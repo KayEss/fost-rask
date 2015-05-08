@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+cd $(dirname $0)
+set -e
+
+OPTIONS="toolset=clang cpp14"
+CPUCOUNT=$(grep -c ^processor /proc/cpuinfo)
+
+../bjam -j$CPUCOUNT $OPTIONS $*
+
+echo fost-rask $OPTIONS $* OK
