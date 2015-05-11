@@ -6,7 +6,7 @@ use-project fost-base : ../fost-base/ ;
 use-project fost-internet : ../fost-internet/ ;
 use-project fost-orm : ../fost-orm/ ;
 
-fost-project rask
+fost-project fost-rask
     :
         <include>../fost-internet/Cpp/include
         <include>../fost-orm/Cpp/include
