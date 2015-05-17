@@ -6,6 +6,17 @@
 */
 
 
-int main(int argc, char *argv[]) {
+#include <fost/main>
+#include <rask/sweep.hpp>
+
+
+FSL_MAIN(
+    L"file-hashes",
+    L"File hashes\nCopyright 2015, Proteus Tech Co. Ltd."
+)( fostlib::ostream &out, fostlib::arguments &args ) {
+    if ( args.size() < 2 ) {
+        out << "Specify one or more files to hash" << std::endl;
+        return 1;
+    }
     return 0;
 }
