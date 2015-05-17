@@ -3,28 +3,26 @@ include $(TOP)/../boost-version.jam ;
 include ../fost-base/fost.jam ;
 
 use-project fost-base : ../fost-base/ ;
-use-project fost-internet : ../fost-internet/ ;
-use-project fost-orm : ../fost-orm/ ;
+fost-project fost-rask ;
 
-fost-project fost-rask
-    :
-        <include>../fost-internet/Cpp/include
-        <include>../fost-orm/Cpp/include
-        <include>include
+alias examples :
+        ./examples/
     ;
+explicit examples ;
 
 alias fost :
         ../fost-base//fost
-        ../fost-internet//fost
-        ../fost-orm//fost
+        src
     ;
-explicit fost ;
 
-alias rask  :
+alias tests :
+        ../fost-base//tests
     ;
+explicit tests ;
 
 alias all :
-        rask
+        examples
         fost
+        tests
     ;
 explicit all ;

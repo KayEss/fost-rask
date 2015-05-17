@@ -1,0 +1,5 @@
+
+fost-exe file-hashes
+    :
+        file-hashes.cpp
+    ;

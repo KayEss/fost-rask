@@ -6,4 +6,9 @@
 */
 
 
-#include <rask/sweep.hpp>
+#pragma once
+
+
+namespace rask {
+
+}
