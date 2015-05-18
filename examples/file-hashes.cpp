@@ -10,6 +10,9 @@
 #include <rask/sweep.hpp>
 
 
+using namespace fostlib;
+
+
 FSL_MAIN(
     L"file-hashes",
     L"File hashes\nCopyright 2015, Proteus Tech Co. Ltd."
@@ -18,5 +21,10 @@ FSL_MAIN(
         out << "Specify one or more files to hash" << std::endl;
         return 1;
     }
+    for ( auto fileindex = 1; fileindex < args.size(); ++fileindex ) {
+        auto filename(coerce<boost::filesystem::path>(args[fileindex].value()));
+        out << filename << std::endl;
+    }
+
     return 0;
 }

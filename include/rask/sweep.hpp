@@ -9,6 +9,9 @@
 #pragma once
 
 
+#include <fost/file>
+
+
 namespace rask {
 
 }
