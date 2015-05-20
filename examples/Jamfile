@@ -1,5 +1,6 @@
 
 fost-exe file-hashes
     :
+        ../src/
         file-hashes.cpp
     ;

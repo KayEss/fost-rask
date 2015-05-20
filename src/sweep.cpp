@@ -7,3 +7,7 @@
 
 
 #include <rask/sweep.hpp>
+
+
+rask::const_file_block_iterator::const_file_block_iterator() {
+}
