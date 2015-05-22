@@ -7,7 +7,31 @@
 
 
 #include <rask/sweep.hpp>
+#include <vector>
+
+
+struct rask::const_file_block_iterator::impl {
+    std::vector<unsigned char> buffer;
+};
 
 
 rask::const_file_block_iterator::const_file_block_iterator() {
 }
+
+rask::const_file_block_iterator::const_file_block_iterator(
+    const boost::filesystem::path &
+) {
+}
+
+rask::const_file_block_iterator::~const_file_block_iterator() {
+}
+
+
+void rask::const_file_block_iterator::operator ++ () {
+}
+
+
+bool rask::const_file_block_iterator::operator == (const const_file_block_iterator &) const {
+    return true;
+}
+

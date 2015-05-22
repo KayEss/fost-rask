@@ -25,6 +25,8 @@ FSL_MAIN(
         auto filename(coerce<boost::filesystem::path>(args[fileindex].value()));
         out << filename << std::endl;
         rask::const_file_block_iterator end;
+        for ( rask::const_file_block_iterator block(filename); block != end; ++block ) {
+        }
     }
 
     return 0;
