@@ -6,8 +6,9 @@
 */
 
 
-#include <fost/main>
+#include <rask/base32.hpp>
 #include <rask/sweep.hpp>
+#include <fost/main>
 
 
 using namespace fostlib;
@@ -26,6 +27,7 @@ FSL_MAIN(
         out << filename << std::endl;
         rask::const_file_block_iterator end;
         for ( rask::const_file_block_iterator block(filename); block != end; ++block ) {
+            std::cout << coerce<rask::base32_string>(*block) << std::endl;
         }
     }
 
