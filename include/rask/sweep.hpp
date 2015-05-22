@@ -34,6 +34,9 @@ namespace rask {
         void operator ++ ();
         /// Allow comparison
         bool operator == (const const_file_block_iterator &) const;
+
+        /// Return the hash for the current block
+        std::vector<unsigned char> operator * () const;
     };
 
 
