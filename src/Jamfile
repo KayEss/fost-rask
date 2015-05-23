@@ -1,4 +1,9 @@
 
 fost-lib-autotest fost-rask
     : src
+    :
+        $(TOP)/../Boost//boost-iostreams-dll
+        ../../fost-base/Cpp/fost-crypto
     ;
+
+fost-install $(TOP)/../Boost//boost-iostreams-dll ;
