@@ -3,6 +3,7 @@ fost-lib-autotest fost-rask
     : src
     :
         $(TOP)/../Boost//boost-iostreams-dll
+        ../../fost-beanbag/beanbag-views
         ../../fost-base/Cpp/fost-crypto
     ;
 
