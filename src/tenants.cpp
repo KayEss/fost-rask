@@ -7,10 +7,13 @@
 
 
 #include <beanbag/beanbag>
+#include <fost/log>
+
 #include <rask/tenants.hpp>
 
 
 void rask::tenants(const fostlib::json &dbconfig) {
+    fostlib::log::debug("Loading tennants database", dbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
 }
 
