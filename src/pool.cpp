@@ -48,6 +48,7 @@ rask::pool::pool(std::size_t threads)
 
 
 rask::pool::~pool() {
+    log::debug("Terminating thread pool");
     pimpl->work.reset();
     io_service.stop();
     std::for_each(pimpl->threads.begin(), pimpl->threads.end(), [](auto &t){ t.join(); });
