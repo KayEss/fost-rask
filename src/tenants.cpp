@@ -13,7 +13,13 @@
 
 
 void rask::tenants(const fostlib::json &dbconfig) {
-    fostlib::log::debug("Loading tennants database", dbconfig);
+    fostlib::log::debug("Loading tenants database", dbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
+    auto configure = [dbp](const fostlib::json &tenants) {
+        fostlib::log::debug("Iterating through tenant configuration", tenants);
+    };
+    dbp->post_commit(configure);
+    fostlib::jsondb::local db(*dbp);
+    configure(db.data());
 }
 
