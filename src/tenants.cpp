@@ -9,6 +9,7 @@
 #include <beanbag/beanbag>
 #include <fost/log>
 
+#include "sweep.tenant.hpp"
 #include <rask/tenants.hpp>
 
 
@@ -28,6 +29,7 @@ void rask::tenants(const fostlib::json &dbconfig) {
                 if ( g_tenants.find(key).size() == 0 ) {
                     fostlib::log::info("New tenant for processing", t.key(), *t);
                     g_tenants.add(key, *t);
+                    start_sweep(key, *t);
                 }
             }
         }
