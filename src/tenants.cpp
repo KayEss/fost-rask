@@ -12,11 +12,25 @@
 #include <rask/tenants.hpp>
 
 
+namespace {
+    fostlib::threadsafe_store<fostlib::json> g_tenants;
+}
+
+
 void rask::tenants(const fostlib::json &dbconfig) {
     fostlib::log::debug("Loading tenants database", dbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
     auto configure = [dbp](const fostlib::json &tenants) {
-        fostlib::log::debug("Iterating through tenant configuration", tenants);
+        if ( tenants.has_key("subscription") ) {
+            const fostlib::json subscriptions(tenants["subscription"]);
+            for ( auto t(subscriptions.begin()); t != subscriptions.end(); ++t ) {
+                auto key(fostlib::coerce<fostlib::string>(t.key()));
+                if ( g_tenants.find(key).size() == 0 ) {
+                    fostlib::log::info("New tenant for processing", t.key(), *t);
+                    g_tenants.add(key, *t);
+                }
+            }
+        }
     };
     dbp->post_commit(configure);
     fostlib::jsondb::local db(*dbp);

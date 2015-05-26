@@ -9,11 +9,24 @@
 #pragma once
 
 
+#include <fost/core>
+#include <fost/json.hpp>
+
+
 namespace rask {
 
 
     /// Check the configuration for changes in tenants
     void tenants(const fostlib::json &dbconfig);
+
+    /// The type of the current tenants
+    typedef std::vector<fostlib::string> tenants_type;
+
+    /// Return all of the current tenants
+    tenants_type all_tenants();
+
+    /// Return JSON describing a tenant -- empty if unknown
+    fostlib::json known_tenant(const fostlib::string &);
 
 
 }
