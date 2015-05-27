@@ -6,12 +6,17 @@
 */
 
 
+#include "sweep.folder.hpp"
 #include "sweep.tenant.hpp"
 
 #include <fost/log>
 
 
-void rask::start_sweep(const fostlib::string &tenant, const fostlib::json &config) {
+void rask::start_sweep(workers &w, const fostlib::string &tenant, const fostlib::json &config) {
     fostlib::log::info("Starting sweep for", tenant, config);
+    auto folder = fostlib::coerce<boost::filesystem::path>(config["path"]);
+    w.high_latency.io_service.post([folder]() {
+        start_sweep(folder);
+    });
 }
 

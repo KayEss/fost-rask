@@ -6,18 +6,12 @@
 */
 
 
-#pragma once
+#include "sweep.folder.hpp"
+
+#include <fost/log>
 
 
-#include <rask/workers.hpp>
-
-
-namespace rask {
-
-
-    /// Start a sweep for the tenant
-    void start_sweep(workers &, const fostlib::string &tenant, const fostlib::json &config);
-
-
+void rask::start_sweep(const boost::filesystem::path &folder) {
+    fostlib::log::info("Sweep recursing into folder", folder);
 }
 

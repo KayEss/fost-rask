@@ -9,14 +9,14 @@
 #pragma once
 
 
-#include <rask/workers.hpp>
+#include <fost/file>
 
 
 namespace rask {
 
 
     /// Start a sweep for the tenant
-    void start_sweep(workers &, const fostlib::string &tenant, const fostlib::json &config);
+    void start_sweep(const boost::filesystem::path &folder);
 
 
 }

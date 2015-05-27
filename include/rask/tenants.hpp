@@ -9,14 +9,14 @@
 #pragma once
 
 
-#include <fost/core>
+#include <rask/workers.hpp>
 
 
 namespace rask {
 
 
     /// Check the configuration for changes in tenants
-    void tenants(const fostlib::json &dbconfig);
+    void tenants(workers &, const fostlib::json &dbconfig);
 
     /// The type of the current tenants
     typedef std::vector<fostlib::string> tenants_type;

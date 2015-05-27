@@ -18,10 +18,10 @@ namespace {
 }
 
 
-void rask::tenants(const fostlib::json &dbconfig) {
+void rask::tenants(workers &w, const fostlib::json &dbconfig) {
     fostlib::log::debug("Loading tenants database", dbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
-    auto configure = [dbp](const fostlib::json &tenants) {
+    auto configure = [&w, dbp](const fostlib::json &tenants) {
         if ( tenants.has_key("subscription") ) {
             const fostlib::json subscriptions(tenants["subscription"]);
             for ( auto t(subscriptions.begin()); t != subscriptions.end(); ++t ) {
@@ -29,7 +29,7 @@ void rask::tenants(const fostlib::json &dbconfig) {
                 if ( g_tenants.find(key).size() == 0 ) {
                     fostlib::log::info("New tenant for processing", t.key(), *t);
                     g_tenants.add(key, *t);
-                    start_sweep(key, *t);
+                    start_sweep(w, key, *t);
                 }
             }
         }
