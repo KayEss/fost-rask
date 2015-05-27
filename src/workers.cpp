@@ -10,6 +10,6 @@
 
 
 rask::workers::workers()
-: low_latency(4), high_latency(2) {
+: low_latency(4), high_latency(2), notify(low_latency.io_service) {
 }
 

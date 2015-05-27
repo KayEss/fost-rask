@@ -13,6 +13,7 @@
 
 void rask::start_sweep(workers &w, const boost::filesystem::path &folder) {
     fostlib::log::debug("Sweep recursing into folder", folder);
+    auto watched = w.notify.watch(folder);
     std::size_t files = 0, directories = 0, ignored = 0;
     typedef boost::filesystem::directory_iterator d_iter;
     for ( auto inode = d_iter(folder); inode != d_iter(); ++inode ) {
@@ -28,6 +29,7 @@ void rask::start_sweep(workers &w, const boost::filesystem::path &folder) {
         ("folder", folder)
         ("directories", directories)
         ("files", files)
-        ("ignored", ignored);
+        ("ignored", ignored)
+        ("watched", watched);
 }
 

@@ -10,6 +10,7 @@
 
 
 #include <memory>
+#include <boost/filesystem.hpp>
 
 
 namespace rask {
@@ -22,12 +23,15 @@ namespace rask {
     class notification {
     public:
         /// Set up a notification handler
-        notification();
+        notification(boost::asio::io_service &);
         /// Destruct it
         ~notification();
 
         /// Start processing the notifications
         void operator() (workers &);
+
+        /// Add a watch for a directory
+        bool watch(const boost::filesystem::path &);
 
     private:
         struct impl;
