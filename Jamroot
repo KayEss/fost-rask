@@ -10,6 +10,7 @@ fost-project fost-rask :
         <include>../fost-internet/Cpp/include
         <include>../fost-orm/Cpp/include
         <include>../fost-web/Cpp/include
+        <include>../fsnotify/include
         <include>include
     ;
 

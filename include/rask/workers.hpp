@@ -10,6 +10,7 @@
 
 
 #include <rask/pool.hpp>
+#include <rask/notification.hpp>
 
 
 namespace rask {
@@ -27,6 +28,8 @@ namespace rask {
         pool low_latency;
         /// Worker pool for longer running tasks
         pool high_latency;
+        /// File system notification
+        notification notify;
     };
 
 
