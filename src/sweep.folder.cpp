@@ -11,7 +11,15 @@
 #include <fost/log>
 
 
-void rask::start_sweep(const boost::filesystem::path &folder) {
+void rask::start_sweep(workers &w, const boost::filesystem::path &folder) {
     fostlib::log::info("Sweep recursing into folder", folder);
+    typedef boost::filesystem::directory_iterator d_iter;
+    for ( auto inode = d_iter(folder); inode != d_iter(); ++inode ) {
+        if ( inode->status().type() == boost::filesystem::directory_file ) {
+            w.high_latency.io_service.post([&w, folder = inode->path()]() {
+                start_sweep(w, folder);
+            });
+        }
+    }
 }
 
