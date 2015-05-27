@@ -15,6 +15,9 @@
 namespace rask {
 
 
+    struct workers;
+
+
     /// File system notifications
     class notification {
     public:
@@ -22,6 +25,9 @@ namespace rask {
         notification();
         /// Destruct it
         ~notification();
+
+        /// Start processing the notifications
+        void operator() (workers &);
 
     private:
         struct impl;

@@ -9,16 +9,24 @@
 #include <rask/workers.hpp>
 
 #include <f5/fsnotify.hpp>
+#include <f5/fsnotify/boost-asio.hpp>
 
 
 struct rask::notification::impl {
+    f5::notifications<f5::boost_asio::reader> notifications;
 };
 
 
-rask::notification::notification() {
+rask::notification::notification()
+: pimpl(new impl) {
 }
 
 
 rask::notification::~notification() {
+}
+
+
+void rask::notification::operator () (rask::workers &) {
+    pimpl->notifications();
 }
 
