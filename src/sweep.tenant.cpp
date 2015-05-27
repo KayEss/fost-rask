@@ -8,15 +8,17 @@
 
 #include "sweep.folder.hpp"
 #include "sweep.tenant.hpp"
+#include <rask/tenants.hpp>
 
 #include <fost/log>
 
 
-void rask::start_sweep(workers &w, const fostlib::string &tenant, const fostlib::json &config) {
-    fostlib::log::info("Starting sweep for", tenant, config);
-    auto folder = fostlib::coerce<boost::filesystem::path>(config["path"]);
-    w.high_latency.io_service.post([&w, folder]() {
-        start_sweep(w, folder);
-    });
+void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
+    fostlib::log::info("Starting sweep for", tenant->name(), tenant->configuration());
+    auto folder = fostlib::coerce<boost::filesystem::path>(tenant->configuration()["path"]);
+    w.high_latency.io_service.post(
+        [&w, tenant, folder]() {
+            start_sweep(w, tenant, folder);
+        });
 }
 

@@ -15,8 +15,11 @@
 namespace rask {
 
 
+    class tenant;
+
+
     /// Start a sweep for the tenant
-    void start_sweep(workers &, const fostlib::string &tenant, const fostlib::json &config);
+    void start_sweep(workers &, std::shared_ptr<tenant>);
 
 
 }

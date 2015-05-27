@@ -24,8 +24,19 @@ namespace rask {
     /// Return all of the current tenants
     tenants_type all_tenants();
 
-    /// Return JSON describing a tenant -- empty if unknown
-    fostlib::json known_tenant(const fostlib::string &);
+    /// Tenant working data
+    class tenant {
+    public:
+        tenant(const fostlib::string &name, const fostlib::json &configuration);
+
+        /// The tenant's name
+        const fostlib::accessors<fostlib::string> name;
+        /// The tenant's configuration
+        const fostlib::accessors<fostlib::json> configuration;
+    };
+
+    /// Return in-memory description of tenant -- empty if unknown
+    std::shared_ptr<tenant> known_tenant(const fostlib::string &);
 
 
 }

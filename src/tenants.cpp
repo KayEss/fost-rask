@@ -14,7 +14,7 @@
 
 
 namespace {
-    fostlib::threadsafe_store<fostlib::json> g_tenants;
+    fostlib::threadsafe_store<std::shared_ptr<rask::tenant>> g_tenants;
 }
 
 
@@ -28,8 +28,9 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
                 auto key(fostlib::coerce<fostlib::string>(t.key()));
                 if ( g_tenants.find(key).size() == 0 ) {
                     fostlib::log::info("New tenant for processing", t.key(), *t);
-                    g_tenants.add(key, *t);
-                    start_sweep(w, key, *t);
+                    auto tp = std::make_shared<tenant>(key, *t);
+                    g_tenants.add(key, tp);
+                    start_sweep(w, tp);
                 }
             }
         }
@@ -37,5 +38,15 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
     dbp->post_commit(configure);
     fostlib::jsondb::local db(*dbp);
     configure(db.data());
+}
+
+
+/*
+    rask::tenant
+*/
+
+
+rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
+: name(n), configuration(c) {
 }
 

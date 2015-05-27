@@ -18,14 +18,20 @@
 
 
 namespace {
-    struct callback : public f5::boost_asio::reader {
-        std::map<int, boost::filesystem::path> &directories;
+    fostlib::threadsafe_store<
+        std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>, int>
+            g_watches;
 
-        callback(std::map<int, boost::filesystem::path> &d, boost::asio::io_service &s)
-        : reader(s), directories(d) {
+
+    struct callback : public f5::boost_asio::reader {
+        callback(boost::asio::io_service &s)
+        : reader(s) {
         }
 
         void process(const inotify_event &event) {
+            std::shared_ptr<rask::tenant> tenant;
+            boost::filesystem::path parent;
+            std::tie(tenant, parent) = g_watches.find(event.wd)[0];
             boost::filesystem::path name(event.name, event.name + event.len);
             fostlib::json mask;
             if ( event.mask & IN_IGNORED )
@@ -55,8 +61,8 @@ namespace {
             fostlib::log::debug()
                 ("", "inotify_event")
                 ("wd", "descriptor", event.wd)
-                ("wd", "directory", directories[event.wd])
-                ("wd", "pathname", directories[event.wd] / name)
+                ("wd", "directory", parent)
+                ("wd", "pathname", parent / name)
                 ("name", name)
                 ("mask", mask)
                 ("cookie", event.cookie);
@@ -67,10 +73,9 @@ namespace {
 
 struct rask::notification::impl {
     f5::notifications<callback> notifications;
-    std::map<int, boost::filesystem::path> directories;
 
     impl(boost::asio::io_service &s)
-    : notifications(directories, s) {
+    : notifications(s) {
     }
 };
 
@@ -89,12 +94,12 @@ void rask::notification::operator () (rask::workers &) {
 }
 
 
-bool rask::notification::watch(const boost::filesystem::path &folder) {
+bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder) {
     bool watched = false;
     pimpl->notifications.watch(folder.c_str(),
-        [this, &watched, &folder](int wd) {
+        [this, &watched, tenant, &folder](int wd) {
             watched = true;
-            pimpl->directories[wd] = folder;
+            g_watches.add(wd, std::make_pair(tenant, folder));
         },
         [](){});
     return watched;

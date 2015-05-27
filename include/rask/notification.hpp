@@ -16,6 +16,7 @@
 namespace rask {
 
 
+    class tenant;
     struct workers;
 
 
@@ -31,7 +32,7 @@ namespace rask {
         void operator() (workers &);
 
         /// Add a watch for a directory
-        bool watch(const boost::filesystem::path &);
+        bool watch(std::shared_ptr<tenant>, const boost::filesystem::path &);
 
     private:
         struct impl;
