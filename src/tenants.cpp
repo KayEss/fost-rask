@@ -80,7 +80,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
     fostlib::jsondb::local meta(*dbp);
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
     if ( !meta.has_key(dbpath) ) {
-        meta.set(dbpath, fostlib::json::object_t()).commit();
+        meta.set(dbpath / "filetype", "directory").commit();
         fostlib::log::info()
             ("", "New folder")
             ("tenant", name())
