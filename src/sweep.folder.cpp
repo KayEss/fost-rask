@@ -7,6 +7,7 @@
 
 
 #include "sweep.folder.hpp"
+#include <rask/tenants.hpp>
 
 #include <fost/log>
 
@@ -23,6 +24,7 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, const boost::
                 [&w, folder = inode->path(), tenant]() {
                     start_sweep(w, tenant, folder);
                 });
+            tenant->dir_stat(inode->path());
         }
     }
     fostlib::log::info()

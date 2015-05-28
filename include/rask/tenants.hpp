@@ -11,6 +11,8 @@
 
 #include <rask/workers.hpp>
 
+#include <beanbag/beanbag>
+
 
 namespace rask {
 
@@ -33,6 +35,14 @@ namespace rask {
         const fostlib::accessors<fostlib::string> name;
         /// The tenant's configuration
         const fostlib::accessors<fostlib::json> configuration;
+        /// The tenant beanbag
+        beanbag::jsondb_ptr beanbag() const;
+
+        /// Tell the tenant about a directory in the observed file system
+        void dir_stat(const boost::filesystem::path &location);
+        /// Tell the tenant about a file in the observed file system
+        void file_stat(const boost::filesystem::path &location,
+            uintmax_t size, const std::time_t &modified, bool changed);
     };
 
     /// Return in-memory description of tenant -- empty if unknown
