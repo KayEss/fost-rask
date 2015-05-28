@@ -39,10 +39,10 @@ rask::pool::pool(std::size_t threads)
                     io_service.run();
                 } catch ( std::exception &e ) {
                     again = true;
-                    log::critical("IO service thread caught an exception", e.what());
+                    log::critical("Rask pool thread caught an exception", e.what());
                 } catch ( ... ) {
                     again = true;
-                    log::critical("IO service thread caught an exception");
+                    log::critical("Rask pool thread caught an exception");
                 }
             } while (again);
         });
