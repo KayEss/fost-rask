@@ -9,6 +9,14 @@
 #include "connection.hpp"
 #include <rask/workers.hpp>
 
+#include <mutex>
+
+
+namespace {
+    std::mutex g_mutex;
+    std::vector<std::weak_ptr<rask::connection>> g_connections;
+}
+
 
 rask::connection::connection(workers &w)
 : cnx(w.low_latency.io_service) {
