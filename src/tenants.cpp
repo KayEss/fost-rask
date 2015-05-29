@@ -6,11 +6,12 @@
 */
 
 
-#include <beanbag/beanbag>
-#include <fost/log>
-
 #include "sweep.tenant.hpp"
 #include <rask/tenants.hpp>
+
+#include <beanbag/beanbag>
+#include <fost/crypto>
+#include <fost/log>
 
 
 namespace {
@@ -80,11 +81,27 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
     fostlib::jsondb::local meta(*dbp);
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
     if ( !meta.has_key(dbpath) ) {
-        meta.set(dbpath / "filetype", "directory").commit();
+        auto path = fostlib::coerce<fostlib::string>(location);
+        auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
+        if ( path.startswith(root) ) {
+            path = path.substr(root.length());
+        } else {
+            fostlib::exceptions::not_implemented error("Directory is not in tenant root");
+            fostlib::insert(error.data(), "root", root);
+            fostlib::insert(error.data(), "location", location);
+            throw error;
+        }
+        meta
+            .set(dbpath / "filetype", "directory")
+            .set(dbpath / "name", path)
+            .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .commit();
         fostlib::log::info()
             ("", "New folder")
             ("tenant", name())
-            ("location", location);
+            ("path", "location", location)
+            ("path", "relative", path)
+            ("path", "hash", meta[dbpath / "hash" / "name"]);
     }
 }
 
