@@ -6,20 +6,11 @@
 */
 
 
-#pragma once
+#include "connection.hpp"
+#include <rask/workers.hpp>
 
 
-#include <fost/internet>
-
-
-namespace rask {
-
-
-    /// A connection between two Rask servers
-    struct connection {
-        boost::asio::ip::tcp::socket cnx;
-    };
-
-
+rask::connection::connection(workers &w)
+: cnx(w.low_latency.io_service) {
 }
 

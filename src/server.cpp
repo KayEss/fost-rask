@@ -6,7 +6,7 @@
 */
 
 
-#include "peer.hpp"
+#include "connection.hpp"
 #include <rask/server.hpp>
 #include <rask/workers.hpp>
 
@@ -21,8 +21,7 @@ namespace {
     };
 
     void accept(rask::workers &w, std::shared_ptr<state> port) {
-        std::shared_ptr<rask::connection> socket(new rask::connection{
-            boost::asio::ip::tcp::socket(w.low_latency.io_service)});
+        auto socket = std::make_shared<rask::connection>(w);
         port->listener.async_accept(socket->cnx,
             [&w, port, socket](const boost::system::error_code &error ) {
                 accept(w, port);

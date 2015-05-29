@@ -6,7 +6,7 @@
 */
 
 
-#include "peer.hpp"
+#include "connection.hpp"
 #include <rask/peer.hpp>
 #include <rask/workers.hpp>
 
@@ -22,16 +22,19 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
         if ( peers.has_key("connect") ) {
             const fostlib::json connect(peers["connect"]);
             for ( auto c(connect.begin()); c != connect.end(); ++c ) {
-                fostlib::log::debug("About to connect to", *c);
+                fostlib::log::debug("About to try to connect to", *c);
+                auto socket = std::make_shared<rask::connection>(w);
                 boost::asio::ip::tcp::resolver resolver(w.low_latency.io_service);
                 boost::asio::ip::tcp::resolver::query q(
                     fostlib::coerce<fostlib::string>((*c)["host"]).c_str(),
                     fostlib::coerce<fostlib::string>((*c)["port"]).c_str());
-                std::shared_ptr<rask::connection> socket(new rask::connection{
-                    boost::asio::ip::tcp::socket(w.low_latency.io_service)});
                 boost::asio::async_connect(socket->cnx, resolver.resolve(q),
                     [&w, socket](const boost::system::error_code& error, auto iterator) {
-                        fostlib::log::debug("Connected to peer");
+                        if ( error ) {
+                            fostlib::log::error("Connected to peer", error.message().c_str());
+                        } else {
+                            fostlib::log::debug("Connected to peer");
+                        }
                     });
             }
         }
