@@ -12,17 +12,23 @@
 #include <fost/log>
 
 
-void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder) {
+void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder) {
+    if ( !boost::filesystem::is_directory(folder) ) {
+        throw fostlib::exceptions::not_implemented(
+            "Trying to recurse into a non-directory",
+            fostlib::coerce<fostlib::string>(folder));
+    }
     fostlib::log::debug("Sweep recursing into folder", folder);
     auto watched = w.notify.watch(tenant, folder);
     std::size_t files = 0, directories = 0, ignored = 0;
     typedef boost::filesystem::directory_iterator d_iter;
-    for ( auto inode = d_iter(folder); inode != d_iter(); ++inode ) {
+    for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
+        fostlib::log::debug("Hit inode", inode->path());
         if ( inode->status().type() == boost::filesystem::directory_file ) {
             ++directories;
             w.high_latency.io_service.post(
-                [&w, folder = inode->path(), tenant]() {
-                    start_sweep(w, tenant, folder);
+                [&w, filename = inode->path(), tenant]() {
+                    start_sweep(w, tenant, filename);
                 });
             tenant->dir_stat(inode->path());
         }

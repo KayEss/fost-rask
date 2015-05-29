@@ -18,7 +18,7 @@ namespace rask {
 
 
     /// Start a sweep for the tenant
-    void start_sweep(workers &, std::shared_ptr<tenant>, const boost::filesystem::path &folder);
+    void start_sweep(workers &, std::shared_ptr<tenant>, boost::filesystem::path folder);
 
 
 }

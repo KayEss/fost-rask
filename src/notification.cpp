@@ -6,13 +6,15 @@
 */
 
 
+#include <rask/tenants.hpp>
 #include <rask/workers.hpp>
+#include "sweep.folder.hpp"
 
 #include <f5/fsnotify.hpp>
 #include <f5/fsnotify/boost-asio.hpp>
+#include <f5/fsnotify/fost.hpp>
 
 #include <fost/log>
-#include <fost/push_back>
 
 #include <map>
 
@@ -24,48 +26,38 @@ namespace {
 
 
     struct callback : public f5::boost_asio::reader {
-        callback(boost::asio::io_service &s)
-        : reader(s) {
+        rask::workers &w;
+
+        callback(rask::workers &w)
+        : reader(w.low_latency.io_service), w(w) {
         }
 
         void process(const inotify_event &event) {
             std::shared_ptr<rask::tenant> tenant;
             boost::filesystem::path parent;
             std::tie(tenant, parent) = g_watches.find(event.wd)[0];
-            boost::filesystem::path name(event.name, event.name + event.len);
-            fostlib::json mask;
-            if ( event.mask & IN_IGNORED )
-                fostlib::push_back(mask, "IN_IGNORED");
-            if ( event.mask & IN_CREATE )
-                fostlib::push_back(mask, "IN_CREATE");
-            if ( event.mask & IN_OPEN )
-                fostlib::push_back(mask, "IN_OPEN");
-            if ( event.mask & IN_MODIFY )
-                fostlib::push_back(mask, "IN_MODIFY");
-            if ( event.mask & IN_CLOSE_NOWRITE )
-                fostlib::push_back(mask, "IN_CLOSE_NOWRITE");
-            if ( event.mask & IN_CLOSE_WRITE )
-                fostlib::push_back(mask, "IN_CLOSE_WRITE");
-            if ( event.mask & IN_DELETE )
-                fostlib::push_back(mask, "IN_DELETE");
-            if ( event.mask & IN_DELETE_SELF )
-                fostlib::push_back(mask, "IN_DELETE_SELF");
-            if ( event.mask & IN_MOVE_SELF )
-                fostlib::push_back(mask, "IN_MOVE_SELF");
-            if ( event.mask & IN_MOVED_FROM )
-                fostlib::push_back(mask, "IN_MOVED_FROM");
-            if ( event.mask & IN_MOVED_TO )
-                fostlib::push_back(mask, "IN_MOVED_TO");
-            if ( event.mask & IN_UNMOUNT )
-                fostlib::push_back(mask, "IN_UNMOUNT");
+            boost::filesystem::path name;
+            if ( event.len ) {
+                name = boost::filesystem::path(event.name);
+            }
+            const boost::filesystem::path filename(parent / name);
             fostlib::log::debug()
                 ("", "inotify_event")
                 ("wd", "descriptor", event.wd)
                 ("wd", "directory", parent)
-                ("wd", "pathname", parent / name)
+                ("wd", "pathname", filename)
                 ("name", name)
-                ("mask", mask)
+                ("mask", f5::mask_json(event))
                 ("cookie", event.cookie);
+
+            if ( event.mask & IN_CREATE ) {
+                if ( is_directory(filename) ) {
+                    w.high_latency.io_service.post(
+                        [this, filename, tenant]() {
+                            rask::start_sweep(w, tenant, filename);
+                        });
+                }
+            }
         }
     };
 }
@@ -74,14 +66,14 @@ namespace {
 struct rask::notification::impl {
     f5::notifications<callback> notifications;
 
-    impl(boost::asio::io_service &s)
-    : notifications(s) {
+    impl(workers &w)
+    : notifications(w) {
     }
 };
 
 
-rask::notification::notification(boost::asio::io_service &s)
-: pimpl(new impl(s)) {
+rask::notification::notification(workers &w)
+: pimpl(new impl(w)) {
 }
 
 
@@ -89,7 +81,7 @@ rask::notification::~notification() {
 }
 
 
-void rask::notification::operator () (rask::workers &) {
+void rask::notification::operator () () {
     pimpl->notifications();
 }
 
@@ -99,7 +91,20 @@ bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::file
     pimpl->notifications.watch(folder.c_str(),
         [this, &watched, tenant, &folder](int wd) {
             watched = true;
-            g_watches.add(wd, std::make_pair(tenant, folder));
+            if ( g_watches.find(wd).size() == 0 ) {
+                g_watches.add(wd, std::make_pair(tenant, folder));
+                fostlib::log::debug()
+                    ("", "Watch added")
+                    ("wd", wd)
+                    ("tenant", tenant->name())
+                    ("directory", folder);
+            } else {
+                fostlib::log::debug()
+                    ("", "Already watching")
+                    ("wd", wd)
+                    ("tenant", tenant->name())
+                    ("directory", folder);
+            }
         },
         [](){});
     return watched;

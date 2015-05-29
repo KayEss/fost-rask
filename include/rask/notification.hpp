@@ -24,12 +24,12 @@ namespace rask {
     class notification {
     public:
         /// Set up a notification handler
-        notification(boost::asio::io_service &);
+        notification(workers &);
         /// Destruct it
         ~notification();
 
         /// Start processing the notifications
-        void operator() (workers &);
+        void operator() ();
 
         /// Add a watch for a directory
         bool watch(std::shared_ptr<tenant>, const boost::filesystem::path &);
