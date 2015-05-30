@@ -23,7 +23,6 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
     std::size_t files = 0, directories = 0, ignored = 0;
     typedef boost::filesystem::directory_iterator d_iter;
     for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
-        fostlib::log::debug("Hit inode", inode->path());
         if ( inode->status().type() == boost::filesystem::directory_file ) {
             ++directories;
             w.high_latency.io_service.post(
