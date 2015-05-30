@@ -50,6 +50,9 @@ namespace rask {
             /// Allow the watchdog to cancel the current connection if it can
             std::weak_ptr<connection> socket;
         };
+
+        /// Store the reconnect so the watchdog can be reset
+        std::shared_ptr<reconnect> restart;
     };
 
 

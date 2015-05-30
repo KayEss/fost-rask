@@ -36,21 +36,9 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
 void rask::peer_with(std::shared_ptr<connection::reconnect> client) {
     fostlib::log::debug("About to try to connect to", client->configuration);
     auto socket = std::make_shared<rask::connection>(client->watchdog.get_io_service());
+    socket->restart = client;
     client->socket = socket;
-    client->watchdog.expires_from_now(boost::posix_time::seconds(15));
-    client->watchdog.async_wait(
-        [client](const boost::system::error_code &error) {
-            std::shared_ptr<connection> socket(client->socket);
-            if ( socket ) {
-                socket->cnx.cancel();
-                socket->cnx.close();
-            }
-            fostlib::log::error()
-                ("", "Watchdog timer fired")
-                ("error", error.message().c_str())
-                ("peer", client->configuration);
-            peer_with(client);
-        });
+    reset_watchdog(client);
     boost::asio::ip::tcp::resolver resolver(client->watchdog.get_io_service());
     boost::asio::ip::tcp::resolver::query q(
         fostlib::coerce<fostlib::string>(client->configuration["host"]).c_str(),
@@ -63,6 +51,26 @@ void rask::peer_with(std::shared_ptr<connection::reconnect> client) {
                 fostlib::log::debug("Connected to peer");
                 monitor_connection(socket);
                 read_and_process(socket);
+            }
+        });
+}
+
+
+void rask::reset_watchdog(std::shared_ptr<connection::reconnect> client) {
+    client->watchdog.expires_from_now(boost::posix_time::seconds(15));
+    client->watchdog.async_wait(
+        [client](const boost::system::error_code &error) {
+            std::shared_ptr<connection> socket(client->socket.lock());
+            if ( !error ) {
+                fostlib::log::error()
+                    ("", "Watchdog timer fired")
+                    ("connection", socket ? fostlib::json(socket->id) : fostlib::json())
+                    ("peer", client->configuration);
+                if ( socket ) {
+                    socket->cnx.cancel();
+                    socket->cnx.close();
+                }
+                peer_with(client);
             }
         });
 }

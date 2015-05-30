@@ -6,7 +6,7 @@
 */
 
 
-#include "connection.hpp"
+#include "peer.hpp"
 #include <rask/workers.hpp>
 
 #include <fost/log>
@@ -78,6 +78,9 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                         ("control", int(control))
                         ("packet-size", packet_size);
                         while ( packet_size-- ) socket->input_buffer.sbumpc();
+                }
+                if ( socket->restart ) {
+                    reset_watchdog(socket->restart);
                 }
                 read_and_process(socket);
             } catch ( std::exception &e ) {
