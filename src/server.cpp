@@ -30,6 +30,7 @@ namespace {
                 } else {
                     fostlib::log::info("Server accept", port->config);
                     socket->version();
+                    read_and_process(socket);
                 }
             });
     }

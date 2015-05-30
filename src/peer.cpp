@@ -35,6 +35,7 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
                         } else {
                             fostlib::log::debug("Connected to peer");
                             socket->version();
+                            read_and_process(socket);
                         }
                     });
             }

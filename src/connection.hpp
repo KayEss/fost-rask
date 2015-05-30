@@ -28,10 +28,15 @@ namespace rask {
         boost::asio::ip::tcp::socket cnx;
         /// Strand used for sending
         boost::asio::io_service::strand sender;
+        /// An input buffer
 
         /// Send a version block
         void version();
     };
+
+
+    /// Read and process a packet
+    void read_and_process(std::shared_ptr<connection>);
 
 
 }
