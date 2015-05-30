@@ -36,12 +36,13 @@ namespace rask {
         boost::asio::io_service::strand sender;
         /// An input buffer
         boost::asio::streambuf input_buffer;
-
-        /// Send a version block
-        void version();
+        /// Heartbeat timer
+        boost::asio::deadline_timer heartbeat;
     };
 
 
+    /// Monitor the connection
+    void monitor_connection(std::shared_ptr<connection>);
     /// Read and process a packet
     void read_and_process(std::shared_ptr<connection>);
 

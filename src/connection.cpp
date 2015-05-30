@@ -26,19 +26,20 @@ std::atomic<int64_t> rask::connection::g_id(0);
 
 
 rask::connection::connection(workers &w)
-: id(++g_id), cnx(w.low_latency.io_service), sender(w.low_latency.io_service) {
+: id(++g_id), cnx(w.low_latency.io_service), sender(w.low_latency.io_service),
+        heartbeat(w.low_latency.io_service) {
 }
 
 
 rask::connection::~connection() {
-    fostlib::log::debug("Connection closed");
+    fostlib::log::debug("Connection closed", id);
 }
 
 
-void rask::connection::version() {
+void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
     static unsigned char data[] = {0x01, 0x80, 0x01};
-    async_write(cnx, boost::asio::buffer(data), sender.wrap(
-        [](const boost::system::error_code& error, std::size_t bytes) {
+    async_write(socket->cnx, boost::asio::buffer(data), socket->sender.wrap(
+        [socket](const boost::system::error_code& error, std::size_t bytes) {
             if ( error ) {
                 fostlib::log::error()
                     ("", "Version block not sent")
@@ -48,6 +49,11 @@ void rask::connection::version() {
                     ("", "Version block sent")
                     ("version", int(data[2]))
                     ("bytes", bytes);
+                socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+                socket->heartbeat.async_wait(
+                    [socket](const boost::system::error_code&) {
+                        monitor_connection(socket);
+                    });
             }
         }));
 }
