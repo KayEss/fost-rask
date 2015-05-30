@@ -18,6 +18,9 @@ namespace rask {
     struct workers;
 
 
+    /// Start the Rask server (if configured)
+    void server(workers &);
+
     /// Listen on a specified socket configuration
     void listen(workers &, const fostlib::json &configuration);
 

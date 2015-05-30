@@ -7,9 +7,11 @@
 
 
 #include "connection.hpp"
+#include <rask/configuration.hpp>
 #include <rask/server.hpp>
 #include <rask/workers.hpp>
 
+#include <beanbag/beanbag>
 #include <fost/internet>
 #include <fost/log>
 
@@ -33,6 +35,27 @@ namespace {
                     read_and_process(socket);
                 }
             });
+    }
+}
+
+
+void rask::server(workers &w) {
+    if ( !c_server_db.value().isnull() ) {
+        beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
+        fostlib::jsondb::local server(*dbp);
+        if ( !server.has_key("identity") ) {
+            uint32_t random = 0;
+            std::ifstream urandom("/dev/urandom");
+            random += urandom.get() << 16;
+            random += urandom.get() << 8;
+            random += urandom.get();
+            random &= (1 << 20) - 1; // Take 20 bits
+            server.set("identity", random);
+            server.commit();
+            fostlib::log::info()("Server identity picked as", random);
+        }
+        // Start listening for connections
+        rask::listen(w, c_server_db.value()["socket"]);
     }
 }
 
