@@ -47,6 +47,8 @@ namespace rask {
             fostlib::json configuration;
             /// The watchdog timer that will be responsible for reconnecting
             boost::asio::deadline_timer watchdog;
+            /// Allow the watchdog to cancel the current connection if it can
+            std::weak_ptr<connection> socket;
         };
     };
 

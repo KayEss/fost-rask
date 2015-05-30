@@ -36,9 +36,15 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
 void rask::peer_with(std::shared_ptr<connection::reconnect> client) {
     fostlib::log::debug("About to try to connect to", client->configuration);
     auto socket = std::make_shared<rask::connection>(client->watchdog.get_io_service());
+    client->socket = socket;
     client->watchdog.expires_from_now(boost::posix_time::seconds(15));
     client->watchdog.async_wait(
         [client](const boost::system::error_code &error) {
+            std::shared_ptr<connection> socket(client->socket);
+            if ( socket ) {
+                socket->cnx.cancel();
+                socket->cnx.close();
+            }
             fostlib::log::error()
                 ("", "Watchdog timer fired")
                 ("error", error.message().c_str())
