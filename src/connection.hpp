@@ -26,6 +26,11 @@ namespace rask {
 
         /// The socket used for this connection
         boost::asio::ip::tcp::socket cnx;
+        /// Strand used for sending
+        boost::asio::io_service::strand sender;
+
+        /// Send a version block
+        void version();
     };
 
 

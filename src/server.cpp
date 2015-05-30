@@ -29,6 +29,7 @@ namespace {
                     fostlib::log::error("Server accept", error.message().c_str(), port->config);
                 } else {
                     fostlib::log::info("Server accept", port->config);
+                    socket->version();
                 }
             });
     }

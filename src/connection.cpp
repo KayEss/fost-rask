@@ -9,6 +9,8 @@
 #include "connection.hpp"
 #include <rask/workers.hpp>
 
+#include <fost/log>
+
 #include <mutex>
 
 
@@ -19,6 +21,15 @@ namespace {
 
 
 rask::connection::connection(workers &w)
-: cnx(w.low_latency.io_service) {
+: cnx(w.low_latency.io_service), sender(w.low_latency.io_service) {
+}
+
+
+void rask::connection::version() {
+    static unsigned char data[] = {0x03, 0x80, 0x01};
+    async_write(cnx, boost::asio::buffer(data), sender.wrap(
+        [](const boost::system::error_code& error, std::size_t bytes) {
+            fostlib::log::debug("Version block sent", int(data[2]));
+        }));
 }
 
