@@ -11,6 +11,8 @@
 
 #include <fost/internet>
 
+#include <atomic>
+
 
 namespace rask {
 
