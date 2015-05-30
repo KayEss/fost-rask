@@ -45,5 +45,6 @@ void rask::listen(workers &w, const fostlib::json &config) {
         config,
         {w.low_latency.io_service, endpoint}}};
     accept(w, port);
+    fostlib::log::info("Rask now listening for peer connections", config);
 }
 
