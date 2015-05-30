@@ -20,15 +20,22 @@ namespace rask {
 
     /// A connection between two Rask servers
     class connection {
+        static std::atomic<int64_t> g_id;
     public:
         /// Construct a connection
         connection(workers &);
+        /// Destructor so we can log failed connections
+        ~connection();
+
+        /// The connection ID used in log messages
+        const int64_t id;
 
         /// The socket used for this connection
         boost::asio::ip::tcp::socket cnx;
         /// Strand used for sending
         boost::asio::io_service::strand sender;
         /// An input buffer
+        boost::asio::streambuf input_buffer;
 
         /// Send a version block
         void version();

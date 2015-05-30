@@ -22,8 +22,16 @@ namespace {
 }
 
 
+std::atomic<int64_t> rask::connection::g_id(0);
+
+
 rask::connection::connection(workers &w)
-: cnx(w.low_latency.io_service), sender(w.low_latency.io_service) {
+: id(++g_id), cnx(w.low_latency.io_service), sender(w.low_latency.io_service) {
+}
+
+
+rask::connection::~connection() {
+    fostlib::log::debug("Connection closed");
 }
 
 
@@ -48,18 +56,42 @@ void rask::connection::version() {
 void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
-            boost::system::error_code error;
-            std::size_t packet_size;
-            unsigned char bytes[2];
-            boost::asio::async_read(socket->cnx, boost::asio::buffer(bytes), yield[error]);
-            if ( !error ) {
-                if ( bytes[0] < 0x80 ) {
-                    packet_size = bytes[0];
-                    fostlib::log::debug("Got packet of size", packet_size);
+            try {
+                boost::asio::async_read(socket->cnx, socket->input_buffer,
+                    boost::asio::transfer_exactly(2), yield);
+                std::size_t packet_size = socket->input_buffer.sbumpc();
+                if ( packet_size < 0x80 ) {
+                    fostlib::log::debug()
+                        ("", "Got packet of size")
+                        ("connection", socket->id)
+                        ("size", packet_size);
                 } else {
                     throw fostlib::exceptions::not_implemented(
                         "Large packets are not implemented");
                 }
+                unsigned char control = socket->input_buffer.sbumpc();
+                boost::asio::async_read(socket->cnx, socket->input_buffer,
+                    boost::asio::transfer_exactly(packet_size), yield);
+                if ( control == 0x80 ) {
+                    fostlib::log::info()
+                        ("", "Version block")
+                        ("connection", socket->id)
+                        ("version", int(socket->input_buffer.sbumpc()));
+                } else {
+                    fostlib::log::warning()
+                        ("", "Unknown control byte received")
+                        ("connection", socket->id)
+                        ("control", int(control))
+                        ("packet-size", packet_size);
+                        while ( packet_size-- ) socket->input_buffer.sbumpc();
+                }
+                read_and_process(socket);
+            } catch ( std::exception &e ) {
+                fostlib::log::error()
+                    ("", "read_and_process caught an exception")
+                    ("connection", socket->id)
+                    ("exception", e.what());
+                fostlib::absorb_exception();
             }
         });
 }
