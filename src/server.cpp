@@ -23,7 +23,7 @@ namespace {
     };
 
     void accept(rask::workers &w, std::shared_ptr<state> port) {
-        auto socket = std::make_shared<rask::connection>(w);
+        auto socket = std::make_shared<rask::connection>(w.low_latency.io_service);
         port->listener.async_accept(socket->cnx,
             [&w, port, socket](const boost::system::error_code &error ) {
                 accept(w, port);

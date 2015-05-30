@@ -23,7 +23,7 @@ namespace rask {
         static std::atomic<int64_t> g_id;
     public:
         /// Construct a connection
-        connection(workers &);
+        connection(boost::asio::io_service&);
         /// Destructor so we can log failed connections
         ~connection();
 
@@ -38,6 +38,16 @@ namespace rask {
         boost::asio::streambuf input_buffer;
         /// Heartbeat timer
         boost::asio::deadline_timer heartbeat;
+
+        /// Structure used to manage
+        class reconnect {
+        public:
+            reconnect(workers &, const fostlib::json &);
+            /// The network configuration to be used to connect
+            fostlib::json configuration;
+            /// The watchdog timer that will be responsible for reconnecting
+            boost::asio::deadline_timer watchdog;
+        };
     };
 
 

@@ -22,20 +22,6 @@ namespace {
 }
 
 
-std::atomic<int64_t> rask::connection::g_id(0);
-
-
-rask::connection::connection(workers &w)
-: id(++g_id), cnx(w.low_latency.io_service), sender(w.low_latency.io_service),
-        heartbeat(w.low_latency.io_service) {
-}
-
-
-rask::connection::~connection() {
-    fostlib::log::debug("Connection closed", id);
-}
-
-
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
     static unsigned char data[] = {0x01, 0x80, 0x01};
     async_write(socket->cnx, boost::asio::buffer(data), socket->sender.wrap(
@@ -43,15 +29,17 @@ void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
             if ( error ) {
                 fostlib::log::error()
                     ("", "Version block not sent")
+                    ("connection", socket->id)
                     ("error", error.message().c_str());
             } else {
                 fostlib::log::debug()
                     ("", "Version block sent")
+                    ("connection", socket->id)
                     ("version", int(data[2]))
                     ("bytes", bytes);
                 socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
                 socket->heartbeat.async_wait(
-                    [socket](const boost::system::error_code&) {
+                    [socket](const boost::system::error_code &) {
                         monitor_connection(socket);
                     });
             }
@@ -100,5 +88,33 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 fostlib::absorb_exception();
             }
         });
+}
+
+
+/*
+    rask::connection
+*/
+
+
+std::atomic<int64_t> rask::connection::g_id(0);
+
+
+rask::connection::connection(boost::asio::io_service &service)
+: id(++g_id), cnx(service), sender(service), heartbeat(service) {
+}
+
+
+rask::connection::~connection() {
+    fostlib::log::debug("Connection closed", id);
+}
+
+
+/*
+    rask::connection::reconnect
+*/
+
+
+rask::connection::reconnect::reconnect(workers &w, const fostlib::json &conf)
+: configuration(conf), watchdog(w.low_latency.io_service) {
 }
 
