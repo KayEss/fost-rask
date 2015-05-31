@@ -18,6 +18,8 @@
 namespace {
     fostlib::threadsafe_store<std::shared_ptr<rask::tenant>> g_tenants;
     fostlib::json g_tenantsdb_config;
+
+    const fostlib::json directory_inode("directory");
 }
 
 
@@ -81,9 +83,10 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
     beanbag::jsondb_ptr dbp(beanbag());
     fostlib::jsondb::local meta(*dbp);
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) ) {
+    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != directory_inode ) {
         auto path = fostlib::coerce<fostlib::string>(location);
         auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
+        auto priority = tick::now();
         if ( path.startswith(root) ) {
             path = path.substr(root.length());
         } else {
@@ -92,11 +95,16 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
             fostlib::insert(error.data(), "location", location);
             throw error;
         }
+        fostlib::digester hash(fostlib::sha256);
+        hash << priority;
         meta
-            .set(dbpath / "filetype", "directory")
+            .set(dbpath / "filetype", directory_inode)
             .set(dbpath / "name", path)
             .set(dbpath / "prority", tick::next())
             .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .set(dbpath / "hash" / "inode",
+                fostlib::coerce<fostlib::string>(
+                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
             .commit();
         fostlib::log::info()
             ("", "New folder")
