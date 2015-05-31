@@ -82,13 +82,19 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     boost::asio::transfer_exactly(packet_size), yield);
                 if ( control == 0x80 ) {
                     const int version = socket->input_buffer.sbumpc();
+                    int64_t time = 0; int32_t server = 0;
                     if ( --packet_size ) {
+                        socket->input_buffer.sgetn(reinterpret_cast<char*>(&time), 8);
+                        socket->input_buffer.sgetn(reinterpret_cast<char*>(&server), 4);
+                        packet_size -= 12;
                         while ( packet_size-- ) socket->input_buffer.sbumpc();
                     }
                     fostlib::log::info()
                         ("", "Version block")
                         ("connection", socket->id)
-                        ("version", version);
+                        ("version", version)
+                        ("tick", "time", time)
+                        ("tick", "server", server);
                 } else {
                     fostlib::log::warning()
                         ("", "Unknown control byte received")
