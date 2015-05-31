@@ -18,6 +18,9 @@ namespace rask {
     struct workers;
 
 
+    /// Return the server identity
+    int32_t server_identity();
+
     /// Start the Rask server (if configured)
     void server(workers &);
 

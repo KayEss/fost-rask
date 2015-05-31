@@ -18,6 +18,8 @@
 
 
 namespace {
+    std::atomic<int32_t> g_identity;
+
     struct state {
         fostlib::json config;
         boost::asio::ip::tcp::acceptor listener;
@@ -40,6 +42,11 @@ namespace {
 }
 
 
+int32_t rask::server_identity() {
+    return g_identity;
+}
+
+
 void rask::server(workers &w) {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
@@ -54,6 +61,9 @@ void rask::server(workers &w) {
             server.set("identity", random);
             server.commit();
             fostlib::log::info()("Server identity picked as", random);
+            g_identity = random;
+        } else {
+            g_identity = fostlib::coerce<int32_t>(server["identity"]);
         }
         // Start listening for connections
         rask::listen(w, c_server_db.value()["socket"]);

@@ -7,6 +7,7 @@
 
 
 #include "sweep.tenant.hpp"
+#include <rask/clock.hpp>
 #include <rask/tenants.hpp>
 
 #include <beanbag/beanbag>
@@ -94,6 +95,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
         meta
             .set(dbpath / "filetype", "directory")
             .set(dbpath / "name", path)
+            .set(dbpath / "prority", tick::next())
             .set(dbpath / "hash" / "name", fostlib::sha256(path))
             .commit();
         fostlib::log::info()
