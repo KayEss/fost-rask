@@ -19,45 +19,49 @@
 
 
 namespace {
+    void run_monitor(std::shared_ptr<rask::connection> socket) {
+        auto sender = socket->sender.wrap(
+            [socket](const boost::system::error_code& error, std::size_t bytes) {
+                if ( error ) {
+                    fostlib::log::error()
+                        ("", "Version block not sent")
+                        ("connection", socket->id)
+                        ("error", error.message().c_str());
+                } else {
+                    fostlib::log::debug()
+                        ("", "Version block sent")
+                        ("connection", socket->id)
+                        ("version", int(rask::known_version))
+                        ("bytes", bytes);
+                    socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+                    socket->heartbeat.async_wait(
+                        [socket](const boost::system::error_code &) {
+                            run_monitor(socket);
+                        });
+                }
+            });
+        if ( rask::server_identity() ) {
+            rask::tick time(rask::tick::now());
+            std::array<unsigned char, 3 + 8 + 4> data;
+            data[0] = data.size() - 2;
+            data[1] = 0x80;
+            data[2] = rask::known_version;
+            std::memcpy(data.data() + 3, &time.time, 8);
+            std::memcpy(data.data() + 3 + 8, &time.server, 4);
+            async_write(socket->cnx, boost::asio::buffer(data), sender);
+        } else {
+            static unsigned char data[] = {0x01, 0x80, rask::known_version};
+            async_write(socket->cnx, boost::asio::buffer(data), sender);
+        }
+    }
+
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
 }
 
 
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
-    auto sender = socket->sender.wrap(
-        [socket](const boost::system::error_code& error, std::size_t bytes) {
-            if ( error ) {
-                fostlib::log::error()
-                    ("", "Version block not sent")
-                    ("connection", socket->id)
-                    ("error", error.message().c_str());
-            } else {
-                fostlib::log::debug()
-                    ("", "Version block sent")
-                    ("connection", socket->id)
-                    ("version", int(known_version))
-                    ("bytes", bytes);
-                socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
-                socket->heartbeat.async_wait(
-                    [socket](const boost::system::error_code &) {
-                        monitor_connection(socket);
-                    });
-            }
-        });
-    if ( server_identity() ) {
-        tick time(tick::now());
-        std::array<unsigned char, 3 + 8 + 4> data;
-        data[0] = data.size() - 2;
-        data[1] = 0x80;
-        data[2] = known_version;
-        std::memcpy(data.data() + 3, &time.time, 8);
-        std::memcpy(data.data() + 3 + 8, &time.server, 4);
-        async_write(socket->cnx, boost::asio::buffer(data), sender);
-    } else {
-        static unsigned char data[] = {0x01, 0x80, known_version};
-        async_write(socket->cnx, boost::asio::buffer(data), sender);
-    }
+    run_monitor(socket);
 }
 
 
