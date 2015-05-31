@@ -25,9 +25,9 @@ rask::tick rask::tick::now() {
         fostlib::jsondb::local server(*dbp);
         fostlib::jcursor location("time");
         if ( server.has_key(location) ) {
-            return fostlib::coerce<int64_t>(server[location]);
+            return tick(fostlib::coerce<int64_t>(server[location]));
         } else {
-            return 0u;
+            return tick(0u);
         }
     } else {
         throw fostlib::exceptions::not_implemented(
@@ -56,7 +56,7 @@ rask::tick rask::tick::next() {
             }
         });
         server.commit();
-        return time;
+        return tick(time);
     } else {
         throw fostlib::exceptions::not_implemented(
             "tick::next() when there is no server database");

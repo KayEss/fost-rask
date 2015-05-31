@@ -18,7 +18,7 @@ namespace rask {
     /// A tick of the clock
     class tick {
         /// Construct a local tick
-        tick(int64_t);
+        explicit tick(int64_t);
 
     public:
         /// The most significant part of the time
