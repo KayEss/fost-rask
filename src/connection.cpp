@@ -42,10 +42,8 @@ namespace {
             });
         if ( rask::server_identity() ) {
             rask::tick time(rask::tick::now());
-            std::array<unsigned char, 3 + 8 + 4> data;
-            data[0] = data.size() - 2;
-            data[1] = 0x80;
-            data[2] = rask::known_version;
+            std::array<unsigned char, 3 + 8 + 4> data{
+                data.size() - 2, 0x80, rask::known_version};
             std::memcpy(data.data() + 3, &time.time, 8);
             std::memcpy(data.data() + 3 + 8, &time.server, 4);
             async_write(socket->cnx, boost::asio::buffer(data), sender);
