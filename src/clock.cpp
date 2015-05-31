@@ -64,6 +64,23 @@ rask::tick rask::tick::next() {
 }
 
 
+void rask::tick::overheard(int64_t t, int32_t) {
+    if ( !c_server_db.value().isnull() ) {
+        beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
+        fostlib::jsondb::local server(*dbp);
+        server.transformation([t](fostlib::json &db) {
+            fostlib::jcursor location("time");
+            if ( db.has_key(location) && fostlib::coerce<int64_t>(db[location]) < t ) {
+                location.replace(db, t);
+            } else {
+                location.insert(db, t);
+            }
+        });
+        server.commit();
+    }
+}
+
+
 fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(rask::tick t) {
     fostlib::json j;
     fostlib::push_back(j, t.time);

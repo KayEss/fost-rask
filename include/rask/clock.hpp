@@ -30,6 +30,8 @@ namespace rask {
         static tick now();
         /// A Lamport clock used to give each event a unique ID
         static tick next();
+        /// Update the clock here if required
+        static void overheard(int64_t, int32_t);
     };
 
 

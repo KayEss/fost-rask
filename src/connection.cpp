@@ -86,6 +86,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     if ( --packet_size ) {
                         socket->input_buffer.sgetn(reinterpret_cast<char*>(&time), 8);
                         socket->input_buffer.sgetn(reinterpret_cast<char*>(&server), 4);
+                        tick::overheard(time, server);
                         packet_size -= 12;
                         while ( packet_size-- ) socket->input_buffer.sbumpc();
                     }
