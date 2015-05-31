@@ -20,6 +20,10 @@ namespace rask {
     struct workers;
 
 
+    /// The highest version of the wire protocol this code knows
+    const char known_version = 0x01;
+
+
     /// A connection between two Rask servers
     class connection {
         static std::atomic<int64_t> g_id;

@@ -26,6 +26,8 @@ namespace rask {
         /// The server identity used as a tie breaker
         const int32_t server;
 
+        /// Return the current time
+        static tick now();
         /// A Lamport clock used to give each event a unique ID
         static tick next();
     };

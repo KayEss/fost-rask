@@ -19,6 +19,23 @@ rask::tick::tick(int64_t t)
 }
 
 
+rask::tick rask::tick::now() {
+    if ( !c_server_db.value().isnull() ) {
+        beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
+        fostlib::jsondb::local server(*dbp);
+        fostlib::jcursor location("time");
+        if ( server.has_key(location) ) {
+            return fostlib::coerce<int64_t>(server[location]);
+        } else {
+            return 0u;
+        }
+    } else {
+        throw fostlib::exceptions::not_implemented(
+            "tick::now() when there is no server database");
+    }
+}
+
+
 rask::tick rask::tick::next() {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
@@ -42,7 +59,7 @@ rask::tick rask::tick::next() {
         return time;
     } else {
         throw fostlib::exceptions::not_implemented(
-            "next_tick when there is no server database");
+            "tick::next() when there is no server database");
     }
 }
 

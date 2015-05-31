@@ -7,6 +7,8 @@
 
 
 #include "peer.hpp"
+#include <rask/clock.hpp>
+#include <rask/server.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/log>
@@ -23,8 +25,7 @@ namespace {
 
 
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
-    static unsigned char data[] = {0x01, 0x80, 0x01};
-    async_write(socket->cnx, boost::asio::buffer(data), socket->sender.wrap(
+    auto sender = socket->sender.wrap(
         [socket](const boost::system::error_code& error, std::size_t bytes) {
             if ( error ) {
                 fostlib::log::error()
@@ -35,7 +36,7 @@ void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
                 fostlib::log::debug()
                     ("", "Version block sent")
                     ("connection", socket->id)
-                    ("version", int(data[2]))
+                    ("version", int(known_version))
                     ("bytes", bytes);
                 socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
                 socket->heartbeat.async_wait(
@@ -43,7 +44,20 @@ void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
                         monitor_connection(socket);
                     });
             }
-        }));
+        });
+    if ( server_identity() ) {
+        tick time(tick::now());
+        std::array<unsigned char, 3 + 8 + 4> data;
+        data[0] = data.size() - 2;
+        data[1] = 0x80;
+        data[2] = known_version;
+        std::memcpy(data.data() + 3, &time.time, 8);
+        std::memcpy(data.data() + 3 + 8, &time.server, 4);
+        async_write(socket->cnx, boost::asio::buffer(data), sender);
+    } else {
+        static unsigned char data[] = {0x01, 0x80, known_version};
+        async_write(socket->cnx, boost::asio::buffer(data), sender);
+    }
 }
 
 
@@ -67,10 +81,14 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 boost::asio::async_read(socket->cnx, socket->input_buffer,
                     boost::asio::transfer_exactly(packet_size), yield);
                 if ( control == 0x80 ) {
+                    const int version = socket->input_buffer.sbumpc();
+                    if ( --packet_size ) {
+                        while ( packet_size-- ) socket->input_buffer.sbumpc();
+                    }
                     fostlib::log::info()
                         ("", "Version block")
                         ("connection", socket->id)
-                        ("version", int(socket->input_buffer.sbumpc()));
+                        ("version", version);
                 } else {
                     fostlib::log::warning()
                         ("", "Unknown control byte received")
