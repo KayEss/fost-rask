@@ -15,7 +15,7 @@
 
 
 rask::tick::tick(int64_t t)
-: time(t), server(server_identity()) {
+: time(t), server(server_identity()), reserved(0) {
 }
 
 

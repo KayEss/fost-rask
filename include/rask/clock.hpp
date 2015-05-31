@@ -25,6 +25,8 @@ namespace rask {
         const int64_t time;
         /// The server identity used as a tie breaker
         const int32_t server;
+        /// Reserved to ensure we get 16 good bytes
+        const int32_t reserved;
 
         /// Return the current time
         static tick now();

@@ -16,5 +16,6 @@ FSL_TEST_SUITE(clock);
 FSL_TEST_FUNCTION(size) {
     FSL_CHECK_EQ(sizeof(int64_t), 8u);
     FSL_CHECK_EQ(sizeof(int32_t), 4u);
+    FSL_CHECK_EQ(sizeof(rask::tick), 16u);
 }
 
