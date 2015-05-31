@@ -98,6 +98,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
         fostlib::digester hash(fostlib::sha256);
         hash << priority;
         meta
+            .set(dbpath, fostlib::json::object_t())
             .set(dbpath / "filetype", directory_inode)
             .set(dbpath / "name", path)
             .set(dbpath / "prority", tick::next())
