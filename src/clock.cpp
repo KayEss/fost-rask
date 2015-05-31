@@ -88,3 +88,8 @@ fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(rask::tick t) 
     return j;
 }
 
+
+fostlib::digester &fostlib::operator << (digester &d, rask::tick t) {
+    return d << const_memory_block(&t, &t + sizeof(rask::tick));
+}
+

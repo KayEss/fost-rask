@@ -9,7 +9,7 @@
 #pragma once
 
 
-#include <fost/core>
+#include <fost/crypto>
 
 
 namespace rask {
@@ -21,6 +21,9 @@ namespace rask {
         explicit tick(int64_t);
 
     public:
+        /// Allow copying
+        tick(const tick &) = default;
+
         /// The most significant part of the time
         const int64_t time;
         /// The server identity used as a tie breaker
@@ -42,10 +45,15 @@ namespace rask {
 
 namespace fostlib {
 
+
+    /// Allow coercion of the tick to JSON
     template<>
     struct coercer<json, rask::tick> {
         json coerce(rask::tick);
     };
+
+
+    digester &operator << (digester &, rask::tick);
 
 
 }
