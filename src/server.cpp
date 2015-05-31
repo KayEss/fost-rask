@@ -9,6 +9,7 @@
 #include "connection.hpp"
 #include <rask/configuration.hpp>
 #include <rask/server.hpp>
+#include <rask/tenants.hpp>
 #include <rask/workers.hpp>
 
 #include <beanbag/beanbag>
@@ -56,6 +57,11 @@ void rask::server(workers &w) {
         }
         // Start listening for connections
         rask::listen(w, c_server_db.value()["socket"]);
+        // Load tenants and start sweeping
+        if ( !c_tenant_db.value().isnull() ) {
+            rask::tenants(w, rask::c_tenant_db.value());
+            w.notify();
+        }
     }
 }
 
