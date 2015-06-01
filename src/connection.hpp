@@ -87,9 +87,16 @@ namespace rask {
                 return *this;
             }
 
+            /// Add a size control sequence
+            out &size_sequence(std::size_t s) {
+                return size_sequence(s, buffer);
+            }
 
             /// Put the data on the wire
             void operator () (std::shared_ptr<connection> socket);
+
+        private:
+            out &size_sequence(std::size_t, boost::asio::streambuf &);
         };
     };
 

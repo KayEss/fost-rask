@@ -130,10 +130,22 @@ void rask::connection::out::operator () (std::shared_ptr<connection> socket) {
             }
         });
     boost::asio::streambuf header;
-    header.sputc(buffer.size());
+    size_sequence(buffer.size(), header);
     header.sputc(control);
     std::array<boost::asio::streambuf::const_buffers_type, 2> data{
         header.data(), buffer.data()};
     async_write(socket->cnx, data, sender);
+}
+
+
+rask::connection::out &rask::connection::out::size_sequence(
+    std::size_t s, boost::asio::streambuf &b
+) {
+    if ( s < 0x80 ) {
+        b.sputc(s);
+    } else {
+        throw fostlib::exceptions::not_implemented(
+            "Large packet sizes");
+    }
 }
 
