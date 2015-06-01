@@ -11,7 +11,11 @@
 
 #include <fost/internet>
 
+#include <boost/asio/streambuf.hpp>
+#include <boost/endian/conversion.hpp>
+
 #include <atomic>
+#include <iostream>
 
 
 namespace rask {
@@ -59,6 +63,36 @@ namespace rask {
 
         /// Store the reconnect so the watchdog can be reset
         std::shared_ptr<reconnect> restart;
+
+        class out {
+            /// Output buffers
+            boost::asio::streambuf buffer;
+            /// The control block value
+            unsigned char control;
+            /// The total data size put into the data buffer
+            std::size_t size;
+        public:
+            /// Construct an outbound packet
+            out(unsigned char control)
+            : control(control), size(0) {
+            }
+
+            template<typename I,
+                typename = std::enable_if_t<std::is_integral<I>::value>>
+            out &operator << (I i) {
+                if ( sizeof(i) > 1 ) {
+                    auto v = boost::endian::native_to_big(i);
+                    buffer.sputn(reinterpret_cast<char *>(&v), sizeof(v));
+                    size += sizeof(v);
+                } else {
+                    buffer.sputc(i);
+                    ++size;
+                }
+                return *this;
+            }
+
+            void operator () (std::shared_ptr<connection> socket);
+        };
     };
 
 

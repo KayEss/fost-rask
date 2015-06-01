@@ -12,43 +12,15 @@
 
 #include <fost/log>
 
-#include <boost/endian/conversion.hpp>
-
 
 void rask::send_version(std::shared_ptr<connection> socket) {
-    auto sender = socket->sender.wrap(
-        [socket](const boost::system::error_code& error, std::size_t bytes) {
-            if ( error ) {
-                fostlib::log::error()
-                    ("", "Version block not sent")
-                    ("connection", socket->id)
-                    ("error", error.message().c_str());
-            } else {
-                fostlib::log::debug()
-                    ("", "Version block sent")
-                    ("connection", socket->id)
-                    ("version", int(rask::known_version))
-                    ("bytes", bytes);
-                socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
-                socket->heartbeat.async_wait(
-                    [socket](const boost::system::error_code &) {
-                        send_version(socket);
-                    });
-            }
-        });
+    connection::out version(0x80);
+    version << rask::known_version;
     if ( rask::server_identity() ) {
         rask::tick time(rask::tick::now());
-        std::array<unsigned char, 3 + 8 + 4> data{
-            data.size() - 2, 0x80, rask::known_version};
-        int64_t tick = boost::endian::native_to_big(time.time);
-        int32_t server = boost::endian::native_to_big(time.server);
-        std::memcpy(data.data() + 3, &tick, 8);
-        std::memcpy(data.data() + 3 + 8, &server, 4);
-        async_write(socket->cnx, boost::asio::buffer(data), sender);
-    } else {
-        static unsigned char data[] = {0x01, 0x80, rask::known_version};
-        async_write(socket->cnx, boost::asio::buffer(data), sender);
+        version << time.time << time.server;
     }
+    version(socket);
 }
 
 
@@ -56,10 +28,11 @@ void rask::receive_version(std::shared_ptr<connection> socket, std::size_t packe
         const int version = socket->input_buffer.sbumpc();
         int64_t time = 0; int32_t server = 0;
         if ( --packet_size ) {
-            socket->input_buffer.sgetn(reinterpret_cast<char*>(&time), 8);
-            time = boost::endian::big_to_native(time);
-            socket->input_buffer.sgetn(reinterpret_cast<char*>(&server), 4);
-            server = boost::endian::big_to_native(server);
+            int64_t ptime; int32_t pserver;
+            socket->input_buffer.sgetn(reinterpret_cast<char*>(&ptime), 8);
+            time = boost::endian::big_to_native(ptime);
+            socket->input_buffer.sgetn(reinterpret_cast<char*>(&pserver), 4);
+            server = boost::endian::big_to_native(pserver);
             tick::overheard(time, server);
             packet_size -= 12;
             while ( packet_size-- ) socket->input_buffer.sbumpc();

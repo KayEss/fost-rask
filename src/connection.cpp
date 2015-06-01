@@ -107,3 +107,33 @@ rask::connection::reconnect::reconnect(workers &w, const fostlib::json &conf)
 : configuration(conf), watchdog(w.low_latency.io_service) {
 }
 
+
+/*
+    rask::connection::out
+*/
+
+
+void rask::connection::out::operator () (std::shared_ptr<connection> socket) {
+    auto sender = socket->sender.wrap(
+        [socket](const boost::system::error_code& error, std::size_t bytes) {
+            if ( error ) {
+                fostlib::log::error()
+                    ("", "Error sending data packet")
+                    ("connection", socket->id)
+                    ("error", error.message().c_str());
+            } else {
+                socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+                socket->heartbeat.async_wait(
+                    [socket](const boost::system::error_code &) {
+                        send_version(socket);
+                    });
+            }
+        });
+    boost::asio::streambuf header;
+    header.sputc(size);
+    header.sputc(control);
+    std::array<boost::asio::streambuf::const_buffers_type, 2> data{
+        header.data(), buffer.data()};
+    async_write(socket->cnx, data, sender);
+}
+
