@@ -18,7 +18,7 @@
 
 
 namespace {
-    std::atomic<int32_t> g_identity;
+    std::atomic<uint32_t> g_identity;
 
     struct state {
         fostlib::json config;
@@ -42,7 +42,7 @@ namespace {
 }
 
 
-int32_t rask::server_identity() {
+uint32_t rask::server_identity() {
     return g_identity;
 }
 
@@ -53,16 +53,16 @@ void rask::server(workers &w) {
         fostlib::jsondb::local server(*dbp);
         if ( !server.has_key("identity") ) {
             std::ifstream urandom("/dev/urandom");
-            uint32_t random = urandom.get() << 24;
-            random += urandom.get() << 16;
-            random += urandom.get() << 8;
-            random += urandom.get();
+            uint32_t random = unsigned(urandom.get()) << 24u;
+            random += unsigned(urandom.get()) << 16u;
+            random += unsigned(urandom.get()) << 8u;
+            random += unsigned(urandom.get());
             server.set("identity", random);
             server.commit();
             fostlib::log::info()("Server identity picked as", random);
             g_identity = random;
         } else {
-            g_identity = fostlib::coerce<int32_t>(server["identity"]);
+            g_identity = fostlib::coerce<uint32_t>(server["identity"]);
         }
         // Start listening for connections
         rask::listen(w, c_server_db.value()["socket"]);

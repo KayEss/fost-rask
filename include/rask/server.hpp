@@ -19,7 +19,7 @@ namespace rask {
 
 
     /// Return the server identity
-    int32_t server_identity();
+    uint32_t server_identity();
 
     /// Start the Rask server (if configured)
     void server(workers &);

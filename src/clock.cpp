@@ -64,7 +64,7 @@ rask::tick rask::tick::next() {
 }
 
 
-void rask::tick::overheard(int64_t t, int32_t) {
+void rask::tick::overheard(int64_t t, uint32_t) {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
         fostlib::jsondb::local server(*dbp);

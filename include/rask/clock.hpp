@@ -27,16 +27,16 @@ namespace rask {
         /// The most significant part of the time
         const int64_t time;
         /// The server identity used as a tie breaker
-        const int32_t server;
+        const uint32_t server;
         /// Reserved to ensure we get 16 good bytes
-        const int32_t reserved;
+        const uint32_t reserved;
 
         /// Return the current time
         static tick now();
         /// A Lamport clock used to give each event a unique ID
         static tick next();
         /// Update the clock here if required
-        static void overheard(int64_t, int32_t);
+        static void overheard(int64_t, uint32_t);
     };
 
 
