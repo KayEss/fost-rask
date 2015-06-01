@@ -31,23 +31,26 @@ void rask::send_version(std::shared_ptr<connection> socket) {
 
 
 void rask::receive_version(std::shared_ptr<connection> socket, std::size_t packet_size) {
-        const int version = socket->input_buffer.sbumpc();
-        int64_t time = 0; int32_t server = 0;
-        if ( --packet_size ) {
-            int64_t ptime; int32_t pserver;
-            socket->input_buffer.sgetn(reinterpret_cast<char*>(&ptime), 8);
-            time = boost::endian::big_to_native(ptime);
-            socket->input_buffer.sgetn(reinterpret_cast<char*>(&pserver), 4);
-            server = boost::endian::big_to_native(pserver);
-            tick::overheard(time, server);
-            packet_size -= 12;
-            while ( packet_size-- ) socket->input_buffer.sbumpc();
-        }
-        fostlib::log::info()
-            ("", "Version block")
-            ("connection", socket->id)
-            ("version", version)
+    auto logger(fostlib::log::info());
+    logger
+        ("", "Version block")
+        ("connection", socket->id);
+    const int version = socket->input_buffer.sbumpc();
+    logger
+        ("version", version);
+    int64_t time = 0; int32_t server = 0;
+    if ( --packet_size ) {
+        int64_t ptime; int32_t pserver;
+        socket->input_buffer.sgetn(reinterpret_cast<char*>(&ptime), 8);
+        time = boost::endian::big_to_native(ptime);
+        socket->input_buffer.sgetn(reinterpret_cast<char*>(&pserver), 4);
+        server = boost::endian::big_to_native(pserver);
+        tick::overheard(time, server);
+        packet_size -= 12;
+        logger
             ("tick", "time", time)
             ("tick", "server", server);
+        while ( packet_size-- ) socket->input_buffer.sbumpc();
+    }
 }
 
