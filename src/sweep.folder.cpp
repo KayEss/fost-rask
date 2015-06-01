@@ -18,6 +18,7 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
             "Trying to recurse into a non-directory",
             fostlib::coerce<fostlib::string>(folder));
     }
+    tenant->dir_stat(folder);
     fostlib::log::debug("Sweep recursing into folder", folder);
     auto watched = w.notify.watch(tenant, folder);
     std::size_t files = 0, directories = 0, ignored = 0;
@@ -29,7 +30,6 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
                 [&w, filename = inode->path(), tenant]() {
                     start_sweep(w, tenant, filename);
                 });
-            tenant->dir_stat(inode->path());
         }
     }
     fostlib::log::info()
