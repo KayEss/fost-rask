@@ -70,15 +70,15 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 unsigned char control = socket->input_buffer.sbumpc();
                 boost::asio::async_read(socket->cnx, socket->input_buffer,
                     boost::asio::transfer_exactly(packet_size), yield);
+                connection::in packet(socket, packet_size);
                 if ( control == 0x80 ) {
-                    receive_version(socket, packet_size);
+                    receive_version(packet);
                 } else {
                     fostlib::log::warning()
                         ("", "Unknown control byte received")
                         ("connection", socket->id)
                         ("control", int(control))
                         ("packet-size", packet_size);
-                    while ( packet_size-- ) socket->input_buffer.sbumpc();
                 }
                 if ( socket->restart ) {
                     reset_watchdog(socket->restart);
@@ -160,5 +160,22 @@ void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf 
         throw fostlib::exceptions::not_implemented(
             "Large packet sizes", fostlib::coerce<fostlib::string>(s));
     }
+}
+
+
+/*
+    rask::connection::in
+*/
+
+
+rask::connection::in::~in() {
+     while ( remaining-- ) socket->input_buffer.sbumpc();
+}
+
+
+void rask::connection::in::check(std::size_t b) const {
+    if ( remaining < b )
+        throw fostlib::exceptions::unexpected_eof(
+            "Not enough data in the buffer for this packet");
 }
 

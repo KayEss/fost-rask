@@ -19,6 +19,8 @@ namespace rask {
     class tick {
         /// Construct a local tick
         explicit tick(int64_t);
+        /// Construct any tick
+        tick(int64_t, uint32_t);
 
     public:
         /// Allow copying
@@ -36,7 +38,7 @@ namespace rask {
         /// A Lamport clock used to give each event a unique ID
         static tick next();
         /// Update the clock here if required
-        static void overheard(int64_t, uint32_t);
+        static tick overheard(int64_t, uint32_t);
     };
 
 

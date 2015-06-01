@@ -9,6 +9,8 @@
 #pragma once
 
 
+#include <rask/clock.hpp>
+
 #include <fost/internet>
 #include <fost/jsondb>
 #include <fost/log>
@@ -145,6 +147,58 @@ namespace rask {
             /// Write a size control sequence to the specified buffer
             static void size_sequence(std::size_t, boost::asio::streambuf &);
         };
+
+
+        /// Allows a network connection to be read from
+        class in {
+            friend void read_and_process(std::shared_ptr<connection>);
+            /// The connection we're reading from
+            std::shared_ptr<connection> socket;
+            /// The number of bytes remaining to be read
+            std::size_t remaining;
+            /// Construct
+            in(std::shared_ptr<connection> socket, std::size_t s)
+            : socket(socket), remaining(s) {
+            }
+            /// Throw an EOF exception if there isn't enough data
+            void check(std::size_t) const;
+        public:
+            /// Destructor clears unprocessed input
+            ~in();
+
+            /// Return true if the packet is empty
+            bool empty() const {
+                return remaining == 0u;
+            }
+            /// Return the connection ID
+            int64_t socket_id() const {
+                return socket->id;
+            }
+
+            /// Read an integer
+            template<typename I,
+                typename std::enable_if<std::is_integral<I>::value>::type* = nullptr>
+            I read() {
+                I i;
+                check(sizeof(i));
+                if ( sizeof(i) > 1 ) {
+                    socket->input_buffer.sgetn(reinterpret_cast<char *>(&i), sizeof(i));
+                    boost::endian::big_to_native_inplace(i);
+                } else {
+                    i = socket->input_buffer.sbumpc();
+                }
+                remaining -= sizeof(i);
+                return i;
+            }
+            /// Read a clock tick
+            template<typename T,
+                typename std::enable_if<std::is_same<tick, T>::value>::type* = nullptr>
+            T read() {
+                auto time(read<int64_t>());
+                auto server(read<uint32_t>());
+                return tick::overheard(time,server);
+            }
+        };
     };
 
 
@@ -159,7 +213,7 @@ namespace rask {
     /// Send a version packet with heartbeat
     void send_version(std::shared_ptr<connection>);
     /// Process a version packet body
-    void receive_version(std::shared_ptr<connection>, std::size_t);
+    void receive_version(connection::in &);
 
     /// Send a create directory instruction
     connection::out create_directory(
