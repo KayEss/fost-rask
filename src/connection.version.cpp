@@ -35,13 +35,11 @@ void rask::receive_version(connection::in &packet) {
         ("", "Version block")
         ("connection", packet.socket_id());
     const auto version(packet.read<int8_t>());
-    logger
-        ("version", version);
+    logger("version", version);
     if ( !packet.empty() ) {
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
-        logger
-            ("tick", time);
+        logger("tick", time);
     }
 }
 

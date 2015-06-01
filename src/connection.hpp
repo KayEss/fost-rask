@@ -175,6 +175,9 @@ namespace rask {
                 return socket->id;
             }
 
+            /// Read a size  control sequence
+            std::size_t size_control();
+
             /// Read an integer
             template<typename I,
                 typename std::enable_if<std::is_integral<I>::value>::type* = nullptr>
@@ -198,6 +201,16 @@ namespace rask {
                 auto server(read<uint32_t>());
                 return tick::overheard(time,server);
             }
+            /// Read a string
+            template<typename T,
+                typename std::enable_if<std::is_same<fostlib::string, T>::value>::type* = nullptr>
+            T read() {
+                auto data = read(size_control());
+                return fostlib::coerce<fostlib::string>(
+                    fostlib::coerce<fostlib::utf8_string>(data));
+            }
+            /// Read a number of bytes
+            std::vector<unsigned char> read(std::size_t b);
         };
     };
 
@@ -219,6 +232,8 @@ namespace rask {
     connection::out create_directory(
         tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
         const fostlib::string &name);
+    /// React to a directory create request
+    void create_directory(connection::in &);
 
 
 }

@@ -73,6 +73,8 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 connection::in packet(socket, packet_size);
                 if ( control == 0x80 ) {
                     receive_version(packet);
+                } else if ( control == 0x91 ) {
+                    create_directory(packet);
                 } else {
                     fostlib::log::warning()
                         ("", "Unknown control byte received")
@@ -177,5 +179,24 @@ void rask::connection::in::check(std::size_t b) const {
     if ( remaining < b )
         throw fostlib::exceptions::unexpected_eof(
             "Not enough data in the buffer for this packet");
+}
+
+
+std::size_t rask::connection::in::size_control() {
+    auto header(read<uint8_t>());
+    if ( header < 0x80 )
+        return header;
+    else
+        throw fostlib::exceptions::not_implemented(
+            "Large data blocks embedded in a packet");
+}
+
+
+std::vector<unsigned char> rask::connection::in::read(std::size_t b) {
+    check(b);
+    std::vector<unsigned char> data(b, 0);
+    socket->input_buffer.sgetn(reinterpret_cast<char *>(data.data()), b);
+    remaining -= b;
+    return data;
 }
 
