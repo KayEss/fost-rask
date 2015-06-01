@@ -69,12 +69,10 @@ namespace rask {
             boost::asio::streambuf buffer;
             /// The control block value
             unsigned char control;
-            /// The total data size put into the data buffer
-            std::size_t size;
         public:
             /// Construct an outbound packet
             out(unsigned char control)
-            : control(control), size(0) {
+            : control(control) {
             }
 
             template<typename I,
@@ -83,14 +81,14 @@ namespace rask {
                 if ( sizeof(i) > 1 ) {
                     auto v = boost::endian::native_to_big(i);
                     buffer.sputn(reinterpret_cast<char *>(&v), sizeof(v));
-                    size += sizeof(v);
                 } else {
                     buffer.sputc(i);
-                    ++size;
                 }
                 return *this;
             }
 
+
+            /// Put the data on the wire
             void operator () (std::shared_ptr<connection> socket);
         };
     };

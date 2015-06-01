@@ -130,7 +130,7 @@ void rask::connection::out::operator () (std::shared_ptr<connection> socket) {
             }
         });
     boost::asio::streambuf header;
-    header.sputc(size);
+    header.sputc(buffer.size());
     header.sputc(control);
     std::array<boost::asio::streambuf::const_buffers_type, 2> data{
         header.data(), buffer.data()};
