@@ -7,62 +7,23 @@
 
 
 #include "peer.hpp"
-#include <rask/clock.hpp>
-#include <rask/server.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/log>
 
 #include <boost/asio/spawn.hpp>
-#include <boost/endian/conversion.hpp>
 
 #include <mutex>
 
 
 namespace {
-    void run_monitor(std::shared_ptr<rask::connection> socket) {
-        auto sender = socket->sender.wrap(
-            [socket](const boost::system::error_code& error, std::size_t bytes) {
-                if ( error ) {
-                    fostlib::log::error()
-                        ("", "Version block not sent")
-                        ("connection", socket->id)
-                        ("error", error.message().c_str());
-                } else {
-                    fostlib::log::debug()
-                        ("", "Version block sent")
-                        ("connection", socket->id)
-                        ("version", int(rask::known_version))
-                        ("bytes", bytes);
-                    socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
-                    socket->heartbeat.async_wait(
-                        [socket](const boost::system::error_code &) {
-                            run_monitor(socket);
-                        });
-                }
-            });
-        if ( rask::server_identity() ) {
-            rask::tick time(rask::tick::now());
-            std::array<unsigned char, 3 + 8 + 4> data{
-                data.size() - 2, 0x80, rask::known_version};
-            int64_t tick = boost::endian::native_to_big(time.time);
-            int32_t server = boost::endian::native_to_big(time.server);
-            std::memcpy(data.data() + 3, &tick, 8);
-            std::memcpy(data.data() + 3 + 8, &server, 4);
-            async_write(socket->cnx, boost::asio::buffer(data), sender);
-        } else {
-            static unsigned char data[] = {0x01, 0x80, rask::known_version};
-            async_write(socket->cnx, boost::asio::buffer(data), sender);
-        }
-    }
-
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
 }
 
 
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
-    run_monitor(socket);
+    send_version(socket);
     std::unique_lock<std::mutex> lock(g_mutex);
     for ( auto w = g_connections.begin(); w != g_connections.end(); ++w ) {
         std::shared_ptr<rask::connection> slot(w->lock());
@@ -95,30 +56,14 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 boost::asio::async_read(socket->cnx, socket->input_buffer,
                     boost::asio::transfer_exactly(packet_size), yield);
                 if ( control == 0x80 ) {
-                    const int version = socket->input_buffer.sbumpc();
-                    int64_t time = 0; int32_t server = 0;
-                    if ( --packet_size ) {
-                        socket->input_buffer.sgetn(reinterpret_cast<char*>(&time), 8);
-                        time = boost::endian::big_to_native(time);
-                        socket->input_buffer.sgetn(reinterpret_cast<char*>(&server), 4);
-                        server = boost::endian::big_to_native(server);
-                        tick::overheard(time, server);
-                        packet_size -= 12;
-                        while ( packet_size-- ) socket->input_buffer.sbumpc();
-                    }
-                    fostlib::log::info()
-                        ("", "Version block")
-                        ("connection", socket->id)
-                        ("version", version)
-                        ("tick", "time", time)
-                        ("tick", "server", server);
+                    receive_version(socket, packet_size);
                 } else {
                     fostlib::log::warning()
                         ("", "Unknown control byte received")
                         ("connection", socket->id)
                         ("control", int(control))
                         ("packet-size", packet_size);
-                        while ( packet_size-- ) socket->input_buffer.sbumpc();
+                    while ( packet_size-- ) socket->input_buffer.sbumpc();
                 }
                 if ( socket->restart ) {
                     reset_watchdog(socket->restart);
