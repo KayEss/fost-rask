@@ -6,6 +6,7 @@
 */
 
 
+#include "connection.hpp"
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
 #include <rask/clock.hpp>
@@ -87,7 +88,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
     if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != directory_inode ) {
         auto path = fostlib::coerce<fostlib::string>(location);
         auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
-        auto priority = tick::now();
+        auto priority = tick::next();
         if ( path.startswith(root) ) {
             path = path.substr(root.length());
         } else {
@@ -102,7 +103,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
             .set(dbpath, fostlib::json::object_t())
             .set(dbpath / "filetype", directory_inode)
             .set(dbpath / "name", path)
-            .set(dbpath / "prority", tick::next())
+            .set(dbpath / "prority", priority)
             .set(dbpath / "hash" / "name", fostlib::sha256(path))
             .set(dbpath / "hash" / "inode",
                 fostlib::coerce<fostlib::string>(
@@ -111,6 +112,8 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
         rehash_inodes(*this, meta);
         fostlib::log::info()
             ("", "New folder")
+            ("broadcast", broadcast(create_directory(
+                *this, priority, meta, dbpath, path)))
             ("tenant", name())
             ("path", "location", location)
             ("path", "relative", path)

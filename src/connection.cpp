@@ -36,6 +36,20 @@ void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
 }
 
 
+std::size_t rask::broadcast(const connection::out &packet) {
+    std::size_t to = 0;
+    std::unique_lock<std::mutex> lock(g_mutex);
+    for ( auto w = g_connections.begin(); w != g_connections.end(); ++w ) {
+        std::shared_ptr<rask::connection> slot(w->lock());
+        if ( slot ) {
+            ++to;
+            packet(slot);
+        }
+    }
+    return to;
+}
+
+
 void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
@@ -113,15 +127,12 @@ rask::connection::reconnect::reconnect(workers &w, const fostlib::json &conf)
 */
 
 
-rask::connection::out &rask::connection::out::size_sequence(
-    std::size_t s, boost::asio::streambuf &b
-) {
+void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf &b) {
     if ( s < 0x80 ) {
         b.sputc(s);
     } else {
         throw fostlib::exceptions::not_implemented(
-            "Large packet sizes");
+            "Large packet sizes", fostlib::coerce<fostlib::string>(s));
     }
-    return *this;
 }
 

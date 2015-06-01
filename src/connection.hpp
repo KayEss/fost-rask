@@ -10,6 +10,7 @@
 
 
 #include <fost/internet>
+#include <fost/jsondb>
 #include <fost/log>
 
 #include <boost/asio/streambuf.hpp>
@@ -22,6 +23,8 @@
 namespace rask {
 
 
+    class tenant;
+    class tick;
     struct workers;
 
 
@@ -67,13 +70,17 @@ namespace rask {
 
         class out {
             /// Output buffers
-            boost::asio::streambuf buffer;
+            std::unique_ptr<boost::asio::streambuf> buffer;
             /// The control block value
             unsigned char control;
         public:
             /// Construct an outbound packet
             out(unsigned char control)
-            : control(control) {
+            : buffer(new boost::asio::streambuf), control(control) {
+            }
+            /// Move constructor
+            out(out&& o)
+            : buffer(std::move(o.buffer)), control(o.control) {
             }
 
             template<typename I,
@@ -81,25 +88,31 @@ namespace rask {
             out &operator << (I i) {
                 if ( sizeof(i) > 1 ) {
                     auto v = boost::endian::native_to_big(i);
-                    buffer.sputn(reinterpret_cast<char *>(&v), sizeof(v));
+                    buffer->sputn(reinterpret_cast<char *>(&v), sizeof(v));
                 } else {
-                    buffer.sputc(i);
+                    buffer->sputc(i);
                 }
                 return *this;
             }
 
+            /// Return the current size of the packet
+            std::size_t size() const {
+                return buffer->size();
+            }
+
             /// Add a size control sequence
             out &size_sequence(std::size_t s) {
-                return size_sequence(s, buffer);
+                size_sequence(s, *buffer);
+                return *this;
             }
 
             /// Put the data on the wire
-            void operator () (std::shared_ptr<connection> socket) {
+            void operator () (std::shared_ptr<connection> socket) const {
                 (*this)(socket, [](){});
             }
             /// Put the data on the wire, then call the requested callback
             template<typename CB>
-            void operator () (std::shared_ptr<connection> socket, CB cb) {
+            void operator () (std::shared_ptr<connection> socket, CB cb) const {
                 auto sender = socket->sender.wrap(
                     [socket, cb](const boost::system::error_code &error, std::size_t bytes) {
                         if ( error ) {
@@ -112,30 +125,37 @@ namespace rask {
                         }
                     });
                 boost::asio::streambuf header;
-                size_sequence(buffer.size(), header);
+                size_sequence(size(), header);
                 header.sputc(control);
                 std::array<boost::asio::streambuf::const_buffers_type, 2> data{
-                    header.data(), buffer.data()};
+                    header.data(), buffer->data()};
                 async_write(socket->cnx, data, sender);
             }
 
         private:
             /// Write a size control sequence to the specified buffer
-            out &size_sequence(std::size_t, boost::asio::streambuf &);
+            static void size_sequence(std::size_t, boost::asio::streambuf &);
         };
     };
 
+
+    /// Broadcast a packet to all connections -- return how many were sent
+    std::size_t broadcast(const connection::out &packet);
 
     /// Monitor the connection
     void monitor_connection(std::shared_ptr<connection>);
     /// Read and process a packet
     void read_and_process(std::shared_ptr<connection>);
 
-
     /// Send a version packet with heartbeat
     void send_version(std::shared_ptr<connection>);
     /// Process a version packet body
     void receive_version(std::shared_ptr<connection>, std::size_t);
+
+    /// Send a create directory instruction
+    connection::out create_directory(
+        tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
+        const fostlib::string &name);
 
 
 }
