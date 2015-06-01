@@ -11,11 +11,12 @@
 
 
 rask::connection::out rask::create_directory(
-    rask::tenant &, const rask::tick &,
+    rask::tenant &, const rask::tick &priority,
     fostlib::jsondb::local &, const fostlib::jcursor &,
     const fostlib::string &name
 ) {
     connection::out packet(0x91);
+    packet << priority << name;
     return std::move(packet);
 }
 

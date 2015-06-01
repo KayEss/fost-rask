@@ -17,8 +17,7 @@ void rask::send_version(std::shared_ptr<connection> socket) {
     connection::out version(0x80);
     version << rask::known_version;
     if ( rask::server_identity() ) {
-        rask::tick time(rask::tick::now());
-        version << time.time << time.server;
+        version << rask::tick::now();
     }
     version(socket, [socket]() {
         socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));

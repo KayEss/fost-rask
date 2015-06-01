@@ -83,6 +83,7 @@ namespace rask {
             : buffer(std::move(o.buffer)), control(o.control) {
             }
 
+            /// Insert an integer in network byte order
             template<typename I,
                 typename = std::enable_if_t<std::is_integral<I>::value>>
             out &operator << (I i) {
@@ -94,6 +95,14 @@ namespace rask {
                 }
                 return *this;
             }
+            /// Insert a clock tick on the buffer
+            out &operator << (const tick &);
+            /// Insert a string on the buffer
+            out &operator << (const fostlib::string &);
+            /// Insert a fixed size memory block. If the size is not fixed then it
+            /// needs to be prefixed with a size_sequence so the remote end
+            /// knows how much data has been sent
+            out &operator << (const fostlib::const_memory_block);
 
             /// Return the current size of the packet
             std::size_t size() const {

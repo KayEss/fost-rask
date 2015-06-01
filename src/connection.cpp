@@ -7,6 +7,7 @@
 
 
 #include "peer.hpp"
+#include <rask/clock.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/log>
@@ -125,6 +126,31 @@ rask::connection::reconnect::reconnect(workers &w, const fostlib::json &conf)
 /*
     rask::connection::out
 */
+
+
+rask::connection::out &rask::connection::out::operator << (const tick &t) {
+    return (*this) << t.time << t.server;
+}
+
+
+rask::connection::out &rask::connection::out::operator << (
+    const fostlib::string &s
+) {
+    // This implementation only works for narrow character string
+    return size_sequence(s.native_length()) <<
+        fostlib::const_memory_block(s.c_str(), s.c_str() + s.native_length());
+}
+
+
+rask::connection::out &rask::connection::out::operator << (
+    const fostlib::const_memory_block b
+) {
+    if ( b.first != b.second )
+        buffer->sputn(reinterpret_cast<const char *>(b.first),
+            reinterpret_cast<const char*>(b.second)
+                - reinterpret_cast<const char*>(b.first));
+    return *this;
+}
 
 
 void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf &b) {
