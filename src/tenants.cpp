@@ -7,6 +7,7 @@
 
 
 #include "sweep.tenant.hpp"
+#include "hash.hpp"
 #include <rask/clock.hpp>
 #include <rask/tenants.hpp>
 
@@ -107,6 +108,7 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
                 fostlib::coerce<fostlib::string>(
                     fostlib::coerce<fostlib::base64_string>(hash.digest())))
             .commit();
+        rehash_inodes(*this, meta);
         fostlib::log::info()
             ("", "New folder")
             ("tenant", name())
