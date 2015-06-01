@@ -10,6 +10,7 @@
 
 
 #include <fost/internet>
+#include <fost/log>
 
 #include <boost/asio/streambuf.hpp>
 #include <boost/endian/conversion.hpp>
@@ -93,9 +94,33 @@ namespace rask {
             }
 
             /// Put the data on the wire
-            void operator () (std::shared_ptr<connection> socket);
+            void operator () (std::shared_ptr<connection> socket) {
+                (*this)(socket, [](){});
+            }
+            /// Put the data on the wire, then call the requested callback
+            template<typename CB>
+            void operator () (std::shared_ptr<connection> socket, CB cb) {
+                auto sender = socket->sender.wrap(
+                    [socket, cb](const boost::system::error_code &error, std::size_t bytes) {
+                        if ( error ) {
+                            fostlib::log::error()
+                                ("", "Error sending data packet")
+                                ("connection", socket->id)
+                                ("error", error.message().c_str());
+                        } else {
+                            cb();
+                        }
+                    });
+                boost::asio::streambuf header;
+                size_sequence(buffer.size(), header);
+                header.sputc(control);
+                std::array<boost::asio::streambuf::const_buffers_type, 2> data{
+                    header.data(), buffer.data()};
+                async_write(socket->cnx, data, sender);
+            }
 
         private:
+            /// Write a size control sequence to the specified buffer
             out &size_sequence(std::size_t, boost::asio::streambuf &);
         };
     };

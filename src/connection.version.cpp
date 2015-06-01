@@ -20,7 +20,13 @@ void rask::send_version(std::shared_ptr<connection> socket) {
         rask::tick time(rask::tick::now());
         version << time.time << time.server;
     }
-    version(socket);
+    version(socket, [socket]() {
+        socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+        socket->heartbeat.async_wait(
+            [socket](const boost::system::error_code &) {
+                send_version(socket);
+            });
+    });
 }
 
 
