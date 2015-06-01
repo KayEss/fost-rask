@@ -37,12 +37,21 @@ rask::pool::pool(std::size_t threads)
                 try {
                     again = false;
                     io_service.run();
+                } catch ( fostlib::exceptions::exception &e ) {
+                    again = true;
+                    log::critical()
+                        ("", "Rask pool thread caught an exception")
+                        ("what", e.what())
+                        ("data", e.data());
+                    fostlib::absorb_exception();
                 } catch ( std::exception &e ) {
                     again = true;
                     log::critical("Rask pool thread caught an exception", e.what());
+                    fostlib::absorb_exception();
                 } catch ( ... ) {
                     again = true;
                     log::critical("Rask pool thread caught an exception");
+                    fostlib::absorb_exception();
                 }
             } while (again);
         });
