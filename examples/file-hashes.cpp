@@ -22,7 +22,7 @@ FSL_MAIN(
         out << "Specify one or more files to hash" << std::endl;
         return 1;
     }
-    for ( auto fileindex = 1; fileindex < args.size(); ++fileindex ) {
+    for ( auto fileindex = 1u; fileindex < args.size(); ++fileindex ) {
         auto filename(coerce<boost::filesystem::path>(args[fileindex].value()));
         out << filename << std::endl;
         rask::const_file_block_iterator end;
