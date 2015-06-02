@@ -24,14 +24,20 @@ rask::tick::tick(int64_t t, uint32_t s)
 }
 
 
+rask::tick::tick(const fostlib::json &j)
+: time(fostlib::coerce<int64_t>(j[0])),
+        server(fostlib::coerce<uint32_t>(j[1])),
+        reserved(0) {
+}
+
+
 rask::tick rask::tick::now() {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
         fostlib::jsondb::local server(*dbp);
         fostlib::jcursor location("time");
         if ( server.has_key(location) ) {
-            return tick(fostlib::coerce<int64_t>(server[location][0]),
-                fostlib::coerce<uint32_t>(server[location][1]));
+            return tick(server[location]);
         } else {
             return tick(0u);
         }
@@ -78,7 +84,7 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
         server.transformation([heard](fostlib::json &db) {
             fostlib::jcursor location("time");
             if ( db.has_key(location) ) {
-                rask::tick mytime(fostlib::coerce<int64_t>(db[location]));
+                rask::tick mytime(db[location]);
                 if ( mytime < heard ) {
                     location.replace(db, fostlib::coerce<fostlib::json>(heard));
                 }
