@@ -79,7 +79,7 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
             if ( db.has_key(location) ) {
                 rask::tick mytime(fostlib::coerce<int64_t>(db[location]));
                 if ( mytime < heard ) {
-                    location.replace(db, heard.time + 1);
+                    location.replace(db, fostlib::coerce<fostlib::json>(heard));
                 }
             } else {
                 location.insert(db, heard.time);
