@@ -30,7 +30,8 @@ rask::tick rask::tick::now() {
         fostlib::jsondb::local server(*dbp);
         fostlib::jcursor location("time");
         if ( server.has_key(location) ) {
-            return tick(fostlib::coerce<int64_t>(server[location]));
+            return tick(fostlib::coerce<int64_t>(server[location][0]),
+                fostlib::coerce<uint32_t>(server[location][1]));
         } else {
             return tick(0u);
         }
@@ -53,11 +54,11 @@ rask::tick rask::tick::next() {
             */
             fostlib::jcursor location("time");
             if ( db.has_key(location) ) {
-                time = fostlib::coerce<int64_t>(db[location]) + 1;
-                location.replace(db, time);
+                time = fostlib::coerce<int64_t>(db[location][0]) + 1;
+                location.replace(db, fostlib::coerce<fostlib::json>(tick(time)));
             } else {
                 time = 1;
-                location.insert(db, time);
+                location.insert(db, fostlib::coerce<fostlib::json>(tick(time)));
             }
         });
         server.commit();
