@@ -33,6 +33,16 @@ namespace rask {
         /// Reserved to ensure we get 16 good bytes
         const uint32_t reserved;
 
+        /// Compare two ticks
+        bool operator < (const tick &t) const {
+            if ( time < t.time )
+                return true;
+            else if ( time == t.time )
+                return server < t.server;
+            else
+                return false;
+        }
+
         /// Return the current time
         static tick now();
         /// A Lamport clock used to give each event a unique ID
