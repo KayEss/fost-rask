@@ -77,7 +77,7 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
             fostlib::jcursor location("time");
             if ( db.has_key(location) && fostlib::coerce<int64_t>(db[location]) < t ) {
                 location.replace(db, t + 1);
-            } else {
+            } else if ( !db.has_key(location) ) {
                 location.insert(db, t);
             }
         });
@@ -98,4 +98,3 @@ fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(rask::tick t) 
 fostlib::digester &fostlib::operator << (digester &d, rask::tick t) {
     return d << const_memory_block(&t, &t + sizeof(rask::tick));
 }
-
