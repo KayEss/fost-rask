@@ -43,8 +43,7 @@ std::pair<rask::tick, fostlib::nullable<fostlib::string>> rask::tick::now() {
             return std::make_pair(tick(0u), hash);
         }
     } else {
-        throw fostlib::exceptions::not_implemented(
-            "tick::now() when there is no server database");
+        return std::make_pair(tick(0u), fostlib::null);
     }
 }
 
