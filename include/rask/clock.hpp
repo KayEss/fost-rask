@@ -45,8 +45,8 @@ namespace rask {
                 return false;
         }
 
-        /// Return the current time
-        static tick now();
+        /// Return the current time with optional hash
+        static std::pair<tick, fostlib::nullable<fostlib::string>> now();
         /// A Lamport clock used to give each event a unique ID
         static tick next();
         /// Update the clock here if required

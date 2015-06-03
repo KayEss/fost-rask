@@ -31,15 +31,16 @@ rask::tick::tick(const fostlib::json &j)
 }
 
 
-rask::tick rask::tick::now() {
+std::pair<rask::tick, fostlib::nullable<fostlib::string>> rask::tick::now() {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
         fostlib::jsondb::local server(*dbp);
+        auto hash(fostlib::coerce<fostlib::nullable<fostlib::string>>(server["hash"]));
         fostlib::jcursor location("time");
         if ( server.has_key(location) ) {
-            return tick(server[location]);
+            return std::make_pair(tick(server[location]), hash);
         } else {
-            return tick(0u);
+            return std::make_pair(tick(0u), hash);
         }
     } else {
         throw fostlib::exceptions::not_implemented(
