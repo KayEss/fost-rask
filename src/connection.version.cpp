@@ -49,8 +49,30 @@ void rask::receive_version(connection::in &packet) {
         tick::overheard(time.time, time.server);
         logger("tick", time);
         if ( !packet.empty() ) {
+            // We got a hash
             auto hash(packet.read(32));
-            logger("hash", fostlib::coerce<fostlib::base64_string>(hash).underlying().underlying().c_str());
+            auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+            logger("hash",  hash64.underlying().underlying().c_str());
+            // Store it
+            std::array<unsigned char, 32> hash_array;
+            std::copy(hash.begin(), hash.end(), hash_array.begin());
+            packet.socket->hash = hash_array;
+            // Now compare to see if we need to have a conversation about it
+            auto myhash = tick::now();
+            if ( !myhash.second.isnull() &&
+                    myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
+                std::weak_ptr<connection::conversation> current(packet.socket->chat.load());
+                if ( !current.lock() ) {
+                    // Different hashes and probably no conversation
+                    auto chat = std::make_shared<connection::conversation>(packet.socket);
+                    if ( packet.socket->chat.compare_exchange_strong(current, chat) ) {
+                        // Ok, certainly no ongoing conversation
+                        logger("conversation", true);
+                    } else {
+                        logger("conversation", false);
+                    }
+                }
+            }
         }
     }
 }

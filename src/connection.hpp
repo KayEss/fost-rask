@@ -70,6 +70,21 @@ namespace rask {
         /// Store the reconnect so the watchdog can be reset
         std::shared_ptr<reconnect> restart;
 
+
+        /// Class for storing conversation state
+        class conversation {
+            std::weak_ptr<connection> wsocket;
+        public:
+            conversation(std::shared_ptr<connection>);
+        };
+
+        /// Store information about the server on the other end
+        std::atomic<std::array<unsigned char, 32>> hash;
+        /// Store a weak link to a conversion in progress
+        std::atomic<std::weak_ptr<conversation>> chat;
+
+
+        /// Build an outbound packet
         class out {
             /// Output buffers
             std::unique_ptr<boost::asio::streambuf> buffer;
@@ -154,10 +169,6 @@ namespace rask {
         /// Allows a network connection to be read from
         class in {
             friend void read_and_process(std::shared_ptr<connection>);
-            /// The connection we're reading from
-            std::shared_ptr<connection> socket;
-            /// The number of bytes remaining to be read
-            std::size_t remaining;
             /// Construct
             in(std::shared_ptr<connection> socket, std::size_t s)
             : socket(socket), remaining(s) {
@@ -165,6 +176,9 @@ namespace rask {
             /// Throw an EOF exception if there isn't enough data
             void check(std::size_t) const;
         public:
+            /// The connection we're reading from
+            std::shared_ptr<connection> socket;
+
             /// Destructor clears unprocessed input
             ~in();
 
@@ -213,6 +227,10 @@ namespace rask {
             }
             /// Read a number of bytes
             std::vector<unsigned char> read(std::size_t b);
+
+        private:
+            /// The number of bytes remaining to be read
+            std::size_t remaining;
         };
     };
 
