@@ -73,10 +73,11 @@ namespace rask {
         /// Class for storing conversation state
         class conversation;
         /// Store information about the server on the other end
-        std::atomic<std::array<unsigned char, 32>> hash;
-        /// Store a weak link to a conversion in progress
         // alignas works around a gcc bug
-        alignas(32) std::atomic<std::weak_ptr<conversation>> chat;
+        std::atomic<std::array<unsigned char, 32>> hash;
+        // /// Store a weak link to a conversion in progress
+        // // alignas works around a gcc bug
+        // alignas(128) std::atomic<std::weak_ptr<conversation>> chat;
 
 
         /// Build an outbound packet
