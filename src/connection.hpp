@@ -99,12 +99,14 @@ namespace rask {
             }
             /// Insert a clock tick on the buffer
             out &operator << (const tick &);
-            /// Insert a string on the buffer
+            /// Insert a string on the buffer, with its size header
             out &operator << (const fostlib::string &);
             /// Insert a fixed size memory block. If the size is not fixed then it
             /// needs to be prefixed with a size_sequence so the remote end
             /// knows how much data has been sent
             out &operator << (const fostlib::const_memory_block);
+            /// Insert a vector of bytes onto the stream. No size prefix is written.
+            out &operator << (const std::vector<unsigned char> &);
 
             /// Return the current size of the packet
             std::size_t size() const {

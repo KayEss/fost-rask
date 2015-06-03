@@ -17,7 +17,15 @@ void rask::send_version(std::shared_ptr<connection> socket) {
     connection::out version(0x80);
     version << rask::known_version;
     if ( rask::server_identity() ) {
-        version << rask::tick::now();
+        auto state = rask::tick::now();
+        version << state.first;
+        if ( !state.second.isnull() ) {
+            const auto hash = fostlib::coerce<std::vector<unsigned char>>(
+                    fostlib::base64_string(
+                        fostlib::coerce<fostlib::ascii_string>(
+                            state.second.value())));
+            version << hash;
+        }
     }
     version(socket, [socket]() {
         socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
@@ -40,6 +48,10 @@ void rask::receive_version(connection::in &packet) {
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
         logger("tick", time);
+        if ( !packet.empty() ) {
+            auto hash(packet.read(32));
+            logger("hash", fostlib::coerce<fostlib::base64_string>(hash).underlying().underlying().c_str());
+        }
     }
 }
 

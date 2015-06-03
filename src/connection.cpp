@@ -155,6 +155,16 @@ rask::connection::out &rask::connection::out::operator << (
 }
 
 
+rask::connection::out &rask::connection::out::operator << (
+    const std::vector<unsigned char> &v
+) {
+    if ( v.size() ) {
+        buffer->sputn(reinterpret_cast<const char *>(v.data()), v.size());
+    }
+    return *this;
+}
+
+
 void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf &b) {
     if ( s < 0x80 ) {
         b.sputc(s);
