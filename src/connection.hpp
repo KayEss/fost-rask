@@ -19,7 +19,6 @@
 #include <boost/endian/conversion.hpp>
 
 #include <atomic>
-#include <iostream>
 
 
 namespace rask {
@@ -72,11 +71,7 @@ namespace rask {
 
 
         /// Class for storing conversation state
-        class conversation {
-            std::weak_ptr<connection> wsocket;
-        public:
-            conversation(std::shared_ptr<connection>);
-        };
+        class conversation;
 
         /// Store information about the server on the other end
         std::atomic<std::array<unsigned char, 32>> hash;

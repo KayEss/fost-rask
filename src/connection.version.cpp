@@ -6,7 +6,7 @@
 */
 
 
-#include "connection.hpp"
+#include "connection.conversation.hpp"
 #include <rask/clock.hpp>
 #include <rask/server.hpp>
 
@@ -66,10 +66,11 @@ void rask::receive_version(connection::in &packet) {
                     // Different hashes and probably no conversation
                     auto chat = std::make_shared<connection::conversation>(packet.socket);
                     if ( packet.socket->chat.compare_exchange_strong(current, chat) ) {
-                        // Ok, certainly no ongoing conversation
-                        logger("conversation", true);
+                        // OK, certainly no ongoing conversation
+                        chat->tenants(chat);
+                        logger("conversation", "started");
                     } else {
-                        logger("conversation", false);
+                        logger("conversation", "already happening");
                     }
                 }
             }

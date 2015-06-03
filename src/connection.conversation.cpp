@@ -6,12 +6,16 @@
 */
 
 
-#include "connection.hpp"
+#include "connection.conversation.hpp"
 
 #include <fost/log>
 
 
 rask::connection::conversation::conversation(std::shared_ptr<connection> s)
 : wsocket(s) {
+}
+
+
+void rask::connection::conversation::tenants(std::shared_ptr<conversation> self) {
 }
 
