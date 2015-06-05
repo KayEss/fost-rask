@@ -21,12 +21,12 @@ namespace rask {
         explicit tick(int64_t);
         /// Construct any tick
         tick(int64_t, uint32_t);
-        /// Construct a clock from JSON
-        tick(const fostlib::json &);
 
     public:
         /// Allow copying
         tick(const tick &) = default;
+        /// Construct a clock from JSON
+        tick(const fostlib::json &);
 
         /// The most significant part of the time
         const int64_t time;
