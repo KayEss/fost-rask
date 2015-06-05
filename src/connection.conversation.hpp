@@ -11,14 +11,23 @@
 
 #include "connection.hpp"
 
+#include <beanbag/beanbag>
+
 
 namespace rask {
 
 
+    class peer;
+
+
     /// Class for storing conversation state
     class connection::conversation {
+        /// The tenants database
+        beanbag::jsondb_ptr tenants_dbp;
         /// Store the socket so we can get at it
         std::shared_ptr<connection> socket;
+        /// The remote peer we're talking to
+        peer &partner;
     public:
         /// Construct from a connection
         conversation(std::shared_ptr<connection>);
@@ -26,7 +35,7 @@ namespace rask {
         ~conversation();
 
         /// Send information about tenants
-        void tenants(std::shared_ptr<conversation>);
+        static void tenants(std::shared_ptr<conversation>);
     };
 
 
