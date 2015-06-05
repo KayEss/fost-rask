@@ -23,7 +23,7 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
             const fostlib::json connect(peers["connect"]);
             for ( auto c(connect.begin()); c != connect.end(); ++c ) {
                 auto connect = std::make_shared<connection::reconnect>(w, *c);
-                peer_with(connect);
+                peer_with(w, connect);
             }
         }
     };
@@ -33,12 +33,12 @@ void rask::peer(workers &w, const fostlib::json &dbconf) {
 }
 
 
-void rask::peer_with(std::shared_ptr<connection::reconnect> client) {
+void rask::peer_with(workers &w, std::shared_ptr<connection::reconnect> client) {
     fostlib::log::debug("About to try to connect to", client->configuration);
-    auto socket = std::make_shared<rask::connection>(client->watchdog.get_io_service());
+    auto socket = std::make_shared<rask::connection>(w);
     socket->restart = client;
     client->socket = socket;
-    reset_watchdog(client);
+    reset_watchdog(w, client);
     boost::asio::ip::tcp::resolver resolver(client->watchdog.get_io_service());
     boost::asio::ip::tcp::resolver::query q(
         fostlib::coerce<fostlib::string>(client->configuration["host"]).c_str(),
@@ -56,10 +56,10 @@ void rask::peer_with(std::shared_ptr<connection::reconnect> client) {
 }
 
 
-void rask::reset_watchdog(std::shared_ptr<connection::reconnect> client) {
+void rask::reset_watchdog(workers &w, std::shared_ptr<connection::reconnect> client) {
     client->watchdog.expires_from_now(boost::posix_time::seconds(15));
     client->watchdog.async_wait(
-        [client](const boost::system::error_code &error) {
+        [&w, client](const boost::system::error_code &error) {
             std::shared_ptr<connection> socket(client->socket.lock());
             if ( !error ) {
                 fostlib::log::error()
@@ -70,7 +70,7 @@ void rask::reset_watchdog(std::shared_ptr<connection::reconnect> client) {
                     socket->cnx.cancel();
                     socket->cnx.close();
                 }
-                peer_with(client);
+                peer_with(w, client);
             }
         });
 }

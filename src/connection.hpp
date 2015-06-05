@@ -38,10 +38,12 @@ namespace rask {
         static std::atomic<int64_t> g_id;
     public:
         /// Construct a connection
-        connection(boost::asio::io_service&);
+        connection(rask::workers&);
         /// Destructor so we can log failed connections
         ~connection();
 
+        /// Worker pool used for this connection
+        rask::workers &workers;
         /// The connection ID used in log messages
         const int64_t id;
 
@@ -57,7 +59,7 @@ namespace rask {
         /// Structure used to manage
         class reconnect {
         public:
-            reconnect(workers &, const fostlib::json &);
+            reconnect(rask::workers &, const fostlib::json &);
             /// The network configuration to be used to connect
             fostlib::json configuration;
             /// The watchdog timer that will be responsible for reconnecting

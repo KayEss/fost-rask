@@ -83,7 +83,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                         ("packet-size", packet_size);
                 }
                 if ( socket->restart ) {
-                    reset_watchdog(socket->restart);
+                    reset_watchdog(socket->workers, socket->restart);
                 }
                 read_and_process(socket);
             } catch ( std::exception &e ) {
@@ -105,8 +105,9 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 std::atomic<int64_t> rask::connection::g_id(0);
 
 
-rask::connection::connection(boost::asio::io_service &service)
-: id(++g_id), cnx(service), sender(service), heartbeat(service),
+rask::connection::connection(rask::workers &w)
+: workers(w), id(++g_id), cnx(w.low_latency.io_service),
+        sender(w.low_latency.io_service), heartbeat(w.low_latency.io_service),
         conversing(false) {
 }
 
@@ -121,7 +122,7 @@ rask::connection::~connection() {
 */
 
 
-rask::connection::reconnect::reconnect(workers &w, const fostlib::json &conf)
+rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &conf)
 : configuration(conf), watchdog(w.low_latency.io_service) {
 }
 

@@ -15,11 +15,14 @@
 namespace rask {
 
 
+    struct workers;
+
+
     /// Kick off a peering arrangement
-    void peer_with(std::shared_ptr<connection::reconnect>);
+    void peer_with(workers &, std::shared_ptr<connection::reconnect>);
 
     /// Reset the watchdog timer
-    void reset_watchdog(std::shared_ptr<connection::reconnect>);
+    void reset_watchdog(workers &w, std::shared_ptr<connection::reconnect>);
 
 
 }
