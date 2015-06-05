@@ -252,7 +252,7 @@ namespace rask {
     void create_directory(connection::in &);
 
     /// Build a tenant instruction
-    connection::out tenant_name(const fostlib::string &name);
+    connection::out tenant_packet(const fostlib::string &name);
 
 
 }

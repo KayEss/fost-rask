@@ -9,7 +9,7 @@
 #include "connection.hpp"
 
 
-rask::connection::out rask::tenant_name(const fostlib::string &name) {
+rask::connection::out rask::tenant_packet(const fostlib::string &name) {
     connection::out packet(0x81);
     packet << name;
     return std::move(packet);
