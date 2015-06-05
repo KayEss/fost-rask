@@ -253,6 +253,8 @@ namespace rask {
 
     /// Build a tenant instruction
     connection::out tenant_packet(const fostlib::string &name);
+    /// React to a tenant that has come in
+    void tenant_packet(connection::in &packet);
 
 
 }

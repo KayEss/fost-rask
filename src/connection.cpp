@@ -73,6 +73,8 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 connection::in packet(socket, packet_size);
                 if ( control == 0x80 ) {
                     receive_version(packet);
+                } else if ( control == 0x81 ) {
+                    tenant_packet(packet);
                 } else if ( control == 0x91 ) {
                     create_directory(packet);
                 } else {
