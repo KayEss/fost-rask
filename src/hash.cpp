@@ -8,6 +8,7 @@
 
 #include "hash.hpp"
 #include <rask/configuration.hpp>
+#include <rask/tenant.hpp>
 
 #include <beanbag/beanbag>
 #include <fost/crypto>

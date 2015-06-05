@@ -11,7 +11,7 @@
 #include "hash.hpp"
 #include <rask/clock.hpp>
 #include <rask/configuration.hpp>
-#include <rask/tenants.hpp>
+#include <rask/tenant.hpp>
 
 #include <beanbag/beanbag>
 #include <f5/threading/map.hpp>

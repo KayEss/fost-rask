@@ -9,12 +9,13 @@
 #pragma once
 
 
-#include <rask/tenants.hpp>
-
 #include <fost/jsondb>
 
 
 namespace rask {
+
+
+    class tenant;
 
 
     /// Re-hash starting at the inode list level
