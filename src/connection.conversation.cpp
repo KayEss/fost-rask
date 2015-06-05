@@ -56,5 +56,15 @@ void rask::connection::conversation::inodes(
     std::shared_ptr<conversation> self, std::shared_ptr<tenant> tenant
 ) {
     fostlib::log::warning("Need to send inodes");
+    fostlib::jsondb::local inodes(*tenant->beanbag(), "inodes");
+    for ( auto iter(inodes.data().begin()); iter != inodes.data().end(); ++iter ) {
+        fostlib::log::debug()
+            ("", "sending create_directory")
+            ("inode", *iter);
+        create_directory(*tenant, tick((*iter)["priority"]),
+                inodes, fostlib::jcursor(),
+                fostlib::coerce<fostlib::string>((*iter)["name"]))
+            (self->socket);
+    }
 }
 
