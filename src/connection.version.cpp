@@ -48,6 +48,7 @@ void rask::receive_version(connection::in &packet) {
     logger("version", version);
     if ( !packet.empty() ) {
         auto identity(packet.read<uint32_t>());
+        packet.socket->identity = identity;
         peer &server(peer::server(identity));
         logger("peer", identity);
         auto time(packet.read<tick>());

@@ -108,7 +108,7 @@ std::atomic<int64_t> rask::connection::g_id(0);
 rask::connection::connection(rask::workers &w)
 : workers(w), id(++g_id), cnx(w.low_latency.io_service),
         sender(w.low_latency.io_service), heartbeat(w.low_latency.io_service),
-        conversing(false) {
+        identity(0), conversing(false) {
 }
 
 

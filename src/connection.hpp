@@ -74,6 +74,8 @@ namespace rask {
 
         /// Class for storing conversation state
         class conversation;
+        /// The identity of the server we're connected with
+        std::atomic<uint32_t> identity;
         /// True if there is an active conversation instance
         std::atomic<bool> conversing;
 
