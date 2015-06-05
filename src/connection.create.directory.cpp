@@ -26,10 +26,14 @@ void rask::create_directory(rask::connection::in &packet) {
     logger("", "Create directory");
     auto priority(packet.read<tick>());
     logger("priority", priority);
-    auto tenant(packet.read<fostlib::string>());
+    auto tenant(known_tenant(packet.read<fostlib::string>()));
     auto name(packet.read<fostlib::string>());
+    if ( !tenant->local_path.empty() ) {
+        boost::filesystem::create_directories(
+            tenant->local_path / fostlib::coerce<boost::filesystem::path>(name));
+    }
     logger
-        ("tenant", tenant)
+        ("tenant", tenant->name())
         ("name", name);
 }
 
