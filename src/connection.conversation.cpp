@@ -36,7 +36,7 @@ void rask::connection::conversation::tenants(std::shared_ptr<conversation> self)
                 auto tenant = fostlib::coerce<fostlib::string>(iter.key());
                 auto ptenant = self->partner.tenants.find(tenant);
                 if ( !ptenant ) {
-                    tenant_packet(tenant)(self->socket);
+                    tenant_packet(tenant, *iter)(self->socket);
                 }
             }
         });

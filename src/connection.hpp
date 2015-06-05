@@ -151,8 +151,8 @@ namespace rask {
                 boost::asio::streambuf header;
                 size_sequence(size(), header);
                 header.sputc(control);
-                std::array<boost::asio::streambuf::const_buffers_type, 2> data{
-                    header.data(), buffer->data()};
+                std::array<boost::asio::streambuf::const_buffers_type, 2>
+                    data{header.data(), buffer->data()};
                 async_write(socket->cnx, data, sender);
             }
 
@@ -252,7 +252,8 @@ namespace rask {
     void create_directory(connection::in &);
 
     /// Build a tenant instruction
-    connection::out tenant_packet(const fostlib::string &name);
+    connection::out tenant_packet(const fostlib::string &name,
+            const fostlib::json &meta);
     /// React to a tenant that has come in
     void tenant_packet(connection::in &packet);
 

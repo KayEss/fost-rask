@@ -41,7 +41,7 @@ namespace rask {
         class tenant {
         public:
             /// The other server's hash for this tenant
-            std::atomic<std::vector<unsigned char>> hash;
+            std::atomic<std::array<unsigned char, 32>> hash;
         };
 
         /// The tenants

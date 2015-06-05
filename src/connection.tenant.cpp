@@ -11,9 +11,16 @@
 #include <rask/workers.hpp>
 
 
-rask::connection::out rask::tenant_packet(const fostlib::string &name) {
+rask::connection::out rask::tenant_packet(
+    const fostlib::string &name, const fostlib::json &meta
+) {
     connection::out packet(0x81);
     packet << name;
+    const auto hash = fostlib::coerce<std::vector<unsigned char>>(
+            fostlib::base64_string(
+                fostlib::coerce<fostlib::ascii_string>(
+                    fostlib::coerce<fostlib::string>(meta["hash"]["data"]))));
+    packet << hash;
     return std::move(packet);
 }
 
@@ -25,11 +32,18 @@ void rask::tenant_packet(connection::in &packet) {
         ("connection", packet.socket_id());
     auto name(packet.read<fostlib::string>());
     logger("name", name);
+    auto hash(packet.read(32));
+    auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+    logger("hash",  hash64.underlying().underlying().c_str());
     packet.socket->workers.high_latency.io_service.post(
-        [name = std::move(name), socket = packet.socket]() {
+        [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
             if ( socket->identity ) {
                 peer &partner(peer::server(socket->identity));
-                partner.tenants.emplace_if_not_found(name);
+                auto &tenant(partner.tenants.add_if_not_found(name,
+                    [](){ return std::make_unique<peer::tenant>(); }));
+                std::array<unsigned char, 32> hash_array;
+                std::copy(hash.begin(), hash.end(), hash_array.begin());
+                tenant->hash = hash_array;
             }
         });
 }
