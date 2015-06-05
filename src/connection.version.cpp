@@ -16,7 +16,8 @@
 void rask::send_version(std::shared_ptr<connection> socket) {
     connection::out version(0x80);
     version << rask::known_version;
-    if ( rask::server_identity() ) {
+    if ( server_identity() ) {
+        version << server_identity();
         auto state = rask::tick::now();
         version << state.first;
         if ( !state.second.isnull() ) {
@@ -45,6 +46,8 @@ void rask::receive_version(connection::in &packet) {
     const auto version(packet.read<int8_t>());
     logger("version", version);
     if ( !packet.empty() ) {
+        auto identity(packet.read<uint32_t>());
+        logger("peer", identity);
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
         logger("tick", time);
