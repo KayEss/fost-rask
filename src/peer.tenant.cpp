@@ -8,7 +8,3 @@
 
 #include "peer.hpp"
 
-
-rask::peer::tenant::tenant()
-: inodes(5) {
-}

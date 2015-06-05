@@ -16,6 +16,11 @@
 #include <f5/threading/ring.hpp>
 
 
+/**
+    The peers are all about the data coming in from another from another
+    node.
+*/
+
 namespace rask {
 
 
@@ -29,7 +34,7 @@ namespace rask {
     void reset_watchdog(workers &w, std::shared_ptr<connection::reconnect>);
 
 
-    /// Store information about a peer
+    /// Store information we've heard about a peer
     class peer {
     public:
         /// Return the peer corresponding to the identifier given
@@ -52,20 +57,16 @@ namespace rask {
 
 class rask::peer::tenant {
 public:
-    /// Construct a new tenant
-    tenant();
-
     /// The other server's hash for this tenant
     std::atomic<std::array<unsigned char, 32>> hash;
 
     class inode;
 
     /// The inodes under discussion
-    f5::tsring<inode> inodes;
+    f5::tsmap<fostlib::string, inode> inodes;
 };
 
 
 class rask::peer::tenant::inode {
 };
-
 
