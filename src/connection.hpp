@@ -152,7 +152,7 @@ namespace rask {
                 size_sequence(size(), header);
                 header.sputc(control);
                 std::array<boost::asio::streambuf::const_buffers_type, 2>
-                    data{header.data(), buffer->data()};
+                    data{{header.data(), buffer->data()}};
                 async_write(socket->cnx, data, sender);
             }
 
