@@ -14,12 +14,13 @@
 #include <rask/tenants.hpp>
 
 #include <beanbag/beanbag>
+#include <f5/threading/map.hpp>
 #include <fost/crypto>
 #include <fost/log>
 
 
 namespace {
-    fostlib::threadsafe_store<std::shared_ptr<rask::tenant>> g_tenants;
+    f5::tsmap<fostlib::string, std::shared_ptr<rask::tenant>> g_tenants;
     const fostlib::json directory_inode("directory");
 }
 
@@ -32,12 +33,13 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
             const fostlib::json subscriptions(tenants["subscription"]);
             for ( auto t(subscriptions.begin()); t != subscriptions.end(); ++t ) {
                 auto key(fostlib::coerce<fostlib::string>(t.key()));
-                if ( g_tenants.find(key).size() == 0 ) {
-                    fostlib::log::info("New tenant for processing", t.key(), *t);
-                    auto tp = std::make_shared<tenant>(key, *t);
-                    g_tenants.add(key, tp);
-                    start_sweep(w, tp);
-                }
+                g_tenants.add_if_not_found(key,
+                    [&]() {
+                        fostlib::log::info("New tenant for processing", t.key(), *t);
+                        auto tp = std::make_shared<tenant>(key, *t);
+                        start_sweep(w, tp);
+                        return tp;
+                    });
             }
         }
     };
