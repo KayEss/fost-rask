@@ -38,11 +38,7 @@ namespace rask {
         std::atomic<std::array<unsigned char, 32>> hash;
 
         /// The view of a tenant that the other server has
-        class tenant {
-        public:
-            /// The other server's hash for this tenant
-            std::atomic<std::array<unsigned char, 32>> hash;
-        };
+        class tenant;
 
         /// The tenants
         f5::tsmap<fostlib::string, std::unique_ptr<tenant>> tenants;
@@ -50,4 +46,12 @@ namespace rask {
 
 
 }
+
+
+
+class rask::peer::tenant {
+public:
+    /// The other server's hash for this tenant
+    std::atomic<std::array<unsigned char, 32>> hash;
+};
 
