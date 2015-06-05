@@ -106,7 +106,8 @@ std::atomic<int64_t> rask::connection::g_id(0);
 
 
 rask::connection::connection(boost::asio::io_service &service)
-: id(++g_id), cnx(service), sender(service), heartbeat(service) {
+: id(++g_id), cnx(service), sender(service), heartbeat(service),
+        conversing(false) {
 }
 
 

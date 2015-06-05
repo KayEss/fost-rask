@@ -59,20 +59,15 @@ void rask::receive_version(connection::in &packet) {
             packet.socket->hash = hash_array;
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
-            if ( !myhash.second.isnull() &&
+            if ( packet.socket->conversing ) {
+                logger("conversation", "ongoing");
+            } else if ( !myhash.second.isnull() &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
-                // std::weak_ptr<connection::conversation> current(packet.socket->chat.load());
-                // if ( !current.lock() ) {
-                //     // Different hashes and probably no conversation
-                //     auto chat = std::make_shared<connection::conversation>(packet.socket);
-                //     if ( packet.socket->chat.compare_exchange_strong(current, chat) ) {
-                //         // OK, certainly no ongoing conversation
-                //         chat->tenants(chat);
-                //         logger("conversation", "started");
-                //     } else {
-                //         logger("conversation", "already happening");
-                //     }
-                // }
+                auto chat = std::make_shared<connection::conversation>(packet.socket);
+                chat->tenants(chat);
+                logger("conversation", "started");
+            } else {
+                logger("conversation", "not needed");
             }
         }
     }

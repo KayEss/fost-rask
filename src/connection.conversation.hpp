@@ -18,10 +18,12 @@ namespace rask {
     /// Class for storing conversation state
     class connection::conversation {
         /// Store the socket so we can get at it
-        std::weak_ptr<connection> wsocket;
+        std::shared_ptr<connection> socket;
     public:
         /// Construct from a connection
         conversation(std::shared_ptr<connection>);
+        /// Destructor so we can reset the conversing flag
+        ~conversation();
 
         /// Send information about tenants
         void tenants(std::shared_ptr<conversation>);

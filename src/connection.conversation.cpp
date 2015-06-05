@@ -11,8 +11,12 @@
 #include <fost/log>
 
 
-rask::connection::conversation::conversation(std::shared_ptr<connection> s)
-: wsocket(s) {
+rask::connection::conversation::conversation(std::shared_ptr<connection> socket)
+: socket(socket) {
+    socket->conversing = true;
+}
+rask::connection::conversation::~conversation() {
+    socket->conversing = false;
 }
 
 
