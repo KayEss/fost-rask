@@ -41,10 +41,20 @@ void rask::connection::conversation::tenants(std::shared_ptr<conversation> self)
                 } else {
                     std::shared_ptr<tenant> mytenant(known_tenant(name));
                     if ( mytenant->hash.load() != (*ptenant)->hash.load() ) {
-                        fostlib::log::warning("Need to send inodes");
+                        self->socket->workers.high_latency.io_service.post(
+                            [self, mytenant]() {
+                                inodes(self, mytenant);
+                            });
                     }
                 }
             }
         });
+}
+
+
+void rask::connection::conversation::inodes(
+    std::shared_ptr<conversation> self, std::shared_ptr<tenant> tenant
+) {
+    fostlib::log::warning("Need to send inodes");
 }
 
