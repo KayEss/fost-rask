@@ -37,6 +37,8 @@ namespace rask {
         const fostlib::accessors<fostlib::json> configuration;
         /// The tenant beanbag
         beanbag::jsondb_ptr beanbag() const;
+        /// The local filesystem path
+        boost::filesystem::path local_path;
 
         /// The current hash
         std::atomic<std::array<unsigned char, 32>> hash;

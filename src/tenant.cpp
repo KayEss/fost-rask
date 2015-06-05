@@ -66,6 +66,9 @@ std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
 
 rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
 : name(n), configuration(c) {
+    if ( c.has_key("path") ) {
+        local_path = fostlib::coerce<boost::filesystem::path>(c["path"]);
+    }
 }
 
 
