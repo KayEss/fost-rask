@@ -7,7 +7,7 @@
 
 
 #include "connection.hpp"
-#include <rask/tenants.hpp>
+#include <rask/tenant.hpp>
 
 
 rask::connection::out rask::create_directory(

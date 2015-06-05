@@ -9,7 +9,7 @@
 #include "connection.hpp"
 #include <rask/configuration.hpp>
 #include <rask/server.hpp>
-#include <rask/tenants.hpp>
+#include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 
 #include <beanbag/beanbag>
