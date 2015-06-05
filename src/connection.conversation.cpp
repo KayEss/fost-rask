@@ -10,6 +10,7 @@
 #include "peer.hpp"
 
 #include <rask/configuration.hpp>
+#include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 
 
@@ -33,10 +34,15 @@ void rask::connection::conversation::tenants(std::shared_ptr<conversation> self)
             fostlib::jsondb::local tenants(*self->tenants_dbp);
             fostlib::jcursor pos("known");
             for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
-                auto tenant = fostlib::coerce<fostlib::string>(iter.key());
-                auto ptenant = self->partner.tenants.find(tenant);
+                auto name = fostlib::coerce<fostlib::string>(iter.key());
+                auto ptenant = self->partner.tenants.find(name);
                 if ( !ptenant ) {
-                    tenant_packet(tenant, *iter)(self->socket);
+                    tenant_packet(name, *iter)(self->socket);
+                } else {
+                    std::shared_ptr<tenant> mytenant(known_tenant(name));
+                    if ( mytenant->hash.load() != (*ptenant)->hash.load() ) {
+                        fostlib::log::warning("Need to send inodes");
+                    }
                 }
             }
         });
