@@ -15,7 +15,7 @@
 #include <beanbag/beanbag>
 
 
-void rask::peer(workers &w, const fostlib::json &dbconf) {
+void rask::peer_with(workers &w, const fostlib::json &dbconf) {
     fostlib::log::debug("Starting peering", dbconf);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconf));
     auto configure = [&w, dbp](const fostlib::json &peers) {

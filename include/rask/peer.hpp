@@ -19,7 +19,7 @@ namespace rask {
 
 
     /// Start peering
-    void peer(workers &, const fostlib::json &);
+    void peer_with(workers &, const fostlib::json &);
 
 
 }
