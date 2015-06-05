@@ -74,9 +74,6 @@ namespace rask {
 
         /// Class for storing conversation state
         class conversation;
-        /// Store information about the server on the other end
-        // alignas works around a gcc bug
-        std::atomic<std::array<unsigned char, 32>> hash;
         /// True if there is an active conversation instance
         std::atomic<bool> conversing;
 

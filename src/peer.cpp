@@ -75,3 +75,21 @@ void rask::reset_watchdog(workers &w, std::shared_ptr<connection::reconnect> cli
         });
 }
 
+
+/*
+    rask::peer
+*/
+
+
+namespace {
+    f5::tsmap<uint32_t, std::unique_ptr<rask::peer>> g_peers;
+}
+
+
+rask::peer &rask::peer::server(uint32_t p) {
+    return *g_peers.add_if_not_found(p,
+        [](){
+            return std::make_unique<rask::peer>();
+        });
+}
+

@@ -7,6 +7,7 @@
 
 
 #include "connection.conversation.hpp"
+#include "peer.hpp"
 #include <rask/clock.hpp>
 #include <rask/server.hpp>
 
@@ -47,6 +48,7 @@ void rask::receive_version(connection::in &packet) {
     logger("version", version);
     if ( !packet.empty() ) {
         auto identity(packet.read<uint32_t>());
+        peer &server(peer::server(identity));
         logger("peer", identity);
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
@@ -59,7 +61,7 @@ void rask::receive_version(connection::in &packet) {
             // Store it
             std::array<unsigned char, 32> hash_array;
             std::copy(hash.begin(), hash.end(), hash_array.begin());
-            packet.socket->hash = hash_array;
+            server.hash = hash_array;
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
             if ( packet.socket->conversing ) {
