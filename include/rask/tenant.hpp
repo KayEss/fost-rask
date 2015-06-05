@@ -38,6 +38,9 @@ namespace rask {
         /// The tenant beanbag
         beanbag::jsondb_ptr beanbag() const;
 
+        /// The current hash
+        std::atomic<std::array<unsigned char, 32>> hash;
+
         /// Tell the tenant about a directory in the observed file system
         void dir_stat(const boost::filesystem::path &location);
         /// Tell the tenant about a file in the observed file system

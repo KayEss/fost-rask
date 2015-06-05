@@ -29,20 +29,25 @@ namespace {
                 throw;
             }
         }
-        return fostlib::coerce<fostlib::string>(
-                fostlib::coerce<fostlib::base64_string>(hasher.digest()));
+        return hasher.digest();
     }
 }
 
 
-void rask::rehash_inodes(const tenant &tenant, const fostlib::jsondb::local &tdb) {
+void rask::rehash_inodes(tenant &tenant, const fostlib::jsondb::local &tdb) {
     beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
     fostlib::jsondb::local tenants(*dbp);
+    std::vector<unsigned char> hash(
+        digest(fostlib::jcursor("hash", "inode"), tdb["inodes"]));
     tenants
         .set(fostlib::jcursor("known", tenant.name(), "hash", "data"),
-            digest(fostlib::jcursor("hash", "inode"), tdb["inodes"]))
+            fostlib::coerce<fostlib::string>(
+                fostlib::coerce<fostlib::base64_string>(hash)))
         .commit();
     rehash_tenants(tenants);
+    std::array<unsigned char, 32> hash_array;
+    std::copy(hash.begin(), hash.end(), hash_array.begin());
+    tenant.hash = hash_array;
 }
 
 
@@ -50,9 +55,12 @@ void rask::rehash_tenants(const fostlib::jsondb::local &tsdb) {
     beanbag::jsondb_ptr dbp(beanbag::database(
         c_server_db.value()["database"]));
     fostlib::jsondb::local server(*dbp);
+    std::vector<unsigned char> hash(
+        digest(fostlib::jcursor("hash", "data"), server["known"]));
     server
         .set(fostlib::jcursor("hash"),
-            digest(fostlib::jcursor("hash", "data"), tsdb["known"]))
+            fostlib::coerce<fostlib::string>(
+                fostlib::coerce<fostlib::base64_string>(hash)))
         .commit();
 }
 

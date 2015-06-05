@@ -19,7 +19,7 @@ namespace rask {
 
 
     /// Re-hash starting at the inode list level
-    void rehash_inodes(const tenant &, const fostlib::jsondb::local &);
+    void rehash_inodes(tenant &, const fostlib::jsondb::local &);
 
     /// Re-hash starting at the tenants level
     void rehash_tenants(const fostlib::jsondb::local &);
