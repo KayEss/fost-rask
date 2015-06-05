@@ -10,6 +10,7 @@
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
 #include <rask/clock.hpp>
+#include <rask/configuration.hpp>
 #include <rask/tenants.hpp>
 
 #include <beanbag/beanbag>
@@ -19,15 +20,12 @@
 
 namespace {
     fostlib::threadsafe_store<std::shared_ptr<rask::tenant>> g_tenants;
-    fostlib::json g_tenantsdb_config;
-
     const fostlib::json directory_inode("directory");
 }
 
 
 void rask::tenants(workers &w, const fostlib::json &dbconfig) {
     fostlib::log::debug("Loading tenants database", dbconfig);
-    g_tenantsdb_config = dbconfig;
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
     auto configure = [&w, dbp](const fostlib::json &tenants) {
         if ( tenants.has_key("subscription") ) {
@@ -60,16 +58,16 @@ rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
 
 
 beanbag::jsondb_ptr rask::tenant::beanbag() const {
-    beanbag::jsondb_ptr dbp(beanbag::database(g_tenantsdb_config));
+    beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
     fostlib::jsondb::local tenants(*dbp);
     fostlib::jcursor dbpath("known", name(), "database");
     if ( !tenants.has_key(dbpath) ) {
         fostlib::log::debug()
             ("", "No tenant database found")
-            ("tenants", "db-configuration", g_tenantsdb_config)
+            ("tenants", "db-configuration", c_tenant_db.value())
             ("name", name())
             ("configuration", configuration());
-        auto tdb_path(fostlib::coerce<boost::filesystem::path>(g_tenantsdb_config["filepath"]));
+        auto tdb_path(fostlib::coerce<boost::filesystem::path>(c_tenant_db.value()["filepath"]));
         tdb_path.replace_extension(fostlib::coerce<boost::filesystem::path>(name() + ".json"));
         fostlib::json conf;
         fostlib::insert(conf, "filepath", tdb_path);
