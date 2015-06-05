@@ -6,9 +6,10 @@
 */
 
 
-#include <rask/tenants.hpp>
-#include <rask/workers.hpp>
+#include "notification.hpp"
 #include "sweep.folder.hpp"
+#include <rask/tenant.hpp>
+#include <rask/workers.hpp>
 
 #include <f5/fsnotify.hpp>
 #include <f5/fsnotify/boost-asio.hpp>
@@ -57,6 +58,11 @@ namespace {
                             rask::start_sweep(w, tenant, filename);
                         });
                 }
+            } else if ( event.mask & IN_DELETE_SELF ) {
+                w.high_latency.io_service.post(
+                    [this, filename, tenant]() {
+                        rask::rm_directory(w, tenant, filename);
+                    });
             }
         }
     };
