@@ -13,6 +13,7 @@
 #include <rask/clock.hpp>
 
 #include <f5/threading/map.hpp>
+#include <f5/threading/ring.hpp>
 
 
 namespace rask {
@@ -51,7 +52,20 @@ namespace rask {
 
 class rask::peer::tenant {
 public:
+    /// Construct a new tenant
+    tenant();
+
     /// The other server's hash for this tenant
     std::atomic<std::array<unsigned char, 32>> hash;
+
+    class inode;
+
+    /// The inodes under discussion
+    f5::tsring<inode> inodes;
 };
+
+
+class rask::peer::tenant::inode {
+};
+
 
