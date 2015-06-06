@@ -35,10 +35,10 @@ namespace {
 
 
 void rask::rehash_inodes(tenant &tenant, const fostlib::jsondb::local &tdb) {
-    beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
-    fostlib::jsondb::local tenants(*dbp);
     std::vector<unsigned char> hash(
         digest(fostlib::jcursor("hash", "inode"), tdb["inodes"]));
+    beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
+    fostlib::jsondb::local tenants(*dbp);
     tenants
         .set(fostlib::jcursor("known", tenant.name(), "hash", "data"),
             fostlib::coerce<fostlib::string>(
@@ -52,11 +52,11 @@ void rask::rehash_inodes(tenant &tenant, const fostlib::jsondb::local &tdb) {
 
 
 void rask::rehash_tenants(const fostlib::jsondb::local &tsdb) {
+    std::vector<unsigned char> hash(
+        digest(fostlib::jcursor("hash", "data"), tsdb["known"]));
     beanbag::jsondb_ptr dbp(beanbag::database(
         c_server_db.value()["database"]));
     fostlib::jsondb::local server(*dbp);
-    std::vector<unsigned char> hash(
-        digest(fostlib::jcursor("hash", "data"), server["known"]));
     server
         .set(fostlib::jcursor("hash"),
             fostlib::coerce<fostlib::string>(
