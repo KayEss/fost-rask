@@ -65,11 +65,23 @@ std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
 */
 
 
-rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
-: name(n), configuration(c) {
-    if ( c.has_key("path") ) {
-        local_path = fostlib::coerce<boost::filesystem::path>(c["path"]);
+
+namespace {
+    auto slash(const fostlib::json &c) {
+        if ( c.has_key("path") ) {
+            auto root = fostlib::coerce<fostlib::string>(c["path"]);
+            if ( !root.endswith('/') )
+                root += '/';
+            return std::move(root);
+        } else {
+            throw fostlib::exceptions::not_implemented(
+                "Tenant must have a 'path' specifying the directory location");
+        }
     }
+}
+rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
+: root(slash(c)), name(n), configuration(c),
+        local_path(fostlib::coerce<boost::filesystem::path>(root)) {
 }
 
 
@@ -101,7 +113,6 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
     if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != directory_inode ) {
         auto path = fostlib::coerce<fostlib::string>(location);
-        auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
         auto priority = tick::next();
         if ( path.startswith(root) ) {
             path = path.substr(root.length());
@@ -140,7 +151,6 @@ void rask::tenant::move_out(const boost::filesystem::path &location) {
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
     if ( meta.has_key(dbpath) && meta[dbpath / "filetype"] != move_inode_out ) {
         auto path = fostlib::coerce<fostlib::string>(location);
-        auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
         auto priority = tick::next();
         if ( path.startswith(root) ) {
             path = path.substr(root.length());

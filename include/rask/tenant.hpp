@@ -28,6 +28,8 @@ namespace rask {
 
     /// Tenant working data
     class tenant {
+        /// Used for internal caclulations
+        const fostlib::string root;
     public:
         tenant(const fostlib::string &name, const fostlib::json &configuration);
 
@@ -38,7 +40,7 @@ namespace rask {
         /// The tenant beanbag
         beanbag::jsondb_ptr beanbag() const;
         /// The local filesystem path
-        boost::filesystem::path local_path;
+        const fostlib::accessors<boost::filesystem::path> local_path;
 
         /// The current hash
         std::atomic<std::array<unsigned char, 32>> hash;
