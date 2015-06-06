@@ -6,7 +6,6 @@
 */
 
 
-#include "connection.hpp"
 #include <rask/tenant.hpp>
 
 

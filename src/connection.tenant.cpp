@@ -6,7 +6,6 @@
 */
 
 
-#include "connection.hpp"
 #include "peer.hpp"
 #include <rask/workers.hpp>
 

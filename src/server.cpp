@@ -6,8 +6,8 @@
 */
 
 
-#include "connection.hpp"
 #include <rask/configuration.hpp>
+#include <rask/connection.hpp>
 #include <rask/server.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>

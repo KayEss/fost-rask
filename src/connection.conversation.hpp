@@ -9,7 +9,7 @@
 #pragma once
 
 
-#include "connection.hpp"
+#include <rask/connection.hpp>
 
 #include <beanbag/beanbag>
 

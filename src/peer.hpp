@@ -9,8 +9,8 @@
 #pragma once
 
 
-#include "connection.hpp"
 #include <rask/clock.hpp>
+#include <rask/connection.hpp>
 
 #include <f5/threading/map.hpp>
 #include <f5/threading/ring.hpp>

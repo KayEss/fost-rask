@@ -6,7 +6,6 @@
 */
 
 
-#include "connection.hpp"
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
 #include <rask/clock.hpp>
