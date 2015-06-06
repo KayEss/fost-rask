@@ -164,7 +164,7 @@ void rask::tenant::move_out(const boost::filesystem::path &location) {
             .commit();
         rehash_inodes(*this, meta);
         fostlib::log::info()
-            ("", "rm folder")
+            ("", "Move inode out")
             ("broadcast", broadcast(rask::move_out(
                 *this, priority, meta, dbpath, path)))
             ("tenant", name())
