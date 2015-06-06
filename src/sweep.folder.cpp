@@ -7,7 +7,7 @@
 
 
 #include "sweep.folder.hpp"
-#include <rask/tenants.hpp>
+#include <rask/tenant.hpp>
 
 #include <fost/log>
 
