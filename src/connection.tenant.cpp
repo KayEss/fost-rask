@@ -7,6 +7,7 @@
 
 
 #include "peer.hpp"
+#include <rask/connection.hpp>
 #include <rask/workers.hpp>
 
 
