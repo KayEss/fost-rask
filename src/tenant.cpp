@@ -20,8 +20,6 @@
 
 namespace {
     f5::tsmap<fostlib::string, std::shared_ptr<rask::tenant>> g_tenants;
-    const fostlib::json directory_inode("directory");
-    const fostlib::json move_inode_out("move-out");
 }
 
 
@@ -63,6 +61,9 @@ std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
     rask::tenant
 */
 
+
+const fostlib::json rask::tenant::directory_inode("directory");
+const fostlib::json rask::tenant::move_inode_out("move-out");
 
 
 namespace {
@@ -106,79 +107,91 @@ beanbag::jsondb_ptr rask::tenant::beanbag() const {
 }
 
 
+namespace {
+    fostlib::string relative_path(
+        const fostlib::string &root, const boost::filesystem::path &location
+    ) {
+        auto path = fostlib::coerce<fostlib::string>(location);
+        if ( path.startswith(root) ) {
+            path = path.substr(root.length());
+        } else {
+            fostlib::exceptions::not_implemented error("Directory is not in tenant root");
+            fostlib::insert(error.data(), "root", root);
+            fostlib::insert(error.data(), "location", location);
+            throw error;
+        }
+        return path;
+    }
+}
+void rask::tenant::local_change(
+    const boost::filesystem::path &location,
+    const fostlib::json &inode_type,
+    packet_builder builder
+) {
+    beanbag::jsondb_ptr dbp(beanbag());
+    fostlib::jsondb::local meta(*dbp);
+    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
+    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ) {
+        auto path = relative_path(root, location);
+        auto priority = tick::next();
+        fostlib::digester hash(fostlib::sha256);
+        hash << priority;
+        meta
+            .set(dbpath, fostlib::json::object_t())
+            .set(dbpath / "filetype", inode_type)
+            .set(dbpath / "name", path)
+            .set(dbpath / "priority", priority)
+            .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .set(dbpath / "hash" / "inode",
+                fostlib::coerce<fostlib::string>(
+                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
+            .commit();
+        rehash_inodes(*this, meta);
+        fostlib::log::info()
+            ("", inode_type)
+            ("broadcast", "to", broadcast(builder(*this, priority, path)))
+            ("tenant", name())
+            ("path", "location", location)
+            ("path", "relative", path)
+            ("meta", meta[dbpath]);
+    }
+}
+void rask::tenant::remote_change(
+    const boost::filesystem::path &location,
+    const fostlib::json &inode_type,
+    const tick &priority
+) {
+    beanbag::jsondb_ptr dbp(beanbag());
+    fostlib::jsondb::local meta(*dbp);
+    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
+    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ||
+            tick(meta[dbpath / "priority"]) < priority
+    ) {
+        auto path = relative_path(root, location);
+        fostlib::digester hash(fostlib::sha256);
+        hash << priority;
+        meta
+            .set(dbpath, fostlib::json::object_t())
+            .set(dbpath / "filetype", inode_type)
+            .set(dbpath / "name", path)
+            .set(dbpath / "priority", priority)
+            .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .set(dbpath / "hash" / "inode",
+                fostlib::coerce<fostlib::string>(
+                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
+            .commit();
+        rehash_inodes(*this, meta);
+        fostlib::log::info()
+            ("", inode_type)
+            ("tenant", name())
+            ("path", "location", location)
+            ("path", "relative", path)
+            ("meta", meta[dbpath]);
+    }
+}
+
+
 void rask::tenant::dir_stat(const boost::filesystem::path &location) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != directory_inode ) {
-        auto path = fostlib::coerce<fostlib::string>(location);
-        auto priority = tick::next();
-        if ( path.startswith(root) ) {
-            path = path.substr(root.length());
-        } else {
-            fostlib::exceptions::not_implemented error("Directory is not in tenant root");
-            fostlib::insert(error.data(), "root", root);
-            fostlib::insert(error.data(), "location", location);
-            throw error;
-        }
-        fostlib::digester hash(fostlib::sha256);
-        hash << priority;
-        meta
-            .set(dbpath, fostlib::json::object_t())
-            .set(dbpath / "filetype", directory_inode)
-            .set(dbpath / "name", path)
-            .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
-            .set(dbpath / "hash" / "inode",
-                fostlib::coerce<fostlib::string>(
-                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
-            .commit();
-        rehash_inodes(*this, meta);
-        fostlib::log::info()
-            ("", "New folder")
-            ("broadcast", broadcast(create_directory(
-                *this, priority, meta, dbpath, path)))
-            ("tenant", name())
-            ("path", "location", location)
-            ("path", "relative", path)
-            ("path", "hash", meta[dbpath / "hash" / "name"]);
-    }
+    local_change(location, directory_inode, create_directory_out);
 }
-void rask::tenant::move_out(const boost::filesystem::path &location) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( meta.has_key(dbpath) && meta[dbpath / "filetype"] != move_inode_out ) {
-        auto path = fostlib::coerce<fostlib::string>(location);
-        auto priority = tick::next();
-        if ( path.startswith(root) ) {
-            path = path.substr(root.length());
-        } else {
-            fostlib::exceptions::not_implemented error("Directory is not in tenant root");
-            fostlib::insert(error.data(), "root", root);
-            fostlib::insert(error.data(), "location", location);
-            throw error;
-        }
-        fostlib::digester hash(fostlib::sha256);
-        hash << priority;
-        meta
-            .set(dbpath, fostlib::json::object_t())
-            .set(dbpath / "filetype", move_inode_out)
-            .set(dbpath / "name", path)
-            .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
-            .set(dbpath / "hash" / "inode",
-                fostlib::coerce<fostlib::string>(
-                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
-            .commit();
-        rehash_inodes(*this, meta);
-        fostlib::log::info()
-            ("", "Move inode out")
-            ("broadcast", broadcast(rask::move_out(
-                *this, priority, meta, dbpath, path)))
-            ("tenant", name())
-            ("path", "location", location)
-            ("path", "relative", path)
-            ("path", "hash", meta[dbpath / "hash" / "name"]);
-    }
-}
+

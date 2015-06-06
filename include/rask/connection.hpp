@@ -251,16 +251,14 @@ namespace rask {
     void tenant_packet(connection::in &packet);
 
     /// Send a create directory instruction
-    connection::out create_directory(
-        tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
-        const fostlib::string &name);
+    connection::out create_directory_out(
+        tenant &, const rask::tick &, const fostlib::string &);
     /// React to a directory create request
     void create_directory(connection::in &);
 
     /// Create a move an inode out packet
     connection::out move_out(
-        tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
-        const fostlib::string &name);
+        tenant &, const rask::tick &, const fostlib::string &name);
     /// React to a move inode out packet
     void move_out(connection::in &);
 

@@ -61,8 +61,7 @@ void rask::connection::conversation::inodes(
         fostlib::log::debug()
             ("", "sending create_directory")
             ("inode", *iter);
-        create_directory(*tenant, tick((*iter)["priority"]),
-                inodes, fostlib::jcursor(),
+        create_directory_out(*tenant, tick((*iter)["priority"]),
                 fostlib::coerce<fostlib::string>((*iter)["name"]))
             (self->socket);
     }

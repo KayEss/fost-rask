@@ -11,7 +11,6 @@
 
 rask::connection::out rask::move_out(
     rask::tenant &tenant, const rask::tick &priority,
-    fostlib::jsondb::local &, const fostlib::jcursor &,
     const fostlib::string &name
 ) {
     connection::out packet(0x93);
