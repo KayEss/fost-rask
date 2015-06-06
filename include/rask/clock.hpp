@@ -45,6 +45,11 @@ namespace rask {
                 return false;
         }
 
+        /// Compare for equality
+        bool operator == (const tick &t) const {
+            return time == t.time && server == t.server && reserved == t.reserved;
+        }
+
         /// Return the current time with optional hash
         static std::pair<tick, fostlib::nullable<fostlib::string>> now();
         /// A Lamport clock used to give each event a unique ID
@@ -63,12 +68,25 @@ namespace fostlib {
     /// Allow coercion of the tick to JSON
     template<>
     struct coercer<json, rask::tick> {
-        json coerce(rask::tick);
+        json coerce(const rask::tick &);
     };
 
 
-    digester &operator << (digester &, rask::tick);
+    digester &operator << (digester &, const rask::tick &);
 
 
 }
+
+
+namespace std {
+
+
+    inline
+    ostream &operator << (ostream &o, const rask::tick &t) {
+        return o << '[' << t.time << ", " << t.server << ", " << t.reserved << ']';
+    }
+
+
+}
+
 

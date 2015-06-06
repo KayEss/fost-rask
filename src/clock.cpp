@@ -98,7 +98,7 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
 }
 
 
-fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(rask::tick t) {
+fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(const rask::tick &t) {
     fostlib::json j;
     fostlib::push_back(j, t.time);
     fostlib::push_back(j, t.server);
@@ -106,6 +106,7 @@ fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(rask::tick t) 
 }
 
 
-fostlib::digester &fostlib::operator << (digester &d, rask::tick t) {
-    return d << const_memory_block(&t, &t + sizeof(rask::tick));
+fostlib::digester &fostlib::operator << (fostlib::digester &d, const rask::tick &t) {
+    return d << fostlib::const_memory_block{&t, &t + 1};
 }
+
