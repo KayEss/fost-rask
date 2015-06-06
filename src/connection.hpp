@@ -244,18 +244,18 @@ namespace rask {
     /// Process a version packet body
     void receive_version(connection::in &);
 
+    /// Build a tenant instruction
+    connection::out tenant_packet(const fostlib::string &name,
+            const fostlib::json &meta);
+    /// React to a tenant that has come in
+    void tenant_packet(connection::in &packet);
+
     /// Send a create directory instruction
     connection::out create_directory(
         tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
         const fostlib::string &name);
     /// React to a directory create request
     void create_directory(connection::in &);
-
-    /// Build a tenant instruction
-    connection::out tenant_packet(const fostlib::string &name,
-            const fostlib::json &meta);
-    /// React to a tenant that has come in
-    void tenant_packet(connection::in &packet);
 
 
 }
