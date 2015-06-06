@@ -61,10 +61,10 @@ rask::tick rask::tick::next() {
             fostlib::jcursor location("time");
             if ( db.has_key(location) ) {
                 time = fostlib::coerce<int64_t>(db[location][0]) + 1;
-                location.replace(db, fostlib::coerce<fostlib::json>(tick(time)));
+                location.replace(db, tick(time));
             } else {
                 time = 1;
-                location.insert(db, fostlib::coerce<fostlib::json>(tick(time)));
+                location.insert(db, tick(time));
             }
         });
         server.commit();
@@ -86,10 +86,10 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
             if ( db.has_key(location) ) {
                 rask::tick mytime(db[location]);
                 if ( mytime < heard ) {
-                    location.replace(db, fostlib::coerce<fostlib::json>(heard));
+                    location.replace(db, heard);
                 }
             } else {
-                location.insert(db, heard.time);
+                location.insert(db, heard);
             }
         });
         server.commit();
