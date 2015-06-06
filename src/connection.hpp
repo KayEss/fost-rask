@@ -257,6 +257,13 @@ namespace rask {
     /// React to a directory create request
     void create_directory(connection::in &);
 
+    /// Create a move an inode out packet
+    connection::out move_out(
+        tenant &, const rask::tick &, fostlib::jsondb::local &, const fostlib::jcursor &,
+        const fostlib::string &name);
+    /// React to a move inode out packet
+    void move_out(connection::in &);
+
 
 }
 

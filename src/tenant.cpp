@@ -22,7 +22,7 @@
 namespace {
     f5::tsmap<fostlib::string, std::shared_ptr<rask::tenant>> g_tenants;
     const fostlib::json directory_inode("directory");
-    const fostlib::json rm_inode("rm");
+    const fostlib::json move_inode_out("move-out");
 }
 
 
@@ -134,11 +134,11 @@ void rask::tenant::dir_stat(const boost::filesystem::path &location) {
             ("path", "hash", meta[dbpath / "hash" / "name"]);
     }
 }
-void rask::tenant::dir_rm(const boost::filesystem::path &location) {
+void rask::tenant::move_out(const boost::filesystem::path &location) {
     beanbag::jsondb_ptr dbp(beanbag());
     fostlib::jsondb::local meta(*dbp);
     fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( meta.has_key(dbpath) && meta[dbpath / "filetype"] != rm_inode ) {
+    if ( meta.has_key(dbpath) && meta[dbpath / "filetype"] != move_inode_out ) {
         auto path = fostlib::coerce<fostlib::string>(location);
         auto root = fostlib::coerce<fostlib::string>(configuration()["path"]);
         auto priority = tick::next();
@@ -154,7 +154,7 @@ void rask::tenant::dir_rm(const boost::filesystem::path &location) {
         hash << priority;
         meta
             .set(dbpath, fostlib::json::object_t())
-            .set(dbpath / "filetype", rm_inode)
+            .set(dbpath / "filetype", move_inode_out)
             .set(dbpath / "name", path)
             .set(dbpath / "priority", priority)
             .set(dbpath / "hash" / "name", fostlib::sha256(path))
@@ -165,8 +165,8 @@ void rask::tenant::dir_rm(const boost::filesystem::path &location) {
         rehash_inodes(*this, meta);
         fostlib::log::info()
             ("", "rm folder")
-//             ("broadcast", broadcast(rm_directory(
-//                 *this, priority, meta, dbpath, path)))
+            ("broadcast", broadcast(rask::move_out(
+                *this, priority, meta, dbpath, path)))
             ("tenant", name())
             ("path", "location", location)
             ("path", "relative", path)
