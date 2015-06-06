@@ -7,10 +7,12 @@
 
 
 #include "notification.hpp"
+#include <rask/tenant.hpp>
 
 
 void rask::rm_directory(
-    workers &, std::shared_ptr<tenant>, const boost::filesystem::path &
+    workers &, std::shared_ptr<tenant> tenant, const boost::filesystem::path &path
 ) {
+    tenant->dir_rm(path);
 }
 

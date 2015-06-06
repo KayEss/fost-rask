@@ -45,6 +45,8 @@ namespace rask {
 
         /// Tell the tenant about a directory in the observed file system
         void dir_stat(const boost::filesystem::path &location);
+        /// Remove the directory
+        void dir_rm(const boost::filesystem::path &location);
         /// Tell the tenant about a file in the observed file system
         void file_stat(const boost::filesystem::path &location,
             uintmax_t size, const std::time_t &modified, bool changed);
