@@ -58,12 +58,19 @@ void rask::connection::conversation::inodes(
     fostlib::log::warning("Need to send inodes");
     fostlib::jsondb::local inodes(*tenant->beanbag(), "inodes");
     for ( auto iter(inodes.data().begin()); iter != inodes.data().end(); ++iter ) {
-        fostlib::log::debug()
-            ("", "sending create_directory")
-            ("inode", *iter);
-        create_directory_out(*tenant, tick((*iter)["priority"]),
-                fostlib::coerce<fostlib::string>((*iter)["name"]))
-            (self->socket);
+        const fostlib::json inode(*iter);
+        if ( inode["filetype"] == tenant::directory_inode ) {
+            fostlib::log::debug()
+                ("", "sending create_directory")
+                ("inode", inode);
+            create_directory_out(*tenant, tick(inode["priority"]),
+                    fostlib::coerce<fostlib::string>(inode["name"]))
+                (self->socket);
+        } else {
+            fostlib::log::error()
+                ("", "Unkown inode type to send to peer")
+                ("inode", inode);
+        }
     }
 }
 
