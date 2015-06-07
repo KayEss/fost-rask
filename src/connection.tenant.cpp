@@ -43,7 +43,7 @@ void rask::tenant_packet(connection::in &packet) {
                     [](){ return std::make_unique<peer::tenant>(); }));
                 std::array<unsigned char, 32> hash_array;
                 std::copy(hash.begin(), hash.end(), hash_array.begin());
-                tenant->hash = hash_array;
+                tenant.hash = hash_array;
             }
         });
 }

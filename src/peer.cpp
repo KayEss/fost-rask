@@ -87,7 +87,7 @@ namespace {
 
 
 rask::peer &rask::peer::server(uint32_t p) {
-    return *g_peers.add_if_not_found(p,
+    return g_peers.add_if_not_found(p,
         [](){
             return std::make_unique<rask::peer>();
         });

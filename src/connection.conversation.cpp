@@ -40,7 +40,7 @@ void rask::connection::conversation::tenants(std::shared_ptr<conversation> self)
                     tenant_packet(name, *iter)(self->socket);
                 } else {
                     std::shared_ptr<tenant> mytenant(known_tenant(name));
-                    if ( mytenant->hash.load() != (*ptenant)->hash.load() ) {
+                    if ( mytenant->hash.load() != ptenant->hash.load() ) {
                         self->socket->workers.high_latency.io_service.post(
                             [self, mytenant]() {
                                 inodes(self, mytenant);
