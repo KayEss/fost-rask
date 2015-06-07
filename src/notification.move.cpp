@@ -13,6 +13,5 @@
 void rask::rm_directory(
     workers &, std::shared_ptr<tenant> tenant, const boost::filesystem::path &path
 ) {
-    tenant->move_out(path);
 }
 
