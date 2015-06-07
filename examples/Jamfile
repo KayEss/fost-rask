@@ -1,0 +1,8 @@
+
+fost-exe file-hashes
+    :
+        $(TOP)/../Boost//boost-iostreams-dll
+        ../../fost-base/Cpp/fost-crypto
+        ../src/
+        file-hashes.cpp
+    ;

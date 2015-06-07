@@ -1,0 +1,14 @@
+
+fost-lib-autotest fost-rask
+    : src
+    :
+        $(TOP)/../Boost//boost-coroutine-dll
+        $(TOP)/../Boost//boost-iostreams-dll
+        ../../fost-beanbag/beanbag-views
+        ../../fost-base/Cpp/fost-crypto
+    ;
+
+fost-install $(TOP)/../Boost//boost-chrono-dll ;
+fost-install $(TOP)/../Boost//boost-context-dll ;
+fost-install $(TOP)/../Boost//boost-coroutine-dll ;
+fost-install $(TOP)/../Boost//boost-iostreams-dll ;
