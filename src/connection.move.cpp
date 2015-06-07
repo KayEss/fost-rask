@@ -36,11 +36,14 @@ void rask::move_out(rask::connection::in &packet) {
             auto location = tenant->local_path() /
                 fostlib::coerce<boost::filesystem::path>(name);
             tenant->remote_change(location, tenant::move_inode_out, priority);
-            fostlib::log::warning()
-                ("", "Deleting files")
-                ("tenant", tenant->name())
-                ("root", location)
-                ("count", boost::filesystem::remove_all(location));
+            auto removed = boost::filesystem::remove_all(location);
+            if ( removed ) {
+                fostlib::log::warning()
+                    ("", "Deleting files")
+                    ("tenant", tenant->name())
+                    ("root", location)
+                    ("count", removed);
+            }
         });
 }
 
