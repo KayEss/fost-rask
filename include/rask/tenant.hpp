@@ -55,7 +55,9 @@ namespace rask {
         /// The current hash
         std::atomic<std::array<unsigned char, 32>> hash;
 
-        /// Write details about something observed on this file system
+        /// Write details about something observed on this file system. After
+        /// recording in the database it will build a packet and broadcast it to
+        /// the other connected nodes
         void local_change(
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
@@ -65,12 +67,6 @@ namespace rask {
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
             const tick &priority);
-
-        /// Tell the tenant about a directory in the observed file system
-        void dir_stat(const boost::filesystem::path &location);
-        /// Tell the tenant about a file in the observed file system
-        void file_stat(const boost::filesystem::path &location,
-            uintmax_t size, const std::time_t &modified, bool changed);
     };
 
     /// Return in-memory description of tenant -- empty if unknown

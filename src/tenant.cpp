@@ -190,8 +190,3 @@ void rask::tenant::remote_change(
     }
 }
 
-
-void rask::tenant::dir_stat(const boost::filesystem::path &location) {
-    local_change(location, directory_inode, create_directory_out);
-}
-

@@ -18,11 +18,11 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
             "Trying to recurse into a non-directory",
             fostlib::coerce<fostlib::string>(folder));
     }
-    tenant->dir_stat(folder);
+    tenant->local_change(folder, tenant::directory_inode, create_directory_out);
     fostlib::log::debug("Sweep recursing into folder", folder);
     auto watched = w.notify.watch(tenant, folder);
     std::size_t files = 0, directories = 0, ignored = 0;
-    typedef boost::filesystem::directory_iterator d_iter;
+    using d_iter = boost::filesystem::directory_iterator;
     for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
         if ( inode->status().type() == boost::filesystem::directory_file ) {
             ++directories;
