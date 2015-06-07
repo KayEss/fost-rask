@@ -9,7 +9,7 @@
 #include <rask/tenant.hpp>
 
 
-rask::connection::out rask::move_out(
+rask::connection::out rask::move_out_packet(
     rask::tenant &tenant, const rask::tick &priority,
     const fostlib::string &name
 ) {

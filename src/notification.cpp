@@ -60,7 +60,7 @@ namespace {
                 }
             } else if ( event.mask & IN_DELETE_SELF ) {
                 w.high_latency.io_service.post(
-                    [this, filename, tenant]() {
+                    [this, filename = std::move(filename), tenant]() {
                         rask::rm_directory(w, tenant, filename);
                     });
             }

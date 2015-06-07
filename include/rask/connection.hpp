@@ -257,7 +257,7 @@ namespace rask {
     void create_directory(connection::in &);
 
     /// Create a move an inode out packet
-    connection::out move_out(
+    connection::out move_out_packet(
         tenant &, const rask::tick &, const fostlib::string &name);
     /// React to a move inode out packet
     void move_out(connection::in &);
