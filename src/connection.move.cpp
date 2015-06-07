@@ -8,6 +8,8 @@
 
 #include <rask/tenant.hpp>
 
+#include <fost/log>
+
 
 rask::connection::out rask::move_out_packet(
     rask::tenant &tenant, const rask::tick &priority,
@@ -29,5 +31,16 @@ void rask::move_out(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
+    packet.socket->workers.high_latency.io_service.post(
+        [tenant, name = std::move(name), priority]() {
+            auto location = tenant->local_path() /
+                fostlib::coerce<boost::filesystem::path>(name);
+            tenant->remote_change(location, tenant::move_inode_out, priority);
+            fostlib::log::warning()
+                ("", "Deleting files")
+                ("tenant", tenant->name())
+                ("root", location)
+                ("count", boost::filesystem::remove_all(location));
+        });
 }
 

@@ -59,11 +59,19 @@ void rask::connection::conversation::inodes(
     fostlib::jsondb::local inodes(*tenant->beanbag(), "inodes");
     for ( auto iter(inodes.data().begin()); iter != inodes.data().end(); ++iter ) {
         const fostlib::json inode(*iter);
-        if ( inode["filetype"] == tenant::directory_inode ) {
+        auto &filetype = inode["filetype"];
+        if ( filetype == tenant::directory_inode ) {
             fostlib::log::debug()
                 ("", "sending create_directory")
                 ("inode", inode);
             create_directory_out(*tenant, tick(inode["priority"]),
+                    fostlib::coerce<fostlib::string>(inode["name"]))
+                (self->socket);
+        } else if ( filetype == tenant::move_inode_out ) {
+            fostlib::log::debug()
+                ("", "sending move_out")
+                ("inode", inode);
+            move_out_packet(*tenant, tick(inode["priority"]),
                     fostlib::coerce<fostlib::string>(inode["name"]))
                 (self->socket);
         } else {
