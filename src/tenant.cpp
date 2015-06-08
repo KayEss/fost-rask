@@ -51,9 +51,10 @@ std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
     const std::shared_ptr<tenant> pt(g_tenants.find(n));
     if ( pt ) {
         return pt;
-    } else
+    } else {
         throw fostlib::exceptions::not_implemented(
             "rask::known_tenant for unknown tenant");
+    }
 }
 
 

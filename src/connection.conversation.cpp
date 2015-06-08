@@ -35,7 +35,7 @@ void rask::connection::conversation::tenants(std::shared_ptr<conversation> self)
             fostlib::jcursor pos("known");
             for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
                 auto name = fostlib::coerce<fostlib::string>(iter.key());
-                auto ptenant = self->partner.tenants.find(name);
+                auto ptenant = self->partner->tenants.find(name);
                 if ( !ptenant ) {
                     tenant_packet(name, *iter)(self->socket);
                 } else {

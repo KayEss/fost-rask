@@ -82,14 +82,14 @@ void rask::reset_watchdog(workers &w, std::shared_ptr<connection::reconnect> cli
 
 
 namespace {
-    f5::tsmap<uint32_t, std::unique_ptr<rask::peer>> g_peers;
+    f5::tsmap<uint32_t, std::shared_ptr<rask::peer>> g_peers;
 }
 
 
-rask::peer &rask::peer::server(uint32_t p) {
+std::shared_ptr<rask::peer> rask::peer::server(uint32_t p) {
     return g_peers.add_if_not_found(p,
         [](){
-            return std::make_unique<rask::peer>();
+            return std::make_shared<rask::peer>();
         });
 }
 

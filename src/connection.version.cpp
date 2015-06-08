@@ -49,7 +49,7 @@ void rask::receive_version(connection::in &packet) {
     if ( !packet.empty() ) {
         auto identity(packet.read<uint32_t>());
         packet.socket->identity = identity;
-        peer &server(peer::server(identity));
+        std::shared_ptr<peer> server(peer::server(identity));
         logger("peer", identity);
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
@@ -62,7 +62,7 @@ void rask::receive_version(connection::in &packet) {
             // Store it
             std::array<unsigned char, 32> hash_array;
             std::copy(hash.begin(), hash.end(), hash_array.begin());
-            server.hash = hash_array;
+            server->hash = hash_array;
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
             if ( packet.socket->conversing ) {

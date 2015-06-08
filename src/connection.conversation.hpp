@@ -27,7 +27,7 @@ namespace rask {
         /// Store the socket so we can get at it
         std::shared_ptr<connection> socket;
         /// The remote peer we're talking to
-        peer &partner;
+        std::shared_ptr<peer> partner;
     public:
         /// Construct from a connection
         conversation(std::shared_ptr<connection>);
