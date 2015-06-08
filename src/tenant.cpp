@@ -8,6 +8,7 @@
 
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
+#include "tree.hpp"
 #include <rask/clock.hpp>
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
@@ -83,28 +84,36 @@ namespace {
 rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
 : root(slash(c)), name(n), configuration(c),
         local_path(fostlib::coerce<boost::filesystem::path>(root)) {
+     // Tests will use this without a tenant configured, so make sure to check
+    if ( c_tenant_db.value() != fostlib::json() ) {
+        beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
+        fostlib::jsondb::local tenants(*dbp);
+        fostlib::jcursor dbpath("known", name(), "database");
+        if ( !tenants.has_key(dbpath) ) {
+            fostlib::log::debug()
+                ("", "No tenant database found")
+                ("tenants", "db-configuration", c_tenant_db.value())
+                ("name", name())
+                ("configuration", configuration());
+            auto tdb_path(fostlib::coerce<boost::filesystem::path>(c_tenant_db.value()["filepath"]));
+            tdb_path.replace_extension(fostlib::coerce<boost::filesystem::path>(name() + ".json"));
+            fostlib::json conf;
+            fostlib::insert(conf, "filepath", tdb_path);
+            fostlib::insert(conf, "name", "tenant/" + name());
+            fostlib::insert(conf, "initial", fostlib::json::object_t());
+            tenants.set(dbpath, conf).commit();
+        }
+        // Set up the inodes
+        inodes = std::make_unique<tree>(tenants[dbpath],
+            fostlib::jcursor("inodes"), fostlib::jcursor("hash", "name"));
+    }
 }
+
+rask::tenant::~tenant() = default;
 
 
 beanbag::jsondb_ptr rask::tenant::beanbag() const {
-    beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
-    fostlib::jsondb::local tenants(*dbp);
-    fostlib::jcursor dbpath("known", name(), "database");
-    if ( !tenants.has_key(dbpath) ) {
-        fostlib::log::debug()
-            ("", "No tenant database found")
-            ("tenants", "db-configuration", c_tenant_db.value())
-            ("name", name())
-            ("configuration", configuration());
-        auto tdb_path(fostlib::coerce<boost::filesystem::path>(c_tenant_db.value()["filepath"]));
-        tdb_path.replace_extension(fostlib::coerce<boost::filesystem::path>(name() + ".json"));
-        fostlib::json conf;
-        fostlib::insert(conf, "filepath", tdb_path);
-        fostlib::insert(conf, "name", "tenant/" + name());
-        fostlib::insert(conf, "initial", fostlib::json::object_t());
-        tenants.set(dbpath, conf).commit();
-    }
-    return beanbag::database(tenants[dbpath]);
+    return inodes->root_dbp();
 }
 
 
