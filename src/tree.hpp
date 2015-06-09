@@ -31,6 +31,41 @@ namespace rask {
 
         /// Return the root database
         beanbag::jsondb_ptr root_dbp() const;
+
+        class const_iterator {
+            friend class rask::tree;
+            /// The owning tree
+            const rask::tree &tree;
+            /// For now just hold the root
+            beanbag::jsondb_ptr root_dbp;
+            /// A local transaction for getting into the data
+            fostlib::jsondb::local root_data;
+            /// For now just hold the undelying iterator
+            fostlib::json::const_iterator underlying;
+            /// Construct an iterator
+            const_iterator(const rask::tree &, beanbag::jsondb_ptr dbp);
+            /// Go to the beginning of the sequence
+            void begin();
+            /// Go to the end of the sequence
+            void end();
+        public:
+            /// Move constructor
+            const_iterator(const_iterator &&);
+
+            /// Return the current JSON
+            fostlib::json operator * () const;
+
+            /// Move to the next item
+            const_iterator &operator ++ ();
+
+            /// Check two iterators for equality
+            bool operator == (const const_iterator &) const;
+        };
+
+        /// Return an iterator to the first of the underlying items
+        const_iterator begin() const;
+        /// Return an iterator to the end of the underlying items
+        const_iterator end() const;
     };
 
 

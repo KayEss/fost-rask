@@ -74,8 +74,11 @@ namespace rask {
             const fostlib::json &inode_type,
             const tick &priority);
 
+        /// The inodes
+        const tree &inodes() const;
+
     private:
-        std::unique_ptr<tree> inodes;
+        std::unique_ptr<tree> inodes_p;
     };
 
     /// Return in-memory description of tenant -- empty if unknown

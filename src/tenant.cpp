@@ -104,7 +104,7 @@ rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
             tenants.set(dbpath, conf).commit();
         }
         // Set up the inodes
-        inodes = std::make_unique<tree>(tenants[dbpath],
+        inodes_p = std::make_unique<tree>(tenants[dbpath],
             fostlib::jcursor("inodes"), fostlib::jcursor("hash", "name"));
     }
 }
@@ -113,7 +113,12 @@ rask::tenant::~tenant() = default;
 
 
 beanbag::jsondb_ptr rask::tenant::beanbag() const {
-    return inodes->root_dbp();
+    return inodes_p->root_dbp();
+}
+
+
+const rask::tree &rask::tenant::inodes() const {
+    return *inodes_p;
 }
 
 

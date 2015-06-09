@@ -8,6 +8,7 @@
 
 #include "connection.conversation.hpp"
 #include "peer.hpp"
+#include "tree.hpp"
 
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
@@ -56,8 +57,7 @@ void rask::connection::conversation::inodes(
     std::shared_ptr<conversation> self, std::shared_ptr<tenant> tenant
 ) {
     fostlib::log::warning("Need to send inodes");
-    fostlib::jsondb::local inodes(*tenant->beanbag(), "inodes");
-    for ( auto iter(inodes.data().begin()); iter != inodes.data().end(); ++iter ) {
+    for ( auto iter(tenant->inodes().begin()); iter != tenant->inodes().end(); ++iter ) {
         const fostlib::json inode(*iter);
         auto &filetype = inode["filetype"];
         if ( filetype == tenant::directory_inode ) {
