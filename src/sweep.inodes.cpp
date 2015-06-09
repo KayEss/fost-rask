@@ -10,6 +10,8 @@
 #include "tree.hpp"
 #include <rask/tenant.hpp>
 
+#include <fost/log>
+
 
 namespace {
     struct closure {
@@ -24,9 +26,17 @@ namespace {
         }
     };
     void block(boost::asio::io_service &s, std::shared_ptr<closure> c) {
-        while ( c->position != c->end ) {
+        for ( ; c->position != c->end; ++c->position ) {
             auto inode = *c->position;
-            ++c->position;
+            auto filetype = inode["filetype"];
+            if ( filetype == rask::tenant::directory_inode ) {
+            } else if ( filetype == rask::tenant::move_inode_out ) {
+            } else {
+                fostlib::log::error()
+                    ("", "Sweeping inodes -- unknown filetype")
+                    ("filetype", filetype)
+                    ("inode", inode);
+            }
         }
     }
 }
