@@ -18,6 +18,13 @@ namespace rask {
     class tenant;
 
 
+    /// The name hash
+    using name_hash_type = std::vector<unsigned char>;
+
+
+    /// Return the hash for a name
+    name_hash_type name_hash(const fostlib::string &);
+
     /// Re-hash starting at the inode list level
     void rehash_inodes(tenant &, const fostlib::jsondb::local &);
 

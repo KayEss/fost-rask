@@ -34,6 +34,13 @@ namespace {
 }
 
 
+rask::name_hash_type rask::name_hash(const fostlib::string &s) {
+    fostlib::digester d(fostlib::md5);
+    d << s;
+    return d.digest();
+}
+
+
 void rask::rehash_inodes(tenant &tenant, const fostlib::jsondb::local &tdb) {
     std::vector<unsigned char> hash(
         digest(fostlib::jcursor("hash", "inode"), tdb["inodes"]));
