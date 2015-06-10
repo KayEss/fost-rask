@@ -109,8 +109,10 @@ namespace {
         if ( !meta[tree.key()].has_key("@context") ) {
             return add_leaf(layer, dbconfig, std::move(meta), tree, dbpath);
         } else {
-            throw fostlib::exceptions::not_implemented(
-                "recursing into a sub-database");
+            fostlib::json dbconf(meta[tree.key()][fostlib::string(1, hash[layer])]);
+            beanbag::jsondb_ptr pdb(beanbag::database(dbconf));
+            return add_recurse(layer + 1, dbconf, fostlib::jsondb::local(*pdb),
+                tree, dbpath, hash);
         }
     }
 }
