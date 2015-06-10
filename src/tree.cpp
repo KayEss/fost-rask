@@ -11,6 +11,11 @@
 #include <fost/log>
 
 
+namespace {
+    const fostlib::json c_db_cluster("db-cluster");
+}
+
+
 /*
     rask::tree
 */
@@ -43,11 +48,15 @@ rask::tree::const_iterator rask::tree::end() const {
 namespace {
     fostlib::jsondb::local leaf(
         beanbag::jsondb_ptr dbp,
-        const fostlib::jcursor &dbpath
+        const fostlib::jcursor &root, const fostlib::jcursor &dbpath
     ) {
         fostlib::jsondb::local meta(*dbp);
         if ( !meta.has_key(dbpath) ) {
             meta.insert(dbpath, fostlib::json::object_t());
+        }
+        if ( meta[root].size() > 64 ) {
+            throw fostlib::exceptions::not_implemented("Partitioning a database",
+                fostlib::coerce<fostlib::string>(meta[root].size()));
         }
         return std::move(meta);
     }
@@ -56,7 +65,7 @@ fostlib::jsondb::local rask::tree::add(
     const fostlib::jcursor &dbpath,
     const fostlib::string &path, const std::vector<unsigned char> &hash
 ) {
-    return leaf(root_dbp(), dbpath);
+    return leaf(root_dbp(), root, dbpath);
 }
 
 
