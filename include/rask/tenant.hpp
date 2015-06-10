@@ -75,7 +75,12 @@ namespace rask {
             const tick &priority);
 
         /// The inodes
-        const tree &inodes() const;
+        const tree &inodes() const {
+            return *inodes_p;
+        }
+        tree &inodes() {
+            return *inodes_p;
+        }
 
     private:
         std::unique_ptr<tree> inodes_p;
