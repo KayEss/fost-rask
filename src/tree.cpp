@@ -33,14 +33,14 @@ beanbag::jsondb_ptr rask::tree::root_dbp() const {
 
 
 rask::tree::const_iterator rask::tree::begin() const {
-    const_iterator iter(*this, root_dbp());
+    const_iterator iter(*this);
     iter.begin();
     return iter;
 }
 
 
 rask::tree::const_iterator rask::tree::end() const {
-    const_iterator iter(*this, root_dbp());
+    const_iterator iter(*this);
     iter.end();
     return iter;
 }
@@ -131,39 +131,58 @@ fostlib::jsondb::local rask::tree::add(
 */
 
 
-rask::tree::const_iterator::const_iterator(const rask::tree &t, beanbag::jsondb_ptr dbp)
-: tree(t), root_dbp(dbp), root_data(*dbp) {
+rask::tree::const_iterator::const_iterator(const rask::tree &t)
+: tree(t) {
+    layers.reserve(10); // This is more than enough to start with (2x10^14)
 }
 
 
 rask::tree::const_iterator::const_iterator(const_iterator &&iter)
-: tree(iter.tree), root_dbp(iter.root_dbp), root_data(std::move(iter.root_data)),
-        underlying(std::move(iter.underlying)) {
+: tree(iter.tree), layers(std::move(iter.layers)) {
 }
+
+
+void rask::tree::const_iterator::check_pop() {
+    while ( layers.size() ) {
+        if ( layers.rbegin()->pos == layers.rbegin()->end )
+            layers.pop_back();
+        else
+            return;
+    }
+}
+
 
 void rask::tree::const_iterator::begin()  {
-    underlying = root_data[tree.root].begin();
+    beanbag::jsondb_ptr dbp(tree.root_dbp());
+    fostlib::jsondb::local layer(*dbp);
+    layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
+    if ( layer.has_key("@context") ) {
+        throw fostlib::exceptions::not_implemented(
+            "tree const_iterator descending into sub-database");
+    } else {
+        check_pop();
+    }
 }
 
 
+/// We don't need this to do something if we take the view that an
+/// empty layer stack is the end of the processing
 void rask::tree::const_iterator::end() {
-    underlying = root_data[tree.root].end();
 }
 
 
 fostlib::json rask::tree::const_iterator::operator * () const {
-    return *underlying;
+    return *(layers.rbegin()->pos);
 }
 
 
 rask::tree::const_iterator &rask::tree::const_iterator::operator ++ () {
-    ++underlying;
-    return *this;
+    throw fostlib::exceptions::not_implemented(
+        "tree const_iterator operator ++");
 }
 
 
 bool rask::tree::const_iterator::operator == (const rask::tree::const_iterator &r) const {
-    return underlying == r.underlying;
+    return layers == r.layers;
 }
-
 

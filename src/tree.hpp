@@ -46,18 +46,33 @@ namespace rask {
             friend class rask::tree;
             /// The owning tree
             const rask::tree &tree;
-            /// For now just hold the root
-            beanbag::jsondb_ptr root_dbp;
-            /// A local transaction for getting into the data
-            fostlib::jsondb::local root_data;
-            /// For now just hold the undelying iterator
-            fostlib::json::const_iterator underlying;
+            /// A layer traversing the tree
+            struct layer_type {
+                beanbag::jsondb_ptr pdb;
+                fostlib::jsondb::local meta;
+                fostlib::json::const_iterator pos;
+                fostlib::json::const_iterator end;
+
+                layer_type(
+                    beanbag::jsondb_ptr pdb, fostlib::jsondb::local meta,
+                    const fostlib::json &p
+                ) : pdb(pdb), meta(std::move(meta)), pos(p.begin()), end(p.end()) {
+                }
+
+                bool operator == (const layer_type &r) const {
+                    return pdb == r.pdb && pos == r.pos && end == r.end;
+                }
+            };
+            /// Hold the stack of layers
+            std::vector<layer_type> layers;
             /// Construct an iterator
-            const_iterator(const rask::tree &, beanbag::jsondb_ptr dbp);
+            const_iterator(const rask::tree &);
             /// Go to the beginning of the sequence
             void begin();
             /// Go to the end of the sequence
             void end();
+            /// Check if we need to pop a layer
+            void check_pop();
         public:
             /// Move constructor
             const_iterator(const_iterator &&);
