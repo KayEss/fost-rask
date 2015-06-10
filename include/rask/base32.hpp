@@ -34,5 +34,13 @@ namespace fostlib {
         /// Perform the coercion
         rask::base32_string coerce(const std::vector<unsigned char>&);
     };
+
+    /// Allow coerceon to a string
+    template<>
+    struct coercer< string, rask::base32_string > {
+        string coerce( const rask::base32_string &h ) {
+            return fostlib::coerce<string>(h.underlying());
+        }
+    };
 }
 
