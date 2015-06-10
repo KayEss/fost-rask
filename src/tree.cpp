@@ -40,16 +40,23 @@ rask::tree::const_iterator rask::tree::end() const {
 }
 
 
+namespace {
+    fostlib::jsondb::local leaf(
+        beanbag::jsondb_ptr dbp,
+        const fostlib::jcursor &dbpath
+    ) {
+        fostlib::jsondb::local meta(*dbp);
+        if ( !meta.has_key(dbpath) ) {
+            meta.insert(dbpath, fostlib::json::object_t());
+        }
+        return std::move(meta);
+    }
+}
 fostlib::jsondb::local rask::tree::add(
     const fostlib::jcursor &dbpath,
     const fostlib::string &path, const std::vector<unsigned char> &hash
 ) {
-    auto rdbp = root_dbp();
-    fostlib::jsondb::local meta(*rdbp);
-    if ( !meta.has_key(dbpath) ) {
-        meta.insert(dbpath, fostlib::json::object_t());
-    }
-    return std::move(meta);
+    return leaf(root_dbp(), dbpath);
 }
 
 
