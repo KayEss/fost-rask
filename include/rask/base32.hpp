@@ -17,6 +17,7 @@ namespace rask {
 
     /// Encoding and checking of the base32 strings
     struct base32_string_tag {
+        static const char characters[];
         static void do_encode(fostlib::nliteral, fostlib::ascii_string &);
         static void do_encode(const fostlib::ascii_string &, fostlib::ascii_string &);
         static void check_encoded(const fostlib::ascii_string &);
