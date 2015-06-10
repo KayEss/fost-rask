@@ -40,6 +40,19 @@ rask::tree::const_iterator rask::tree::end() const {
 }
 
 
+fostlib::jsondb::local rask::tree::add(
+    const fostlib::jcursor &dbpath,
+    const fostlib::string &path, const std::vector<unsigned char> &hash
+) {
+    auto rdbp = root_dbp();
+    fostlib::jsondb::local meta(*rdbp);
+    if ( !meta.has_key(dbpath) ) {
+        meta.insert(dbpath, fostlib::json::object_t());
+    }
+    return std::move(meta);
+}
+
+
 /*
     rask::tree::const_iterator
 */

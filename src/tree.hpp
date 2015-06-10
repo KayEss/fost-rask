@@ -31,6 +31,15 @@ namespace rask {
 
         /// Return the root database
         beanbag::jsondb_ptr root_dbp() const;
+        /// Return the key that is being managed
+        const fostlib::jcursor &key() const {
+            return root;
+        }
+
+        /// Return a local transaction that covers the database where we
+        /// want to add a node
+        fostlib::jsondb::local add(const fostlib::jcursor &dbpath,
+            const fostlib::string &path, const std::vector<unsigned char> &hash);
 
         class const_iterator {
             friend class rask::tree;

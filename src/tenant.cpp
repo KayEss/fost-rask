@@ -9,6 +9,7 @@
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
 #include "tree.hpp"
+#include <rask/base32.hpp>
 #include <rask/clock.hpp>
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
@@ -117,11 +118,6 @@ beanbag::jsondb_ptr rask::tenant::beanbag() const {
 }
 
 
-const rask::tree &rask::tenant::inodes() const {
-    return *inodes_p;
-}
-
-
 namespace {
     fostlib::string relative_path(
         const fostlib::string &root, const boost::filesystem::path &location
@@ -143,23 +139,23 @@ void rask::tenant::local_change(
     const fostlib::json &inode_type,
     packet_builder builder
 ) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ) {
-        auto path = relative_path(root, location);
+    auto path = relative_path(root, location);
+    auto path_hash = name_hash(path);
+    fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
+    fostlib::jsondb::local meta(inodes().add(dbpath, path, path_hash));
+    if ( meta[dbpath / "filetype"] != inode_type ) {
         auto priority = tick::next();
         fostlib::digester hash(fostlib::sha256);
         hash << priority;
         meta
-            .set(dbpath, fostlib::json::object_t())
+            .update(dbpath, fostlib::json::object_t())
             .set(dbpath / "filetype", inode_type)
             .set(dbpath / "name", path)
             .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .set(dbpath / "hash" / "name",
+                    fostlib::coerce<rask::base32_string>(path_hash))
             .set(dbpath / "hash" / "inode",
-                fostlib::coerce<fostlib::string>(
-                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
+                    fostlib::coerce<fostlib::base64_string>(hash.digest()))
             .commit();
         rehash_inodes(*this, meta);
         fostlib::log::info()
@@ -176,17 +172,16 @@ void rask::tenant::remote_change(
     const fostlib::json &inode_type,
     const tick &priority
 ) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ||
-            tick(meta[dbpath / "priority"]) < priority
-    ) {
+    auto path = relative_path(root, location);
+    auto path_hash = name_hash(path);
+    fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
+    fostlib::jsondb::local meta(inodes().add(dbpath, path, path_hash));
+    if ( meta[dbpath / "filetype"] != inode_type || tick(meta[dbpath / "priority"]) < priority ) {
         auto path = relative_path(root, location);
         fostlib::digester hash(fostlib::sha256);
         hash << priority;
         meta
-            .set(dbpath, fostlib::json::object_t())
+            .update(dbpath, fostlib::json::object_t())
             .set(dbpath / "filetype", inode_type)
             .set(dbpath / "name", path)
             .set(dbpath / "priority", priority)
