@@ -177,7 +177,15 @@ void rask::tree::const_iterator::end() {
 
 
 fostlib::json rask::tree::const_iterator::operator * () const {
-    return *(layers.rbegin()->pos);
+    if ( layers.size() ) {
+        fostlib::log::debug()
+            ("", "rask::tree::const_iterator::operator *")
+            ("content", *(layers.rbegin()->pos));
+        return *(layers.rbegin()->pos);
+    } else {
+        throw fostlib::exceptions::not_implemented(
+            "rask::tree::const_iterator::operator * when layers is empty");
+    }
 }
 
 
