@@ -158,10 +158,6 @@ bool rask::tree::const_iterator::check_pop() {
 void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
     fostlib::jsondb::local layer(*dbp);
     const bool bottom(!layer.data().has_key("@context"));
-    fostlib::log::debug()
-        ("", "rask::tree::const_iterator::begin")
-        ("bottom", bottom)
-        ("layer", layer[tree.key()]);
     layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
     if ( !bottom ) {
         begin(beanbag::database((*layers.rbegin()->pos)["database"]));
@@ -179,9 +175,6 @@ void rask::tree::const_iterator::end() {
 
 fostlib::json rask::tree::const_iterator::operator * () const {
     if ( layers.size() ) {
-        fostlib::log::debug()
-            ("", "rask::tree::const_iterator::operator *")
-            ("content", *(layers.rbegin()->pos));
         return *(layers.rbegin()->pos);
     } else {
         throw fostlib::exceptions::not_implemented(
