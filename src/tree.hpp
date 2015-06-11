@@ -71,8 +71,8 @@ namespace rask {
             void begin(beanbag::jsondb_ptr dbp);
             /// Go to the end of the sequence
             void end();
-            /// Check if we need to pop a layer
-            void check_pop();
+            /// Check if we need to pop a layer. Returns true if a layer was popped.
+            bool check_pop();
         public:
             /// Move constructor
             const_iterator(const_iterator &&);
