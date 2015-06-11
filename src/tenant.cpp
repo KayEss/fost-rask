@@ -105,8 +105,9 @@ rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
             tenants.set(dbpath, conf).commit();
         }
         // Set up the inodes
-        inodes_p = std::make_unique<tree>(tenants[dbpath],
-            fostlib::jcursor("inodes"), fostlib::jcursor("hash", "name"));
+        inodes_p = std::make_unique<tree>(
+            tenants[dbpath], fostlib::jcursor("inodes"),
+            fostlib::jcursor("hash", "name"), fostlib::jcursor("hash", "inode"));
     }
 }
 

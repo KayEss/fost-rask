@@ -25,10 +25,13 @@ namespace rask {
         const fostlib::jcursor root;
     public:
         /// Construct the tree
-        tree(fostlib::json config, fostlib::jcursor root, fostlib::jcursor hash);
+        tree(fostlib::json config, fostlib::jcursor root,
+            fostlib::jcursor name_hash, fostlib::jcursor item_hash);
 
         /// The path within an entry where we can find the hash
         const fostlib::accessors<fostlib::jcursor> name_hash_path;
+        /// The path within an entry where we can find the item hash
+        const fostlib::accessors<fostlib::jcursor> item_hash_path;
 
         /// Return the root database
         beanbag::jsondb_ptr root_dbp() const;

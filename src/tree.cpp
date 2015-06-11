@@ -22,8 +22,9 @@ namespace {
 */
 
 
-rask::tree::tree(fostlib::json c, fostlib::jcursor r, fostlib::jcursor h)
-: root_db_config(std::move(c)), root(std::move(r)), name_hash_path(std::move(h)) {
+rask::tree::tree(fostlib::json c, fostlib::jcursor r, fostlib::jcursor nh, fostlib::jcursor ih)
+: root_db_config(std::move(c)), root(std::move(r)),
+        name_hash_path(std::move(nh)), item_hash_path(std::move(ih)) {
 }
 
 
