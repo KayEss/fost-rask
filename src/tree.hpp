@@ -68,7 +68,7 @@ namespace rask {
             /// Construct an iterator
             const_iterator(const rask::tree &);
             /// Go to the beginning of the sequence
-            void begin();
+            void begin(beanbag::jsondb_ptr dbp);
             /// Go to the end of the sequence
             void end();
             /// Check if we need to pop a layer

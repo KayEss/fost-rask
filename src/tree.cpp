@@ -34,7 +34,7 @@ beanbag::jsondb_ptr rask::tree::root_dbp() const {
 
 rask::tree::const_iterator rask::tree::begin() const {
     const_iterator iter(*this);
-    iter.begin();
+    iter.begin(root_dbp());
     return iter;
 }
 
@@ -154,13 +154,16 @@ void rask::tree::const_iterator::check_pop() {
 }
 
 
-void rask::tree::const_iterator::begin()  {
-    beanbag::jsondb_ptr dbp(tree.root_dbp());
+void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
     fostlib::jsondb::local layer(*dbp);
+    const bool bottom(!layer.data().has_key("@context"));
+    fostlib::log::debug()
+        ("", "rask::tree::const_iterator::begin")
+        ("bottom", bottom)
+        ("layer", layer[tree.key()]);
     layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
-    if ( layer.has_key("@context") ) {
-        throw fostlib::exceptions::not_implemented(
-            "tree const_iterator descending into sub-database");
+    if ( !bottom ) {
+        begin(beanbag::database(*layers.rbegin()->pos));
     } else {
         check_pop();
     }
