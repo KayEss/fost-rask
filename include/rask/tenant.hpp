@@ -19,6 +19,7 @@ namespace rask {
 
 
     class tree;
+    struct workers;
 
 
     /// Check the configuration for changes in tenants
@@ -40,7 +41,7 @@ namespace rask {
         const fostlib::string root;
     public:
         /// Construct a tenant representation
-        tenant(const fostlib::string &name, const fostlib::json &configuration);
+        tenant(workers &, const fostlib::string &name, const fostlib::json &configuration);
         /// Explicit desctructor
         ~tenant();
 

@@ -36,7 +36,7 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
                 g_tenants.add_if_not_found(key,
                     [&]() {
                         fostlib::log::info("New tenant for processing", t.key(), *t);
-                        auto tp = std::make_shared<tenant>(key, *t);
+                        auto tp = std::make_shared<tenant>(w, key, *t);
                         start_sweep(w, tp);
                         return tp;
                     });
@@ -82,7 +82,7 @@ namespace {
         }
     }
 }
-rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
+rask::tenant::tenant(workers &w, const fostlib::string &n, const fostlib::json &c)
 : root(slash(c)), name(n), configuration(c),
         local_path(fostlib::coerce<boost::filesystem::path>(root)) {
      // Tests will use this without a tenant configured, so make sure to check
@@ -106,7 +106,7 @@ rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
         }
         // Set up the inodes
         inodes_p = std::make_unique<tree>(
-            tenants[dbpath], fostlib::jcursor("inodes"),
+            w, tenants[dbpath], fostlib::jcursor("inodes"),
             fostlib::jcursor("hash", "name"), fostlib::jcursor("hash", "inode"));
     }
 }

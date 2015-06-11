@@ -8,6 +8,7 @@
 
 #include "tree.hpp"
 #include <rask/base32.hpp>
+#include <rask/workers.hpp>
 
 #include <fost/log>
 
@@ -22,8 +23,9 @@ namespace {
 */
 
 
-rask::tree::tree(fostlib::json c, fostlib::jcursor r, fostlib::jcursor nh, fostlib::jcursor ih)
-: root_db_config(std::move(c)), root(std::move(r)),
+rask::tree::tree(
+    rask::workers &w, fostlib::json c, fostlib::jcursor r, fostlib::jcursor nh, fostlib::jcursor ih
+) : workers(w), root_db_config(std::move(c)), root(std::move(r)),
         name_hash_path(std::move(nh)), item_hash_path(std::move(ih)) {
 }
 

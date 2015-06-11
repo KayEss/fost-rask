@@ -15,17 +15,22 @@
 namespace rask {
 
 
+    struct workers;
+
+
     /// Class that can be used to provide an interface onto the beanbags
     /// needed to implement the tree for large collections of names -- tenants
     /// and inodes.
     class tree {
+        /// The workers that can be used for async jobs
+        rask::workers &workers;
         /// The beanbag configuration for the root database
         const fostlib::json root_db_config;
         /// The root jcursor that we are going to iterate on
         const fostlib::jcursor root;
     public:
         /// Construct the tree
-        tree(fostlib::json config, fostlib::jcursor root,
+        tree(rask::workers &, fostlib::json config, fostlib::jcursor root,
             fostlib::jcursor name_hash, fostlib::jcursor item_hash);
 
         /// The path within an entry where we can find the hash
