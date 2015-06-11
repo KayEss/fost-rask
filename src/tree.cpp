@@ -59,7 +59,7 @@ namespace {
                 if ( data[tree.key()].size() > 64 ) {
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
-                    fostlib::insert(data, tree.key(), "@context", c_db_cluster);
+                    fostlib::insert(data, "@context", c_db_cluster);
                     for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
                         auto item = *niter;
                         auto hash = fostlib::coerce<fostlib::string>(item[tree.name_hash_path()]);
@@ -106,7 +106,7 @@ namespace {
         std::size_t layer, const fostlib::json &dbconfig, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath, const fostlib::string &hash
     ) {
-        if ( !meta[tree.key()].has_key("@context") ) {
+        if ( !meta.data().has_key("@context") ) {
             return add_leaf(layer, dbconfig, std::move(meta), tree, dbpath);
         } else {
             fostlib::json dbconf(meta[tree.key()][fostlib::string(1, hash[layer])]);
