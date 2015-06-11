@@ -101,7 +101,7 @@ rask::tenant::tenant(workers &w, const fostlib::string &n, const fostlib::json &
             fostlib::json conf;
             fostlib::insert(conf, "filepath", tdb_path);
             fostlib::insert(conf, "name", "tenant/" + name());
-            fostlib::insert(conf, "initial", fostlib::json::object_t());
+            fostlib::insert(conf, "initial", "tenant", name());
             tenants.set(dbpath, conf).commit();
         }
         // Set up the inodes
