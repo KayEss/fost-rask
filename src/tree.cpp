@@ -69,7 +69,7 @@ namespace {
                         auto hkey = fostlib::string(1, hash[layer]);
                         beanbag::jsondb_ptr hdbp;
                         if ( data[tree.key()].has_key(hkey) ) {
-                            hdbp = beanbag::database(data[tree.key()][hkey]);
+                            hdbp = beanbag::database(data[tree.key()][hkey]["database"]);
                         } else {
                             auto ndb_path(fostlib::coerce<boost::filesystem::path>(
                                 dbconfig["filepath"]));
@@ -85,7 +85,7 @@ namespace {
                                     fostlib::coerce<fostlib::string>(dbconfig["name"]) + hkey);
                             }
                             fostlib::insert(conf, "initial", fostlib::json::object_t());
-                            (tree.key() / hkey).insert(data, conf);
+                            (tree.key() / hkey / "database").insert(data, conf);
                             hdbp = beanbag::database(conf);
                             fostlib::jsondb::local child(*hdbp);
                             child
@@ -109,7 +109,7 @@ namespace {
         if ( !meta.data().has_key("@context") ) {
             return add_leaf(layer, dbconfig, std::move(meta), tree, dbpath);
         } else {
-            fostlib::json dbconf(meta[tree.key()][fostlib::string(1, hash[layer])]);
+            fostlib::json dbconf(meta[tree.key()][fostlib::string(1, hash[layer])]["database"]);
             beanbag::jsondb_ptr pdb(beanbag::database(dbconf));
             return add_recurse(layer + 1, dbconf, fostlib::jsondb::local(*pdb),
                 tree, dbpath, hash);
@@ -164,7 +164,7 @@ void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
         ("layer", layer[tree.key()]);
     layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
     if ( !bottom ) {
-        begin(beanbag::database(*layers.rbegin()->pos));
+        begin(beanbag::database((*layers.rbegin()->pos)["database"]));
     } else {
         check_pop();
     }
@@ -198,7 +198,7 @@ rask::tree::const_iterator &rask::tree::const_iterator::operator ++ () {
         }
     }
     if ( layers.size() && layers.rbegin()->meta.has_key("@context") ) {
-        begin(beanbag::database(*layers.rbegin()->pos));
+        begin(beanbag::database((*layers.rbegin()->pos)["database"]));
     }
     return *this;
 }
