@@ -191,8 +191,16 @@ fostlib::json rask::tree::const_iterator::operator * () const {
 
 
 rask::tree::const_iterator &rask::tree::const_iterator::operator ++ () {
-    throw fostlib::exceptions::not_implemented(
-        "tree const_iterator operator ++");
+    ++(layers.rbegin()->pos);
+    while ( check_pop() ) {
+        if ( layers.size() ) {
+            ++(layers.rbegin()->pos);
+        }
+    }
+    if ( layers.size() && layers.rbegin()->meta.has_key("@context") ) {
+        begin(beanbag::database(*layers.rbegin()->pos));
+    }
+    return *this;
 }
 
 
