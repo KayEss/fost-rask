@@ -167,8 +167,8 @@ void rask::tree::const_iterator::begin()  {
 }
 
 
-/// We don't need this to do something if we take the view that an
-/// empty layer stack is the end of the processing
+/// We don't need this to do something if the iterator advancement
+/// and begin can leave the layer empty when they get to the end
 void rask::tree::const_iterator::end() {
 }
 
