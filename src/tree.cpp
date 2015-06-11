@@ -144,13 +144,14 @@ rask::tree::const_iterator::const_iterator(const_iterator &&iter)
 }
 
 
-void rask::tree::const_iterator::check_pop() {
-    while ( layers.size() ) {
-        if ( layers.rbegin()->pos == layers.rbegin()->end )
+bool rask::tree::const_iterator::check_pop() {
+    if ( layers.size() ) {
+        if ( layers.rbegin()->pos == layers.rbegin()->end ) {
             layers.pop_back();
-        else
-            return;
+            return true;
+        }
     }
+    return false;
 }
 
 
