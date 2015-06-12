@@ -59,7 +59,7 @@ namespace {
             meta.insert(dbpath, fostlib::json::object_t());
         }
         meta.pre_commit(
-            [&workers, layer, &dbconfig, &tree](fostlib::json &data) {
+            [&workers, layer, dbconfig, &tree](fostlib::json &data) {
                 if ( data[tree.key()].size() > 64 ) {
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
