@@ -153,8 +153,7 @@ void rask::tenant::local_change(
             .set(dbpath / "filetype", inode_type)
             .set(dbpath / "name", path)
             .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name",
-                    fostlib::coerce<rask::base32_string>(path_hash))
+            .set(dbpath / "hash" / "name", path_hash)
             .set(dbpath / "hash" / "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()))
             .commit();
@@ -186,7 +185,7 @@ void rask::tenant::remote_change(
             .set(dbpath / "filetype", inode_type)
             .set(dbpath / "name", path)
             .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
+            .set(dbpath / "hash" / "name", path_hash)
             .set(dbpath / "hash" / "inode",
                 fostlib::coerce<fostlib::string>(
                     fostlib::coerce<fostlib::base64_string>(hash.digest())))

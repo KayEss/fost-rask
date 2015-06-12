@@ -9,6 +9,7 @@
 #pragma once
 
 
+#include "hash.hpp"
 #include <beanbag/beanbag>
 
 
@@ -48,7 +49,7 @@ namespace rask {
         /// Return a local transaction that covers the database where we
         /// want to add a node
         fostlib::jsondb::local add(const fostlib::jcursor &dbpath,
-            const fostlib::string &path, const std::vector<unsigned char> &hash);
+            const fostlib::string &path, const name_hash_type &hash);
 
         class const_iterator {
             friend class rask::tree;

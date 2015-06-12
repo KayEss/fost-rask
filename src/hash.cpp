@@ -16,6 +16,11 @@
 #include <fost/log>
 
 
+rask::name_hash_type rask::name_hash(const fostlib::string &s) {
+    return fostlib::md5(s);
+}
+
+
 namespace {
     auto digest(const fostlib::jcursor &p, const fostlib::json &o) {
         fostlib::digester hasher(fostlib::sha256);
@@ -32,13 +37,6 @@ namespace {
         }
         return hasher.digest();
     }
-}
-
-
-rask::name_hash_type rask::name_hash(const fostlib::string &s) {
-    fostlib::digester d(fostlib::md5);
-    d << s;
-    return d.digest();
 }
 
 

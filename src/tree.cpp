@@ -129,12 +129,10 @@ namespace {
 }
 fostlib::jsondb::local rask::tree::add(
     const fostlib::jcursor &dbpath,
-    const fostlib::string &path, const std::vector<unsigned char> &hashv
+    const fostlib::string &path, const name_hash_type &hash
 ) {
     auto dbp = root_dbp();
     fostlib::jsondb::local meta(*dbp);
-    auto hash = fostlib::coerce<fostlib::string>(
-        fostlib::coerce<rask::base32_string>(hashv));
     return add_recurse(workers, 0, root_db_config, std::move(meta), *this, dbpath, hash);
 }
 

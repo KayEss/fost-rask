@@ -19,7 +19,7 @@ namespace rask {
 
 
     /// The name hash
-    using name_hash_type = std::vector<unsigned char>;
+    using name_hash_type = fostlib::string;
 
 
     /// Return the hash for a name
