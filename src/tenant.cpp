@@ -158,7 +158,7 @@ void rask::tenant::local_change(
             .set(dbpath / "hash" / "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()))
             .commit();
-        rehash_inodes(*this, meta);
+        rehash_inodes(meta);
         fostlib::log::info()
             ("", inode_type)
             ("broadcast", "to", broadcast(builder(*this, priority, path)))
@@ -191,7 +191,7 @@ void rask::tenant::remote_change(
                 fostlib::coerce<fostlib::string>(
                     fostlib::coerce<fostlib::base64_string>(hash.digest())))
             .commit();
-        rehash_inodes(*this, meta);
+        rehash_inodes(meta);
         fostlib::log::info()
             ("", inode_type)
             ("tenant", name())
