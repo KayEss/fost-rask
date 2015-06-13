@@ -83,10 +83,12 @@ namespace {
                             .commit();
                     }
                     for ( auto dbp : children ) {
-                        workers.high_latency.io_service.post(
-                            [dbp]() {
-                                rask::rehash_inodes(fostlib::jsondb::local(*dbp));
-                            });
+                        if ( dbp ) {
+                            workers.high_latency.io_service.post(
+                                [dbp]() {
+                                    rask::rehash_inodes(fostlib::jsondb::local(*dbp));
+                                });
+                        }
                     }
                 }
             });
