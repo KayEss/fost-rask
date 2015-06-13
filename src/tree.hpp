@@ -29,6 +29,7 @@ namespace rask {
         const fostlib::json root_db_config;
         /// The root jcursor that we are going to iterate on
         const fostlib::jcursor root;
+
     public:
         /// Construct the tree
         tree(rask::workers &, fostlib::json config, fostlib::jcursor root,
@@ -44,6 +45,14 @@ namespace rask {
         /// Return the key that is being managed
         const fostlib::jcursor &key() const {
             return root;
+        }
+        /// Return the database config for a particular layer
+        fostlib::json layer_db_config(std::size_t layer, const name_hash_type &) const;
+        /// Return the database for a particualr layer
+        beanbag::jsondb_ptr layer_dbp(
+            std::size_t layer, const name_hash_type &hash
+        ) const {
+            return beanbag::database(layer_db_config(layer, hash));
         }
 
         /// Return a local transaction that covers the database where we

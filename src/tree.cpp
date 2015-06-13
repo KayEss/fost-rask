@@ -52,93 +52,57 @@ rask::tree::const_iterator rask::tree::end() const {
 
 namespace {
     fostlib::jsondb::local add_leaf(rask::workers &workers,
-        std::size_t layer, const fostlib::json &dbconfig, fostlib::jsondb::local meta,
+        std::size_t layer, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath
     ) {
         if ( !meta.has_key(dbpath) ) {
             meta.insert(dbpath, fostlib::json::object_t());
         }
         meta.pre_commit(
-            [&workers, layer, dbconfig, &tree](fostlib::json &data) {
+            [&workers, layer, &tree](fostlib::json &data) {
                 if ( data[tree.key()].size() > 64 ) {
+                    std::vector<beanbag::jsondb_ptr> children(32);
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
                     fostlib::insert(data, "@context", c_db_cluster);
                     for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
                         auto item = *niter;
-                        auto hash = fostlib::coerce<fostlib::string>(item[tree.name_hash_path()]);
+                        const auto hash = fostlib::coerce<fostlib::string>(
+                            item[tree.name_hash_path()]);
                         if ( layer >= hash.length() )
                             throw fostlib::exceptions::not_implemented(
                                 "Partitioning a tree when we've run out of name hash");
                         auto hkey = fostlib::string(1, hash[layer]);
-                        beanbag::jsondb_ptr hdbp;
-                        if ( data[tree.key()].has_key(hkey) ) {
-                            hdbp = beanbag::database(data[tree.key()][hkey]["database"]);
-                        } else {
-                            auto ndb_path(fostlib::coerce<boost::filesystem::path>(
-                                dbconfig["filepath"]));
-                            ndb_path.replace_extension(
-                                fostlib::coerce<boost::filesystem::path>(hkey + ".json"));
-                            fostlib::json conf;
-                            fostlib::insert(conf, "filepath", ndb_path);
-                            if ( layer == 0u ) {
-                                fostlib::insert(conf, "name",
-                                    fostlib::coerce<fostlib::string>(dbconfig["name"]) + "/" + hkey);
-                            } else {
-                                fostlib::insert(conf, "name",
-                                    fostlib::coerce<fostlib::string>(dbconfig["name"]) + hkey);
-                            }
-                            fostlib::insert(conf, "initial", fostlib::json::object_t());
-                            (tree.key() / hkey / "database").insert(data, conf);
-                            hdbp = beanbag::database(conf);
-                            fostlib::jsondb::local child(*hdbp);
-                            child
-                                .insert("parent", dbconfig)
-                                .insert("child", hkey)
-                                .insert(tree.key(), fostlib::json::object_t())
-                                .commit();
+                        const auto digit = rask::from_base32_ascii_digit(hash[layer]);
+                        if ( !children[digit] ) {
+                            children[digit] = tree.layer_dbp(layer + 1, hash);
                         }
-                        fostlib::jsondb::local child(*hdbp);
+                        fostlib::jsondb::local child(*children[digit]);
                         child
                             .insert(tree.key() / niter.key(), item)
                             .commit();
                     }
-                    for ( auto db : data[tree.key()] ) {
-                            workers.high_latency.io_service.post(
-                                [db]() {
-                                    try {
-                                        rask::rehash_inodes(db["database"]);
-                                    } catch ( fostlib::exceptions::exception &e ) {
-                                        fostlib::insert(e.data(), "during", "inode hashing");
-                                        fostlib::insert(e.data(), "db", db);
-                                        throw;
-                                    }
-                                });
+                    for ( auto dbp : children ) {
+                        workers.high_latency.io_service.post(
+                            [dbp]() {
+                                rask::rehash_inodes(fostlib::jsondb::local(*dbp));
+                            });
                     }
                 }
             });
         return std::move(meta);
     }
     fostlib::jsondb::local add_recurse(rask::workers &workers,
-        std::size_t layer, const fostlib::json &dbconfig, fostlib::jsondb::local meta,
-        const rask::tree &tree, const fostlib::jcursor &dbpath, const fostlib::string &hash
+        std::size_t layer, fostlib::jsondb::local meta,
+        const rask::tree &tree, const fostlib::jcursor &dbpath,
+        const rask::name_hash_type &hash
     ) {
         if ( !meta.data().has_key("@context") ) {
-            return add_leaf(workers, layer, dbconfig, std::move(meta), tree, dbpath);
+            return add_leaf(workers, layer, std::move(meta), tree, dbpath);
         } else {
-            auto subdb = meta[tree.key()][fostlib::string(1, hash[layer])];
-            try {
-                fostlib::json dbconf(subdb["database"]);
-                beanbag::jsondb_ptr pdb(beanbag::database(dbconf));
-                return add_recurse(workers, layer + 1, dbconf, fostlib::jsondb::local(*pdb),
-                    tree, dbpath, hash);
-            } catch ( fostlib::exceptions::exception &e ) {
-                fostlib::push_back(e.data(), "during", "recurse into database");
-                fostlib::push_back(e.data(), "db", subdb);
-                fostlib::push_back(e.data(), "meta", meta.data());
-                fostlib::push_back(e.data(), "into", fostlib::string(1, hash[layer]));
-                throw;
-            }
+            beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+            return add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                tree, dbpath, hash);
         }
     }
 }
@@ -148,7 +112,30 @@ fostlib::jsondb::local rask::tree::add(
 ) {
     auto dbp = root_dbp();
     fostlib::jsondb::local meta(*dbp);
-    return add_recurse(workers, 0, root_db_config, std::move(meta), *this, dbpath, hash);
+    return add_recurse(workers, 0,  std::move(meta), *this, dbpath, hash);
+}
+
+
+fostlib::json rask::tree::layer_db_config(
+    std::size_t layer, const name_hash_type &hash
+) const {
+    if ( layer == 0u ) {
+        return root_db_config;
+    } else {
+        const auto hash_prefix = hash.substr(0, layer);
+        auto ndb_path =
+            fostlib::coerce<boost::filesystem::path>(root_db_config["filepath"]);
+        ndb_path.replace_extension(
+            fostlib::coerce<boost::filesystem::path>(hash.substr(0, layer) + ".json"));
+        fostlib::json conf;
+        fostlib::insert(conf, "filepath", ndb_path);
+        fostlib::insert(conf, "name",
+            fostlib::coerce<fostlib::string>(root_db_config["name"]) + "/" + hash_prefix);
+        fostlib::insert(conf, "initial", "layer", "index", layer);
+        fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
+        fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
+        return conf;
+    }
 }
 
 
