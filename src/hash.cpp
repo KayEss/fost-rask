@@ -7,6 +7,7 @@
 
 
 #include "hash.hpp"
+#include <rask/base32.hpp>
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
 
@@ -17,7 +18,10 @@
 
 
 rask::name_hash_type rask::name_hash(const fostlib::string &s) {
-    return fostlib::md5(s);
+    fostlib::digester d(fostlib::md5);
+    d << s;
+    return fostlib::coerce<fostlib::string>(
+        fostlib::coerce<rask::base32_string>(d.digest()));
 }
 
 
