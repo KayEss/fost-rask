@@ -7,6 +7,7 @@
 
 
 #include "hash.hpp"
+#include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
@@ -49,26 +50,29 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
     std::vector<unsigned char> hash(
         digest(inode_hash_path, tdb["inodes"]));
     if ( tdb.has_key("layer") ) {
-        // TODO: Implement this -- need to find the tenant
-//         auto pdbp = beanbag::database(tdb["parent"]);
-//         fostlib::jsondb::local parent(*pdbp);
-//         try {
-//             // Set the correct hash in the parent's child node
-//             parent
-//                 .set(fostlib::jcursor("inodes") /
-//                         fostlib::coerce<fostlib::string>(tdb["child"]) /
-//                         inode_hash_path,
-//                     fostlib::coerce<fostlib::base64_string>(hash))
-//                 .commit();
-//             // Then rehash the parent and on up
-//             rehash_inodes(parent);
-//         } catch ( fostlib::exceptions::exception &e ) {
-//             fostlib::json level;
-//             fostlib::insert(level, "tdb", tdb.data());
-//             fostlib::insert(level, "parent", parent.data());
-//             fostlib::push_back(e.data(), "rehash_inodes", level);
-//             throw;
-//         }
+        const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
+        auto tenant = known_tenant(tenant_name);
+        auto pdbp = tenant->inodes().layer_dbp(
+            fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
+            fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
+        fostlib::jsondb::local parent(*pdbp);
+        try {
+            // Set the correct hash in the parent's child node
+            parent
+                .set(fostlib::jcursor("inodes") /
+                        fostlib::coerce<fostlib::string>(tdb["layer"]["current"]) /
+                        inode_hash_path,
+                    fostlib::coerce<fostlib::base64_string>(hash))
+                .commit();
+            // Then rehash the parent and on up
+            rehash_inodes(parent);
+        } catch ( fostlib::exceptions::exception &e ) {
+            fostlib::json level;
+            fostlib::insert(level, "tdb", tdb.data());
+            fostlib::insert(level, "parent", parent.data());
+            fostlib::push_back(e.data(), "rehash_inodes", level);
+            throw;
+        }
     } else {
         std::shared_ptr<rask::tenant> tenantp(
             known_tenant(fostlib::coerce<fostlib::string>(tdb["tenant"])));
