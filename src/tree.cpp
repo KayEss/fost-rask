@@ -133,6 +133,7 @@ fostlib::json rask::tree::layer_db_config(
         fostlib::insert(conf, "filepath", ndb_path);
         fostlib::insert(conf, "name",
             fostlib::coerce<fostlib::string>(root_db_config["name"]) + "/" + hash_prefix);
+        fostlib::insert(conf, "initial", root_db_config["initial"]);
         fostlib::insert(conf, "initial", "layer", "index", layer);
         fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
         fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
