@@ -26,7 +26,12 @@ namespace rask {
     typedef fostlib::tagged_string<base32_string_tag, fostlib::ascii_string> base32_string;
 
 
+    /// Return the number that is represented by the single base32 digit
+    int8_t from_base32_ascii_digit(fostlib::utf32);
+
+
 }
+
 
 namespace fostlib {
     /// Allow a base32 string to be generated from a vector of byte values

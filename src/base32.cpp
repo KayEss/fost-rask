@@ -59,3 +59,22 @@ rask::base32_string fostlib::coercer<
     }
     return fostlib::ascii_string(string);
 }
+
+
+int8_t rask::from_base32_ascii_digit(fostlib::utf32 c) {
+    if ( c < '0' || c > 'z' ) {
+        throw fostlib::exceptions::out_of_range<utf32>(
+            "Character outside of allowable range", c, '0', 'z');
+    }
+    const char *ptr(std::find(
+        base32_string_tag::characters,
+        base32_string_tag::characters + sizeof(base32_string_tag::characters),
+        c));
+    const int8_t d = ptr - base32_string_tag::characters;
+    if ( d > 31 ) {
+        throw fostlib::exceptions::out_of_range<int8_t>(
+            "Digit not in base32", c, '0', 'z');
+    }
+    return d;
+}
+
