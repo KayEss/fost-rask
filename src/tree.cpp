@@ -104,10 +104,16 @@ namespace {
                             .commit();
                     }
                     for ( auto db : data[tree.key()] ) {
-                        workers.high_latency.io_service.post(
-                            [db]() {
-                                rask::rehash_inodes(db["database"]);
-                            });
+                            workers.high_latency.io_service.post(
+                                [db]() {
+                                    try {
+                                        rask::rehash_inodes(db["database"]);
+                                    } catch ( fostlib::exceptions::exception &e ) {
+                                        fostlib::insert(e.data(), "during", "inode hashing");
+                                        fostlib::insert(e.data(), "db", db);
+                                        throw;
+                                    }
+                                });
                     }
                 }
             });
@@ -120,10 +126,19 @@ namespace {
         if ( !meta.data().has_key("@context") ) {
             return add_leaf(workers, layer, dbconfig, std::move(meta), tree, dbpath);
         } else {
-            fostlib::json dbconf(meta[tree.key()][fostlib::string(1, hash[layer])]["database"]);
-            beanbag::jsondb_ptr pdb(beanbag::database(dbconf));
-            return add_recurse(workers, layer + 1, dbconf, fostlib::jsondb::local(*pdb),
-                tree, dbpath, hash);
+            auto subdb = meta[tree.key()][fostlib::string(1, hash[layer])];
+            try {
+                fostlib::json dbconf(subdb["database"]);
+                beanbag::jsondb_ptr pdb(beanbag::database(dbconf));
+                return add_recurse(workers, layer + 1, dbconf, fostlib::jsondb::local(*pdb),
+                    tree, dbpath, hash);
+            } catch ( fostlib::exceptions::exception &e ) {
+                fostlib::push_back(e.data(), "during", "recurse into database");
+                fostlib::push_back(e.data(), "db", subdb);
+                fostlib::push_back(e.data(), "meta", meta.data());
+                fostlib::push_back(e.data(), "into", fostlib::string(1, hash[layer]));
+                throw;
+            }
         }
     }
 }
