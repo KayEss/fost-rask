@@ -50,13 +50,13 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
     std::vector<unsigned char> hash(
         digest(inode_hash_path, tdb["inodes"]));
     if ( tdb.has_key("layer") ) {
-        const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
-        auto tenant = known_tenant(tenant_name);
-        auto pdbp = tenant->inodes().layer_dbp(
-            fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
-            fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
-        fostlib::jsondb::local parent(*pdbp);
         try {
+            const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
+            auto tenant = known_tenant(tenant_name);
+            auto pdbp = tenant->inodes().layer_dbp(
+                fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
+                fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
+            fostlib::jsondb::local parent(*pdbp);
             // Set the correct hash in the parent's child node
             parent
                 .set(fostlib::jcursor("inodes") /
@@ -69,7 +69,6 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
         } catch ( fostlib::exceptions::exception &e ) {
             fostlib::json level;
             fostlib::insert(level, "tdb", tdb.data());
-            fostlib::insert(level, "parent", parent.data());
             fostlib::push_back(e.data(), "rehash_inodes", level);
             throw;
         }

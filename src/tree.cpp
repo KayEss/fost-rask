@@ -16,6 +16,12 @@
 
 namespace {
     const fostlib::json c_db_cluster("db-cluster");
+
+    template<typename D>
+    inline bool partitioned(const D &d) {
+//         fostlib::log::debug("partitioned", d["@context"] == c_db_cluster, d[fostlib::jcursor()]);
+        return d["@context"] == c_db_cluster;
+    }
 }
 
 
@@ -65,7 +71,10 @@ namespace {
     ) {
         meta.pre_commit(
             [&workers, layer, &tree](fostlib::json &data) {
-                if ( data[tree.key()].size() > 64 ) {
+                if ( data[tree.key()].size() > 96 ) {
+                    fostlib::log::debug()
+                        ("", "partitioning beanbag")
+                        ("layer", data["layer"]);
                     std::vector<beanbag::jsondb_ptr> children(32);
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
@@ -77,7 +86,6 @@ namespace {
                         if ( layer >= hash.length() )
                             throw fostlib::exceptions::not_implemented(
                                 "Partitioning a tree when we've run out of name hash");
-                        auto hkey = fostlib::string(1, hash[layer]);
                         const auto digit = rask::from_base32_ascii_digit(hash[layer]);
                         if ( !children[digit] ) {
                             children[digit] = tree.layer_dbp(layer + 1, hash);
@@ -101,15 +109,25 @@ namespace {
             [
                 &workers, &tree, manipulator, dbpath, layer, hash
             ](fostlib::json &data) {
-                if ( data.has_key("@context") ) {
-                    beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
-                    add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                        tree, dbpath, hash, manipulator);
-                } else {
-                    if ( !data.has_key(dbpath) ) {
-                        dbpath.insert(data, fostlib::json::object_t());
+                const bool recurse = partitioned(data);
+                try {
+                    if ( recurse ) {
+                        beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+                        add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                            tree, dbpath, hash, manipulator);
+                    } else {
+                        if ( !data.has_key(dbpath) ) {
+                            dbpath.insert(data, fostlib::json::object_t());
+                        }
+                        manipulator(workers, data, tree.layer_db_config(layer, hash));
                     }
-                    manipulator(workers, data, tree.layer_db_config(layer, hash));
+                } catch ( fostlib::exceptions::exception &e ) {
+                    fostlib::push_back(e.data(), "add", "stack", "meta.transformation");
+                    fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
+                    fostlib::push_back(e.data(), "add", "hash", hash);
+                    fostlib::push_back(e.data(), "add", "recurse", recurse);
+                    fostlib::push_back(e.data(), "add", "data", data);
+                    throw;
                 }
             });
         meta.commit();
@@ -120,12 +138,31 @@ namespace {
         const rask::name_hash_type &hash,
         rask::tree::manipulator_fn manipulator
     ) {
-        if ( !meta.data().has_key("@context") ) {
-            add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
+        const bool recurse = partitioned(meta);
+        if ( !recurse ) {
+            try {
+                add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
+            } catch ( fostlib::exceptions::exception &e ) {
+                fostlib::push_back(e.data(), "add", "stack", "add_leaf");
+                fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
+                fostlib::push_back(e.data(), "add", "hash", hash);
+                fostlib::push_back(e.data(), "add", "recurse", recurse);
+                fostlib::push_back(e.data(), "add", "data", meta.data());
+                throw;
+            }
         } else {
-            beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
-            add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                tree, dbpath, hash, manipulator);
+            try {
+                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
+                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                    tree, dbpath, hash, manipulator);
+            } catch ( fostlib::exceptions::exception &e ) {
+                fostlib::push_back(e.data(), "add", "stack", "add_recurse");
+                fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
+                fostlib::push_back(e.data(), "add", "hash", hash);
+                fostlib::push_back(e.data(), "add", "recurse", recurse);
+                fostlib::push_back(e.data(), "add", "data", meta.data());
+                throw;
+            }
         }
     }
 }
@@ -160,6 +197,13 @@ fostlib::json rask::tree::layer_db_config(
         fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
         fostlib::insert(conf, "initial", "layer", "current", hash.substr(layer - 1, 1));
         fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
+        fostlib::log::debug()
+            ("", "layer_db_config")
+            ("layer", layer)
+            ("config", conf);
+//         if ( layer == 2 ) {
+//             throw fostlib::exceptions::not_implemented("Not allowing layer 2");
+//         }
         return conf;
     }
 }
@@ -194,7 +238,7 @@ bool rask::tree::const_iterator::check_pop() {
 
 void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
     fostlib::jsondb::local layer(*dbp);
-    const bool bottom(!layer.data().has_key("@context"));
+    const bool bottom(!partitioned(layer));
     layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
     if ( !bottom ) {
         begin(beanbag::database((*layers.rbegin()->pos)["database"]));
@@ -227,7 +271,7 @@ rask::tree::const_iterator &rask::tree::const_iterator::operator ++ () {
             ++(layers.rbegin()->pos);
         }
     }
-    if ( layers.size() && layers.rbegin()->meta.has_key("@context") ) {
+    if ( partitioned(layers.rbegin()->meta) ) {
         begin(beanbag::database((*layers.rbegin()->pos)["database"]));
     }
     return *this;
