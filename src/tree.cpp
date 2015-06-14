@@ -101,10 +101,16 @@ namespace {
             [
                 &workers, &tree, manipulator, dbpath, layer, hash
             ](fostlib::json &data) {
-                if ( !data.has_key(dbpath) ) {
-                    dbpath.insert(data, fostlib::json::object_t());
+                if ( data.has_key("@context") ) {
+                    beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+                    add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                        tree, dbpath, hash, manipulator);
+                } else {
+                    if ( !data.has_key(dbpath) ) {
+                        dbpath.insert(data, fostlib::json::object_t());
+                    }
+                    manipulator(workers, data, tree.layer_db_config(layer, hash));
                 }
-                manipulator(workers, data, tree.layer_db_config(layer, hash));
             });
         meta.commit();
     }
