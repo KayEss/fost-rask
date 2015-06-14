@@ -184,10 +184,14 @@ fostlib::json rask::tree::layer_db_config(
         return root_db_config;
     } else {
         const auto hash_prefix = hash.substr(0, layer);
-        auto ndb_path =
-            fostlib::coerce<boost::filesystem::path>(root_db_config["filepath"]);
-        ndb_path.replace_extension(
-            fostlib::coerce<boost::filesystem::path>(hash.substr(0, layer) + ".json"));
+        auto path_str = fostlib::coerce<fostlib::string>(root_db_config["filepath"]);
+        path_str = path_str.substr(0, path_str.length() - 5);
+        if ( layer > 2 ) {
+            path_str += "/" + hash.substr(0, 2) + "/" + hash.substr(2, layer - 2) + ".json";
+        } else {
+            path_str += "/" + hash.substr(0, layer) + ".json";
+        }
+        auto ndb_path = fostlib::coerce<boost::filesystem::path>(path_str);
         fostlib::json conf;
         fostlib::insert(conf, "filepath", ndb_path);
         fostlib::insert(conf, "name",
