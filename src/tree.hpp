@@ -95,6 +95,8 @@ namespace rask {
             void end();
             /// Check if we need to pop a layer. Returns true if a layer was popped.
             bool check_pop();
+            // Recurse down one layer
+            void down();
         public:
             /// Move constructor
             const_iterator(const_iterator &&);

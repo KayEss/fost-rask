@@ -88,6 +88,8 @@ namespace {
                                 "Partitioning a tree when we've run out of name hash");
                         const auto digit = rask::from_base32_ascii_digit(hash[layer]);
                         if ( !children[digit] ) {
+                            fostlib::insert(data, tree.key(), hash.substr(layer, 1),
+                                fostlib::json::object_t());
                             children[digit] = tree.layer_dbp(layer + 1, hash);
                         }
                         fostlib::jsondb::local child(*children[digit]);
@@ -240,12 +242,26 @@ bool rask::tree::const_iterator::check_pop() {
 }
 
 
+void rask::tree::const_iterator::down() {
+    if ( layers.rbegin()->meta.has_key("layer") ) {
+        const auto index = fostlib::coerce<int>(layers.rbegin()->meta["layer"]["index"]);
+        const auto hash =
+            fostlib::coerce<fostlib::string>(layers.rbegin()->meta["layer"]["hash"]) +
+            fostlib::coerce<fostlib::string>(layers.rbegin()->pos.key());
+        begin(tree.layer_dbp(index + 1, hash));
+    } else {
+        const auto hash = fostlib::coerce<fostlib::string>(layers.rbegin()->pos.key());
+        begin(tree.layer_dbp(1, hash));
+    }
+}
+
+
 void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
     fostlib::jsondb::local layer(*dbp);
-    const bool bottom(!partitioned(layer));
+    const bool split(partitioned(layer));
     layers.emplace_back(dbp, std::move(layer), layer[tree.key()]);
-    if ( !bottom ) {
-        begin(beanbag::database((*layers.rbegin()->pos)["database"]));
+    if ( split ) {
+        down();
     } else {
         check_pop();
     }
@@ -275,8 +291,8 @@ rask::tree::const_iterator &rask::tree::const_iterator::operator ++ () {
             ++(layers.rbegin()->pos);
         }
     }
-    if ( partitioned(layers.rbegin()->meta) ) {
-        begin(beanbag::database((*layers.rbegin()->pos)["database"]));
+    if ( layers.size() && partitioned(layers.rbegin()->meta) ) {
+        down();
     }
     return *this;
 }
