@@ -139,11 +139,13 @@ namespace {
         rask::tree::manipulator_fn manipulator
     ) {
         const bool recurse = partitioned(meta);
-        if ( !recurse ) {
+        if ( recurse ) {
             try {
-                add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
+                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
+                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                    tree, dbpath, hash, manipulator);
             } catch ( fostlib::exceptions::exception &e ) {
-                fostlib::push_back(e.data(), "add", "stack", "add_leaf");
+                fostlib::push_back(e.data(), "add", "stack", "add_recurse");
                 fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
                 fostlib::push_back(e.data(), "add", "hash", hash);
                 fostlib::push_back(e.data(), "add", "recurse", recurse);
@@ -152,11 +154,9 @@ namespace {
             }
         } else {
             try {
-                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
-                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                    tree, dbpath, hash, manipulator);
+                add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
             } catch ( fostlib::exceptions::exception &e ) {
-                fostlib::push_back(e.data(), "add", "stack", "add_recurse");
+                fostlib::push_back(e.data(), "add", "stack", "add_leaf");
                 fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
                 fostlib::push_back(e.data(), "add", "hash", hash);
                 fostlib::push_back(e.data(), "add", "recurse", recurse);
