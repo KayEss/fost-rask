@@ -182,13 +182,13 @@ void rask::tenant::remote_change(
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, priority, dbpath = std::move(dbpath),
+            self = this, inode_type, priority, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
         ) {
-            if ( data[dbpath / "filetype"] != inode_type ||
-                    tick(data[dbpath / "priority"]) < priority ) {
+            if ( data[dbpath]["filetype"] != inode_type ||
+                    tick(data[dbpath]["priority"]) < priority ) {
                 fostlib::digester hash(fostlib::sha256);
                 hash << priority;
                 fostlib::json node;
