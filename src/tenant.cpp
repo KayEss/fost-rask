@@ -145,7 +145,7 @@ void rask::tenant::local_change(
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, builder, dbpath = std::move(dbpath),
+            self = this, inode_type, builder, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
