@@ -38,7 +38,7 @@ namespace rask {
     class peer {
     public:
         /// Return the peer corresponding to the identifier given
-        static peer &server(uint32_t);
+        static std::shared_ptr<rask::peer> server(uint32_t);
 
         /// Store information about the server on the other end
         std::atomic<std::array<unsigned char, 32>> hash;
@@ -47,7 +47,7 @@ namespace rask {
         class tenant;
 
         /// The tenants
-        f5::tsmap<fostlib::string, std::unique_ptr<tenant>> tenants;
+        f5::tsmap<fostlib::string, std::shared_ptr<tenant>> tenants;
     };
 
 

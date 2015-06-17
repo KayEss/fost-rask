@@ -26,3 +26,12 @@ FSL_TEST_FUNCTION(coercion) {
     FSL_CHECK_EQ(coerce<rask::base32_string>(v{0x01, 0xe2, 0x40}), "03rj0");
     FSL_CHECK_EQ(coerce<rask::base32_string>(v{0xff, 0xff, 0xff}), "fzzzz");
 }
+
+
+FSL_TEST_FUNCTION(digit) {
+    FSL_CHECK_EQ(rask::from_base32_ascii_digit('0'), 0);
+    FSL_CHECK_EQ(rask::from_base32_ascii_digit('9'), 9);
+    FSL_CHECK_EQ(rask::from_base32_ascii_digit('a'), 10);
+    FSL_CHECK_EQ(rask::from_base32_ascii_digit('z'), 31);
+}
+

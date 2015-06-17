@@ -38,12 +38,12 @@ void rask::tenant_packet(connection::in &packet) {
     packet.socket->workers.high_latency.io_service.post(
         [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
             if ( socket->identity ) {
-                peer &partner(peer::server(socket->identity));
-                auto &tenant(partner.tenants.add_if_not_found(name,
-                    [](){ return std::make_unique<peer::tenant>(); }));
+                auto partner(peer::server(socket->identity));
+                auto tenant(partner->tenants.add_if_not_found(name,
+                    [](){ return std::make_shared<peer::tenant>(); }));
                 std::array<unsigned char, 32> hash_array;
                 std::copy(hash.begin(), hash.end(), hash_array.begin());
-                tenant.hash = hash_array;
+                tenant->hash = hash_array;
             }
         });
 }

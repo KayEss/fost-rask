@@ -8,6 +8,8 @@
 
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
+#include "tree.hpp"
+#include <rask/base32.hpp>
 #include <rask/clock.hpp>
 #include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
@@ -34,7 +36,7 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
                 g_tenants.add_if_not_found(key,
                     [&]() {
                         fostlib::log::info("New tenant for processing", t.key(), *t);
-                        auto tp = std::make_shared<tenant>(key, *t);
+                        auto tp = std::make_shared<tenant>(w, key, *t);
                         start_sweep(w, tp);
                         return tp;
                     });
@@ -51,9 +53,10 @@ std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
     const std::shared_ptr<tenant> pt(g_tenants.find(n));
     if ( pt ) {
         return pt;
-    } else
+    } else {
         throw fostlib::exceptions::not_implemented(
             "rask::known_tenant for unknown tenant");
+    }
 }
 
 
@@ -79,31 +82,40 @@ namespace {
         }
     }
 }
-rask::tenant::tenant(const fostlib::string &n, const fostlib::json &c)
+rask::tenant::tenant(workers &w, const fostlib::string &n, const fostlib::json &c)
 : root(slash(c)), name(n), configuration(c),
         local_path(fostlib::coerce<boost::filesystem::path>(root)) {
+     // Tests will use this without a tenant configured, so make sure to check
+    if ( c_tenant_db.value() != fostlib::json() ) {
+        beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
+        fostlib::jsondb::local tenants(*dbp);
+        fostlib::jcursor dbpath("known", name(), "database");
+        if ( !tenants.has_key(dbpath) ) {
+            fostlib::log::debug()
+                ("", "No tenant database found")
+                ("tenants", "db-configuration", c_tenant_db.value())
+                ("name", name())
+                ("configuration", configuration());
+            auto tdb_path(fostlib::coerce<boost::filesystem::path>(c_tenant_db.value()["filepath"]));
+            tdb_path.replace_extension(fostlib::coerce<boost::filesystem::path>(name() + ".json"));
+            fostlib::json conf;
+            fostlib::insert(conf, "filepath", tdb_path);
+            fostlib::insert(conf, "name", "tenant/" + name());
+            fostlib::insert(conf, "initial", "tenant", name());
+            tenants.set(dbpath, conf).commit();
+        }
+        // Set up the inodes
+        inodes_p = std::make_unique<tree>(
+            w, tenants[dbpath], fostlib::jcursor("inodes"),
+            fostlib::jcursor("hash", "name"), fostlib::jcursor("hash", "inode"));
+    }
 }
+
+rask::tenant::~tenant() = default;
 
 
 beanbag::jsondb_ptr rask::tenant::beanbag() const {
-    beanbag::jsondb_ptr dbp(beanbag::database(c_tenant_db.value()));
-    fostlib::jsondb::local tenants(*dbp);
-    fostlib::jcursor dbpath("known", name(), "database");
-    if ( !tenants.has_key(dbpath) ) {
-        fostlib::log::debug()
-            ("", "No tenant database found")
-            ("tenants", "db-configuration", c_tenant_db.value())
-            ("name", name())
-            ("configuration", configuration());
-        auto tdb_path(fostlib::coerce<boost::filesystem::path>(c_tenant_db.value()["filepath"]));
-        tdb_path.replace_extension(fostlib::coerce<boost::filesystem::path>(name() + ".json"));
-        fostlib::json conf;
-        fostlib::insert(conf, "filepath", tdb_path);
-        fostlib::insert(conf, "name", "tenant/" + name());
-        fostlib::insert(conf, "initial", fostlib::json::object_t());
-        tenants.set(dbpath, conf).commit();
-    }
-    return beanbag::database(tenants[dbpath]);
+    return inodes_p->root_dbp();
 }
 
 
@@ -128,65 +140,72 @@ void rask::tenant::local_change(
     const fostlib::json &inode_type,
     packet_builder builder
 ) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ) {
-        auto path = relative_path(root, location);
-        auto priority = tick::next();
-        fostlib::digester hash(fostlib::sha256);
-        hash << priority;
-        meta
-            .set(dbpath, fostlib::json::object_t())
-            .set(dbpath / "filetype", inode_type)
-            .set(dbpath / "name", path)
-            .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
-            .set(dbpath / "hash" / "inode",
-                fostlib::coerce<fostlib::string>(
-                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
-            .commit();
-        rehash_inodes(*this, meta);
-        fostlib::log::info()
-            ("", inode_type)
-            ("broadcast", "to", broadcast(builder(*this, priority, path)))
-            ("tenant", name())
-            ("path", "location", location)
-            ("path", "relative", path)
-            ("meta", meta[dbpath]);
-    }
+    auto path = relative_path(root, location);
+    auto path_hash = name_hash(path);
+    fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
+    inodes().add(dbpath, path, path_hash,
+        [
+            self = this, inode_type, builder, dbpath,
+            path = std::move(path), path_hash = std::move(path_hash)
+        ](
+            workers &w, fostlib::json &data, const fostlib::json &dbconf
+        ) {
+            if ( data[dbpath]["filetype"] != inode_type ) {
+                auto priority = tick::next();
+                fostlib::digester hash(fostlib::sha256);
+                hash << priority;
+                fostlib::json node;
+                fostlib::insert(node, "filetype", inode_type);
+                fostlib::insert(node, "name", path);
+                fostlib::insert(node, "priority", priority);
+                fostlib::insert(node, "hash", "name", path_hash);
+                fostlib::insert(node, "hash", "inode",
+                    fostlib::coerce<fostlib::base64_string>(hash.digest()));
+                dbpath.replace(data, node);
+                w.high_latency.io_service.post([dbconf](){rehash_inodes(dbconf);});
+                fostlib::log::info()
+                    ("", inode_type)
+                    ("broadcast", "to", broadcast(builder(*self, priority, path)))
+                    ("tenant", self->name())
+                    ("path", "relative", path)
+                    ("node", node);
+            }
+        });
 }
 void rask::tenant::remote_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
     const tick &priority
 ) {
-    beanbag::jsondb_ptr dbp(beanbag());
-    fostlib::jsondb::local meta(*dbp);
-    fostlib::jcursor dbpath("inodes", fostlib::coerce<fostlib::string>(location));
-    if ( !meta.has_key(dbpath) || meta[dbpath / "filetype"] != inode_type ||
-            tick(meta[dbpath / "priority"]) < priority
-    ) {
-        auto path = relative_path(root, location);
-        fostlib::digester hash(fostlib::sha256);
-        hash << priority;
-        meta
-            .set(dbpath, fostlib::json::object_t())
-            .set(dbpath / "filetype", inode_type)
-            .set(dbpath / "name", path)
-            .set(dbpath / "priority", priority)
-            .set(dbpath / "hash" / "name", fostlib::sha256(path))
-            .set(dbpath / "hash" / "inode",
-                fostlib::coerce<fostlib::string>(
-                    fostlib::coerce<fostlib::base64_string>(hash.digest())))
-            .commit();
-        rehash_inodes(*this, meta);
-        fostlib::log::info()
-            ("", inode_type)
-            ("tenant", name())
-            ("path", "location", location)
-            ("path", "relative", path)
-            ("meta", meta[dbpath]);
-    }
+    auto path = relative_path(root, location);
+    auto path_hash = name_hash(path);
+    fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
+    inodes().add(dbpath, path, path_hash,
+        [
+            self = this, inode_type, priority, dbpath,
+            path = std::move(path), path_hash = std::move(path_hash)
+        ](
+            workers &w, fostlib::json &data, const fostlib::json &dbconf
+        ) {
+            if ( data[dbpath]["filetype"] != inode_type ||
+                    tick(data[dbpath]["priority"]) < priority ) {
+                fostlib::digester hash(fostlib::sha256);
+                hash << priority;
+                fostlib::json node;
+                fostlib::insert(node, "filetype", inode_type);
+                fostlib::insert(node, "name", path);
+                fostlib::insert(node, "priority", priority);
+                fostlib::insert(node, "hash", "name", path_hash);
+                fostlib::insert(node, "hash", "inode",
+                    fostlib::coerce<fostlib::base64_string>(hash.digest()));
+                dbpath.replace(data, node);
+                w.high_latency.io_service.post([dbconf](){rehash_inodes(dbconf);});
+                fostlib::log::info()
+                    ("", inode_type)
+                    ("tenant", self->name())
+                    ("path", "relative", path)
+                    ("node", node);
+            }
+        });
 }
 

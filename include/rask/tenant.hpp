@@ -18,6 +18,10 @@
 namespace rask {
 
 
+    class tree;
+    struct workers;
+
+
     /// Check the configuration for changes in tenants
     void tenants(workers &, const fostlib::json &dbconfig);
 
@@ -36,7 +40,10 @@ namespace rask {
         /// Used for internal caclulations
         const fostlib::string root;
     public:
-        tenant(const fostlib::string &name, const fostlib::json &configuration);
+        /// Construct a tenant representation
+        tenant(workers &, const fostlib::string &name, const fostlib::json &configuration);
+        /// Explicit desctructor
+        ~tenant();
 
         /// A directory inode
         static const fostlib::json directory_inode;
@@ -67,6 +74,17 @@ namespace rask {
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
             const tick &priority);
+
+        /// The inodes
+        const tree &inodes() const {
+            return *inodes_p;
+        }
+        tree &inodes() {
+            return *inodes_p;
+        }
+
+    private:
+        std::unique_ptr<tree> inodes_p;
     };
 
     /// Return in-memory description of tenant -- empty if unknown

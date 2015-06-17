@@ -17,6 +17,7 @@ namespace rask {
 
     /// Encoding and checking of the base32 strings
     struct base32_string_tag {
+        static const char characters[];
         static void do_encode(fostlib::nliteral, fostlib::ascii_string &);
         static void do_encode(const fostlib::ascii_string &, fostlib::ascii_string &);
         static void check_encoded(const fostlib::ascii_string &);
@@ -25,7 +26,12 @@ namespace rask {
     typedef fostlib::tagged_string<base32_string_tag, fostlib::ascii_string> base32_string;
 
 
+    /// Return the number that is represented by the single base32 digit
+    int8_t from_base32_ascii_digit(fostlib::utf32);
+
+
 }
+
 
 namespace fostlib {
     /// Allow a base32 string to be generated from a vector of byte values
@@ -33,6 +39,14 @@ namespace fostlib {
     struct coercer<rask::base32_string, std::vector< unsigned char >> {
         /// Perform the coercion
         rask::base32_string coerce(const std::vector<unsigned char>&);
+    };
+
+    /// Allow coerceon to a string
+    template<>
+    struct coercer< string, rask::base32_string > {
+        string coerce( const rask::base32_string &h ) {
+            return fostlib::coerce<string>(h.underlying());
+        }
     };
 }
 

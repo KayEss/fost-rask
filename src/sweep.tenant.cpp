@@ -7,6 +7,7 @@
 
 
 #include "sweep.folder.hpp"
+#include "sweep.inodes.hpp"
 #include "sweep.tenant.hpp"
 #include <rask/tenant.hpp>
 
@@ -18,6 +19,7 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
     auto folder = fostlib::coerce<boost::filesystem::path>(tenant->configuration()["path"]);
     w.high_latency.io_service.post(
         [&w, tenant, folder]() {
+            sweep_inodes(w, tenant, folder);
             start_sweep(w, tenant, folder);
         });
 }
