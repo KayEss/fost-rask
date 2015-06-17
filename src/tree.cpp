@@ -19,7 +19,6 @@ namespace {
 
     template<typename D>
     inline bool partitioned(const D &d) {
-//         fostlib::log::debug("partitioned", d["@context"] == c_db_cluster, d[fostlib::jcursor()]);
         return d["@context"] == c_db_cluster;
     }
 }
@@ -108,9 +107,7 @@ namespace {
                 }
             });
         meta.transformation(
-            [
-                &workers, &tree, manipulator, dbpath, layer, hash
-            ](fostlib::json &data) {
+            [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
                 const bool recurse = partitioned(data);
                 try {
                     if ( recurse ) {
