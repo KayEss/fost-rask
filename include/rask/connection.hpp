@@ -9,6 +9,7 @@
 #pragma once
 
 
+#include <rask/configuration.hpp>
 #include <rask/clock.hpp>
 
 #include <fost/internet>
@@ -140,7 +141,7 @@ namespace rask {
                 auto sender = socket->sender.wrap(
                     [socket, cb](const boost::system::error_code &error, std::size_t bytes) {
                         if ( error ) {
-                            fostlib::log::error()
+                            fostlib::log::error(c_fost_rask)
                                 ("", "Error sending data packet")
                                 ("connection", socket->id)
                                 ("error", error.message().c_str());

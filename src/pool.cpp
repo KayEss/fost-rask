@@ -6,6 +6,7 @@
 */
 
 
+#include <rask/configuration.hpp>
 #include <rask/pool.hpp>
 
 #include <fost/log>
@@ -39,18 +40,18 @@ rask::pool::pool(std::size_t threads)
                     io_service.run();
                 } catch ( fostlib::exceptions::exception &e ) {
                     again = true;
-                    log::critical()
+                    log::critical(c_fost_rask)
                         ("", "Rask pool thread caught an exception")
                         ("what", e.what())
                         ("data", e.data());
                     fostlib::absorb_exception();
                 } catch ( std::exception &e ) {
                     again = true;
-                    log::critical("Rask pool thread caught an exception", e.what());
+                    log::critical(c_fost_rask, "Rask pool thread caught an exception", e.what());
                     fostlib::absorb_exception();
                 } catch ( ... ) {
                     again = true;
-                    log::critical("Rask pool thread caught an exception");
+                    log::critical(c_fost_rask, "Rask pool thread caught an exception");
                     fostlib::absorb_exception();
                 }
             } while (again);
@@ -60,7 +61,7 @@ rask::pool::pool(std::size_t threads)
 
 
 rask::pool::~pool() {
-    log::debug("Terminating thread pool");
+    log::debug(c_fost_rask,  "Terminating thread pool");
     pimpl->work.reset();
     io_service.stop();
     std::for_each(pimpl->threads.begin(), pimpl->threads.end(), [](auto &t){ t.join(); });

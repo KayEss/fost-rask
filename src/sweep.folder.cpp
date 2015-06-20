@@ -7,6 +7,7 @@
 
 
 #include "sweep.folder.hpp"
+#include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/log>
@@ -19,7 +20,7 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
             fostlib::coerce<fostlib::string>(folder));
     }
     tenant->local_change(folder, tenant::directory_inode, create_directory_out);
-    fostlib::log::debug("Sweep recursing into folder", folder);
+    fostlib::log::debug(c_fost_rask, "Sweep recursing into folder", folder);
     auto watched = w.notify.watch(tenant, folder);
     std::size_t files = 0, directories = 0, ignored = 0;
     using d_iter = boost::filesystem::directory_iterator;
@@ -32,7 +33,7 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
                 });
         }
     }
-    fostlib::log::info()
+    fostlib::log::info(c_fost_rask)
         ("", "Swept folder")
         ("folder", folder)
         ("directories", directories)

@@ -31,9 +31,11 @@ namespace {
             [&w, port, socket](const boost::system::error_code &error ) {
                 accept(w, port);
                 if ( error ) {
-                    fostlib::log::error("Server accept", error.message().c_str(), port->config);
+                    fostlib::log::error(rask::c_fost_rask,
+                        "Server accept", error.message().c_str(), port->config);
                 } else {
-                    fostlib::log::info("Server accept", port->config);
+                    fostlib::log::info(rask::c_fost_rask,
+                        "Server accept", port->config);
                     monitor_connection(socket);
                     read_and_process(socket);
                 }
@@ -83,6 +85,6 @@ void rask::listen(workers &w, const fostlib::json &config) {
         config,
         {w.low_latency.io_service, endpoint}}};
     accept(w, port);
-    fostlib::log::info("Rask now listening for peer connections", config);
+    fostlib::log::info(c_fost_rask, "Rask now listening for peer connections", config);
 }
 

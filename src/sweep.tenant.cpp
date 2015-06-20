@@ -9,13 +9,14 @@
 #include "sweep.folder.hpp"
 #include "sweep.inodes.hpp"
 #include "sweep.tenant.hpp"
+#include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/log>
 
 
 void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
-    fostlib::log::info("Starting sweep for", tenant->name(), tenant->configuration());
+    fostlib::log::info(c_fost_rask, "Starting sweep for", tenant->name(), tenant->configuration());
     auto folder = fostlib::coerce<boost::filesystem::path>(tenant->configuration()["path"]);
     w.high_latency.io_service.post(
         [&w, tenant, folder]() {

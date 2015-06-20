@@ -38,19 +38,19 @@ FSL_TEST_FUNCTION(sub_db_config) {
         tenants["initial"]["known"]["t1"]["database"]);
 
     auto layer1 = t.inodes().layer_db_config(1, "01234");
-    fostlib::log::debug("layer1", layer1);
+    fostlib::log::debug(rask::c_fost_rask, "layer1", layer1);
     FSL_CHECK_EQ(layer1["filepath"], fostlib::json("/tmp/t1/0.json"));
     FSL_CHECK_EQ(layer1["initial"]["layer"]["current"], fostlib::json("0"));
     FSL_CHECK_EQ(layer1["initial"]["layer"]["hash"], fostlib::json("0"));
 
     auto layer2 = t.inodes().layer_db_config(2, "01234");
-    fostlib::log::debug("layer2", layer2);
+    fostlib::log::debug(rask::c_fost_rask, "layer2", layer2);
     FSL_CHECK_EQ(layer2["filepath"], fostlib::json("/tmp/t1/01.json"));
     FSL_CHECK_EQ(layer2["initial"]["layer"]["current"], fostlib::json("1"));
     FSL_CHECK_EQ(layer2["initial"]["layer"]["hash"], fostlib::json("01"));
 
     auto layer3 = t.inodes().layer_db_config(3, "01234");
-    fostlib::log::debug("layer3", layer3);
+    fostlib::log::debug(rask::c_fost_rask, "layer3", layer3);
     FSL_CHECK_EQ(layer3["filepath"], fostlib::json("/tmp/t1/01/2.json"));
     FSL_CHECK_EQ(layer3["initial"]["layer"]["current"], fostlib::json("2"));
     FSL_CHECK_EQ(layer3["initial"]["layer"]["hash"], fostlib::json("012"));
