@@ -15,6 +15,10 @@
 namespace rask {
 
 
+    /// The fost-rask module
+    extern const fostlib::module c_fost_rask;
+
+
     /// The peering database to use
     extern const fostlib::setting<fostlib::json> c_peers_db;
     /// The server database to use

@@ -9,6 +9,9 @@
 #include <rask/configuration.hpp>
 
 
+const fostlib::module rask::c_fost_rask(fostlib::c_fost, "rask");
+
+
 const fostlib::setting<fostlib::json> rask::c_peers_db(
     "fost-rask/configuration.cpp", "rask", "peers", fostlib::json(), true);
 const fostlib::setting<fostlib::json> rask::c_server_db(
