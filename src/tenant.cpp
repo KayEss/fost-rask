@@ -70,12 +70,14 @@ const fostlib::json rask::tenant::move_inode_out("move-out");
 
 
 namespace {
+    auto slash(fostlib::string root) {
+        if ( !root.endswith('/') )
+            root += '/';
+        return std::move(root);
+    }
     auto slash(const fostlib::json &c) {
         if ( c.has_key("path") ) {
-            auto root = fostlib::coerce<fostlib::string>(c["path"]);
-            if ( !root.endswith('/') )
-                root += '/';
-            return std::move(root);
+            return slash(fostlib::coerce<fostlib::string>(c["path"]));
         } else {
             throw fostlib::exceptions::not_implemented(
                 "Tenant must have a 'path' specifying the directory location");
@@ -123,7 +125,7 @@ namespace {
     fostlib::string relative_path(
         const fostlib::string &root, const boost::filesystem::path &location
     ) {
-        auto path = fostlib::coerce<fostlib::string>(location);
+        auto path = slash(fostlib::coerce<fostlib::string>(location));
         if ( path.startswith(root) ) {
             path = path.substr(root.length());
         } else {
