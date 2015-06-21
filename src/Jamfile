@@ -4,8 +4,10 @@ fost-lib-autotest fost-rask
     :
         $(TOP)/../Boost//boost-coroutine-dll
         $(TOP)/../Boost//boost-iostreams-dll
-        ../../fost-beanbag/beanbag-views
+        ../../fost-beanbag/beanbag
         ../../fost-base/Cpp/fost-crypto
+        ../../fost-internet/Cpp/fost-inet
+        ../../fost-orm/Cpp/fost-jsondb
     ;
 
 fost-install $(TOP)/../Boost//boost-chrono-dll ;

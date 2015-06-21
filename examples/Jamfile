@@ -2,7 +2,10 @@
 fost-exe file-hashes
     :
         $(TOP)/../Boost//boost-iostreams-dll
+        ../../fost-beanbag/beanbag
         ../../fost-base/Cpp/fost-crypto
+        ../../fost-internet/Cpp/fost-inet
+        ../../fost-orm/Cpp/fost-jsondb
         ../src/
         file-hashes.cpp
     ;
