@@ -27,9 +27,9 @@ namespace {
 
     struct limiter {
         boost::asio::posix::stream_descriptor fd;
-        boost::asio::streambuf buffer;
+        std::atomic<uint64_t> outstanding;
         limiter(rask::workers &w, int f)
-        : fd(w.high_latency.io_service, f) {
+        : fd(w.high_latency.io_service, f), outstanding(0) {
             ++p_starts;
         }
         ~limiter() {
@@ -43,7 +43,6 @@ namespace {
     ) {
         boost::asio::spawn(w.high_latency.io_service,
             [&w, tenant, folder, limit](boost::asio::yield_context yield) {
-                uint64_t outstanding = 0;
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
                     throw fostlib::exceptions::not_implemented(
@@ -58,7 +57,7 @@ namespace {
                 using d_iter = boost::filesystem::directory_iterator;
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
-                        ++outstanding;
+                        ++limit->outstanding;
                         ++directories;
                         ++p_recursing;
                         w.high_latency.io_service.post(
@@ -78,13 +77,22 @@ namespace {
                                 sweep(w, tenant, filename, limit);
                             });
                     }
-                    while ( outstanding > 16 ) {
+                    while ( limit->outstanding > 16 ) {
                         uint64_t count = 0;
                         ++p_paused;
-                        boost::asio::async_read(limit->fd, limit->buffer,
+                        boost::asio::streambuf buffer;
+                        boost::asio::async_read(limit->fd, buffer,
                             boost::asio::transfer_exactly(sizeof(count)), yield);
-                        limit->buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
-                        outstanding -= count;
+                        buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
+                        if ( count > limit->outstanding.load() )
+                            throw fostlib::exceptions::out_of_range<uint64_t>(
+                                "Just completed jobs is higher than the outsanding number",
+                                0, limit->outstanding.load(), count);
+                        limit->outstanding -= count;
+                        fostlib::log::debug(rask::c_fost_rask)
+                            ("", "Rate limit on rask::sweep_folder")
+                            ("outstanding", limit->outstanding.load())
+                            ("just-completed", count);
                     }
                 }
                 fostlib::log::info(rask::c_fost_rask)
@@ -102,7 +110,7 @@ namespace {
 void rask::start_sweep(
     workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder
 ) {
-    int fd(eventfd(1, 0));
+    int fd(eventfd(0, 0));
     sweep(w, tenant, folder, std::make_shared<limiter>(w, fd));
 }
 
