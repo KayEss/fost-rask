@@ -8,12 +8,24 @@
 
 #include "sweep.folder.hpp"
 #include <rask/configuration.hpp>
+#include <rask/configuration.hpp>
 #include <rask/tenant.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 
-void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder) {
+namespace {
+    fostlib::performance p_swept(rask::c_fost_rask, "sweep", "folders");
+    fostlib::performance p_recursing(rask::c_fost_rask, "sweep", "recursing");
+    fostlib::performance p_recursed(rask::c_fost_rask, "sweep", "recursed");
+}
+
+
+void rask::start_sweep(
+    workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder
+) {
+    ++p_swept;
     if ( !boost::filesystem::is_directory(folder) ) {
         throw fostlib::exceptions::not_implemented(
             "Trying to recurse into a non-directory",
@@ -27,8 +39,10 @@ void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant, boost::filesy
     for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
         if ( inode->status().type() == boost::filesystem::directory_file ) {
             ++directories;
+            ++p_recursing;
             w.high_latency.io_service.post(
                 [&w, filename = inode->path(), tenant]() {
+                    ++p_recursed;
                     start_sweep(w, tenant, filename);
                 });
         }

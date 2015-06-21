@@ -15,6 +15,7 @@
 #include <f5/fsnotify/boost-asio.hpp>
 #include <f5/fsnotify/fost.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 #include <map>
@@ -25,6 +26,7 @@ namespace {
         std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>, int>
             g_watches;
 
+    fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
 
     struct callback : public f5::boost_asio::reader {
         rask::workers &w;
@@ -42,7 +44,7 @@ namespace {
                 name = boost::filesystem::path(event.name);
             }
             const boost::filesystem::path filename(parent / name);
-            fostlib::log::debug()
+            fostlib::log::debug(rask::c_fost_rask)
                 ("", "inotify_event")
                 ("wd", "descriptor", event.wd)
                 ("wd", "directory", parent)
@@ -52,6 +54,7 @@ namespace {
                 ("cookie", event.cookie);
 
             if ( event.mask & IN_CREATE ) {
+                ++p_in_create;
                 if ( is_directory(filename) ) {
                     w.high_latency.io_service.post(
                         [this, filename, tenant]() {
@@ -99,13 +102,13 @@ bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::file
             watched = true;
             if ( g_watches.find(wd).size() == 0 ) {
                 g_watches.add(wd, std::make_pair(tenant, folder));
-                fostlib::log::debug()
+                fostlib::log::debug(c_fost_rask)
                     ("", "Watch added")
                     ("wd", wd)
                     ("tenant", tenant->name())
                     ("directory", folder);
             } else {
-                fostlib::log::debug()
+                fostlib::log::debug(c_fost_rask)
                     ("", "Already watching")
                     ("wd", wd)
                     ("tenant", tenant->name())
