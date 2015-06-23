@@ -152,6 +152,7 @@ namespace {
                 throw;
             }
         } else {
+            fostlib::json mdata(meta.data());
             try {
                 add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
             } catch ( fostlib::exceptions::exception &e ) {
@@ -159,7 +160,7 @@ namespace {
                 fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
                 fostlib::push_back(e.data(), "add", "hash", hash);
                 fostlib::push_back(e.data(), "add", "recurse", recurse);
-                fostlib::push_back(e.data(), "add", "data", meta.data());
+                fostlib::push_back(e.data(), "add", "data", mdata);
                 throw;
             }
         }
