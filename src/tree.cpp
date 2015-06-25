@@ -112,9 +112,17 @@ namespace {
                 const bool recurse = partitioned(data);
                 try {
                     if ( recurse ) {
-                        beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
-                        add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                            tree, dbpath, hash, manipulator);
+                        /// If we find that we need to recurse down, then we are almost
+                        /// certainly recursing up at the same time due to child inode
+                        /// rehashing. Therefore we'll allow this commit to complete
+                        /// and recurse down in a new job so we aren't holding the lock
+                        /// for any longer than we need to.
+                        workers.high_latency.get_io_service().post(
+                            [&workers, &tree, manipulator, dbpath, layer, hash]() {
+                                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+                                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                                    tree, dbpath, hash, manipulator);
+                            });
                     } else {
                         if ( !data.has_key(dbpath) ) {
                             dbpath.insert(data, fostlib::json::object_t());
