@@ -27,9 +27,9 @@ namespace {
 
     struct limiter {
         boost::asio::posix::stream_descriptor fd;
-        std::atomic<uint64_t> outstanding;
-        limiter(rask::workers &w, int f)
-        : fd(w.high_latency.io_service, f), outstanding(0) {
+        uint64_t outstanding;
+        limiter(rask::workers &w)
+        : fd(w.high_latency.get_io_service(), eventfd(0, 0)), outstanding(0) {
             ++p_starts;
         }
         ~limiter() {
@@ -39,10 +39,11 @@ namespace {
 
     void sweep(
         rask::workers &w, std::shared_ptr<rask::tenant> tenant,
-        boost::filesystem::path folder, std::shared_ptr<limiter> limit
+        boost::filesystem::path folder
     ) {
-        boost::asio::spawn(w.high_latency.io_service,
-            [&w, tenant, folder, limit](boost::asio::yield_context yield) {
+//         boost::asio::spawn(w.high_latency.io_service,
+//             [&w, tenant, folder](boost::asio::yield_context yield) {
+                limiter limit(w);
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
                     throw fostlib::exceptions::not_implemented(
@@ -57,43 +58,43 @@ namespace {
                 using d_iter = boost::filesystem::directory_iterator;
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
-                        ++limit->outstanding;
+                        ++limit.outstanding;
                         ++directories;
                         ++p_recursing;
-                        w.high_latency.io_service.post(
-                            [&w, filename = inode->path(), tenant, limit]() {
+                        w.high_latency.get_io_service().post(
+                            [&w, filename = inode->path(), tenant, &limit]() {
                                 ++p_recursed;
-                                uint64_t count = 1;
-                                boost::asio::async_write(limit->fd,
-                                    boost::asio::buffer(&count, sizeof(count)),
-                                    [](const boost::system::error_code &error, std::size_t bytes) {
-                                        if ( error || bytes != sizeof(count) ) {
-                                            fostlib::log::error(rask::c_fost_rask)
-                                                ("", "Whilst notifying parent task that this one has started.")
-                                                ("error", error.message().c_str())
-                                                ("bytes", bytes);
-                                        }
-                                    });
-                                sweep(w, tenant, filename, limit);
+//                                 uint64_t count = 1;
+//                                 boost::asio::async_write(limit.fd,
+//                                     boost::asio::buffer(&count, sizeof(count)),
+//                                     [](const boost::system::error_code &error, std::size_t bytes) {
+//                                         if ( error || bytes != sizeof(count) ) {
+//                                             fostlib::log::error(rask::c_fost_rask)
+//                                                 ("", "Whilst notifying parent task that this one has started.")
+//                                                 ("error", error.message().c_str())
+//                                                 ("bytes", bytes);
+//                                         }
+//                                     });
+                                sweep(w, tenant, filename);
                             });
                     }
-                    while ( limit->outstanding > 16 ) {
-                        uint64_t count = 0;
-                        ++p_paused;
-                        boost::asio::streambuf buffer;
-                        boost::asio::async_read(limit->fd, buffer,
-                            boost::asio::transfer_exactly(sizeof(count)), yield);
-                        buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
-                        if ( count > limit->outstanding.load() )
-                            throw fostlib::exceptions::out_of_range<uint64_t>(
-                                "Just completed jobs is higher than the outsanding number",
-                                0, limit->outstanding.load(), count);
-                        limit->outstanding -= count;
-                        fostlib::log::debug(rask::c_fost_rask)
-                            ("", "Rate limit on rask::sweep_folder")
-                            ("outstanding", limit->outstanding.load())
-                            ("just-completed", count);
-                    }
+//                     while ( limit.outstanding > 2 ) {
+//                         ++p_paused;
+//                         uint64_t count = 0;
+//                         boost::asio::streambuf buffer;
+//                         boost::asio::async_read(limit.fd, buffer,
+//                             boost::asio::transfer_exactly(sizeof(count)), yield);
+//                         buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
+//                         if ( count > limit.outstanding )
+//                             throw fostlib::exceptions::out_of_range<uint64_t>(
+//                                 "Just completed jobs is higher than the outsanding number",
+//                                 0, limit.outstanding, count);
+//                         limit.outstanding -= count;
+//                         fostlib::log::debug(rask::c_fost_rask)
+//                             ("", "Rate limit on rask::sweep_folder")
+//                             ("outstanding", limit.outstanding)
+//                             ("just-completed", count);
+//                     }
                 }
                 fostlib::log::info(rask::c_fost_rask)
                     ("", "Swept folder")
@@ -102,7 +103,7 @@ namespace {
                     ("files", files)
                     ("ignored", ignored)
                     ("watched", watched);
-            });
+//             });
     }
 }
 
@@ -110,7 +111,6 @@ namespace {
 void rask::start_sweep(
     workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder
 ) {
-    int fd(eventfd(0, 0));
-    sweep(w, tenant, folder, std::make_shared<limiter>(w, fd));
+    sweep(w, tenant, folder);
 }
 

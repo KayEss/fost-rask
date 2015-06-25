@@ -61,7 +61,7 @@ void rask::server(workers &w) {
             random += unsigned(urandom.get());
             server.set("identity", random);
             server.commit();
-            fostlib::log::info()("Server identity picked as", random);
+            fostlib::log::info(c_fost_rask)("Server identity picked as", random);
             g_identity = random;
         } else {
             g_identity = fostlib::coerce<uint32_t>(server["identity"]);
@@ -83,7 +83,7 @@ void rask::listen(workers &w, const fostlib::json &config) {
         h.address(), fostlib::coerce<uint16_t>(config["port"])};
     std::shared_ptr<state> port{new state{
         config,
-        {w.low_latency.io_service, endpoint}}};
+        {w.low_latency.get_io_service(), endpoint}}};
     accept(w, port);
     fostlib::log::info(c_fost_rask, "Rask now listening for peer connections", config);
 }

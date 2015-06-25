@@ -22,7 +22,7 @@ rask::connection::out rask::move_out_packet(
 
 
 void rask::move_out(rask::connection::in &packet) {
-    auto logger(fostlib::log::info());
+    auto logger(fostlib::log::info(c_fost_rask));
     logger("", "Remove inode");
     auto priority(packet.read<tick>());
     logger("priority", priority);
@@ -31,14 +31,14 @@ void rask::move_out(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
-    packet.socket->workers.high_latency.io_service.post(
+    packet.socket->workers.high_latency.get_io_service().post(
         [tenant, name = std::move(name), priority]() {
             auto location = tenant->local_path() /
                 fostlib::coerce<boost::filesystem::path>(name);
             tenant->remote_change(location, tenant::move_inode_out, priority);
             auto removed = boost::filesystem::remove_all(location);
             if ( removed ) {
-                fostlib::log::warning()
+                fostlib::log::warning(c_fost_rask)
                     ("", "Deleting files")
                     ("tenant", tenant->name())
                     ("root", location)

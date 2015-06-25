@@ -9,8 +9,9 @@
 #pragma once
 
 
-#include <rask/pool.hpp>
 #include <rask/notification.hpp>
+
+#include <f5/threading/boost-asio.hpp>
 
 
 namespace rask {
@@ -25,9 +26,9 @@ namespace rask {
         workers &operator = (const workers &) = delete;
 
         /// Worker pool for IO related tasks (i.e. low latency to react)
-        pool low_latency;
+        f5::boost_asio::reactor_pool low_latency;
         /// Worker pool for longer running tasks
-        pool high_latency;
+        f5::boost_asio::reactor_pool high_latency;
         /// File system notification
         notification notify;
     };

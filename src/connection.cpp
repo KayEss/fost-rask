@@ -59,7 +59,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     boost::asio::transfer_exactly(2), yield);
                 std::size_t packet_size = socket->input_buffer.sbumpc();
                 if ( packet_size < 0x80 ) {
-                    fostlib::log::debug()
+                    fostlib::log::debug(c_fost_rask)
                         ("", "Got packet of size")
                         ("connection", socket->id)
                         ("size", packet_size);
@@ -80,7 +80,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 } else if ( control == 0x93 ) {
                     move_out(packet);
                 } else {
-                    fostlib::log::warning()
+                    fostlib::log::warning(c_fost_rask)
                         ("", "Unknown control byte received")
                         ("connection", socket->id)
                         ("control", int(control))
@@ -91,7 +91,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                 }
                 read_and_process(socket);
             } catch ( std::exception &e ) {
-                fostlib::log::error()
+                fostlib::log::error(c_fost_rask)
                     ("", "read_and_process caught an exception")
                     ("connection", socket->id)
                     ("exception", e.what());
@@ -110,14 +110,15 @@ std::atomic<int64_t> rask::connection::g_id(0);
 
 
 rask::connection::connection(rask::workers &w)
-: workers(w), id(++g_id), cnx(w.low_latency.io_service),
-        sender(w.low_latency.io_service), heartbeat(w.low_latency.io_service),
+: workers(w), id(++g_id), cnx(w.low_latency.get_io_service()),
+        sender(w.low_latency.get_io_service()),
+        heartbeat(w.low_latency.get_io_service()),
         identity(0), conversing(false) {
 }
 
 
 rask::connection::~connection() {
-    fostlib::log::debug("Connection closed", id);
+    fostlib::log::debug(c_fost_rask, "Connection closed", id);
 }
 
 
@@ -127,7 +128,7 @@ rask::connection::~connection() {
 
 
 rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &conf)
-: configuration(conf), watchdog(w.low_latency.io_service) {
+: configuration(conf), watchdog(w.low_latency.get_io_service()) {
 }
 
 

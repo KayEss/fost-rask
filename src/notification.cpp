@@ -29,11 +29,11 @@ namespace {
 
     fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
 
-    struct callback : public f5::boost_asio::reader {
+    struct callback : public f5::fsnotify::boost_asio::reader {
         rask::workers &w;
 
         callback(rask::workers &w)
-        : reader(w.low_latency.io_service), w(w) {
+        : reader(w.low_latency.get_io_service()), w(w) {
         }
 
         void process(const inotify_event &event) {
@@ -58,13 +58,13 @@ namespace {
             if ( event.mask & IN_CREATE ) {
                 ++p_in_create;
                 if ( is_directory(filename) ) {
-                    w.high_latency.io_service.post(
+                    w.high_latency.get_io_service().post(
                         [this, filename, tenant]() {
                             rask::start_sweep(w, tenant, filename);
                         });
                 }
             } else if ( event.mask & IN_DELETE_SELF ) {
-                w.high_latency.io_service.post(
+                w.high_latency.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
                         rask::rm_directory(w, tenant, filename);
                     });

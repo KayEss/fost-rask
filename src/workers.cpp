@@ -6,10 +6,24 @@
 */
 
 
+#include <rask/configuration.hpp>
 #include <rask/workers.hpp>
+
+#include <fost/log>
+
+
+namespace {
+    auto eh() {
+        return []() {
+            fostlib::log::critical(rask::c_fost_rask, "Rask pool thread caught an exception");
+            fostlib::absorb_exception();
+            return true;
+        };
+    }
+}
 
 
 rask::workers::workers()
-: low_latency(4), high_latency(4), notify(*this) {
+: low_latency(eh(), 4), high_latency(eh(), 4), notify(*this) {
 }
 

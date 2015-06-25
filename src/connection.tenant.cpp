@@ -26,7 +26,7 @@ rask::connection::out rask::tenant_packet(
 
 
 void rask::tenant_packet(connection::in &packet) {
-    auto logger(fostlib::log::info());
+    auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Tenant packet")
         ("connection", packet.socket_id());
@@ -35,7 +35,7 @@ void rask::tenant_packet(connection::in &packet) {
     auto hash(packet.read(32));
     auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
     logger("hash",  hash64.underlying().underlying().c_str());
-    packet.socket->workers.high_latency.io_service.post(
+    packet.socket->workers.high_latency.get_io_service().post(
         [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
             if ( socket->identity ) {
                 auto partner(peer::server(socket->identity));

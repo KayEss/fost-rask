@@ -18,7 +18,7 @@
 void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
     fostlib::log::info(c_fost_rask, "Starting sweep for", tenant->name(), tenant->configuration());
     auto folder = fostlib::coerce<boost::filesystem::path>(tenant->configuration()["path"]);
-    w.high_latency.io_service.post(
+    w.high_latency.get_io_service().post(
         [&w, tenant, folder]() {
             sweep_inodes(w, tenant, folder);
             start_sweep(w, tenant, folder);

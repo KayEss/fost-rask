@@ -9,6 +9,7 @@
 #include "hash.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
+#include <rask/configuration.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/log>
@@ -71,7 +72,7 @@ namespace {
         meta.pre_commit(
             [&workers, layer, &tree](fostlib::json &data) {
                 if ( data[tree.key()].size() > 96 ) {
-                    fostlib::log::debug()
+                    fostlib::log::debug(rask::c_fost_rask)
                         ("", "partitioning beanbag")
                         ("layer", data["layer"]);
                     std::vector<beanbag::jsondb_ptr> children(32);
@@ -98,7 +99,7 @@ namespace {
                     }
                     for ( auto dbp : children ) {
                         if ( dbp ) {
-                            workers.high_latency.io_service.post(
+                            workers.high_latency.get_io_service().post(
                                 [dbp]() {
                                     rask::rehash_inodes(fostlib::jsondb::local(*dbp));
                                 });
@@ -201,7 +202,7 @@ fostlib::json rask::tree::layer_db_config(
         fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
         fostlib::insert(conf, "initial", "layer", "current", hash.substr(layer - 1, 1));
         fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
-        fostlib::log::debug()
+        fostlib::log::debug(c_fost_rask)
             ("", "layer_db_config")
             ("layer", layer)
             ("config", conf);

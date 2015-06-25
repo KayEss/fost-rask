@@ -32,7 +32,7 @@ namespace {
             if ( filetype == rask::tenant::directory_inode ) {
             } else if ( filetype == rask::tenant::move_inode_out ) {
             } else {
-                fostlib::log::error()
+                fostlib::log::error(rask::c_fost_rask)
                     ("", "Sweeping inodes -- unknown filetype")
                     ("filetype", filetype)
                     ("inode", inode);
@@ -46,8 +46,8 @@ void rask::sweep_inodes(
     workers &w, std::shared_ptr<tenant> t, boost::filesystem::path f
 ) {
     auto c = std::make_shared<closure>(t, std::move(f));
-    w.high_latency.io_service.post(
-        [&io_service = w.high_latency.io_service, c]() {
+    w.high_latency.get_io_service().post(
+        [&io_service = w.high_latency.get_io_service(), c]() {
             block(io_service, c);
         });
 }

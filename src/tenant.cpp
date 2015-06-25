@@ -26,7 +26,7 @@ namespace {
 
 
 void rask::tenants(workers &w, const fostlib::json &dbconfig) {
-    fostlib::log::debug("Loading tenants database", dbconfig);
+    fostlib::log::debug(c_fost_rask, "Loading tenants database", dbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
     auto configure = [&w, dbp](const fostlib::json &tenants) {
         if ( tenants.has_key("subscription") ) {
@@ -35,7 +35,8 @@ void rask::tenants(workers &w, const fostlib::json &dbconfig) {
                 auto key(fostlib::coerce<fostlib::string>(t.key()));
                 g_tenants.add_if_not_found(key,
                     [&]() {
-                        fostlib::log::info("New tenant for processing", t.key(), *t);
+                        fostlib::log::info(c_fost_rask,
+                            "New tenant for processing", t.key(), *t);
                         auto tp = std::make_shared<tenant>(w, key, *t);
                         start_sweep(w, tp);
                         return tp;
@@ -93,7 +94,7 @@ rask::tenant::tenant(workers &w, const fostlib::string &n, const fostlib::json &
         fostlib::jsondb::local tenants(*dbp);
         fostlib::jcursor dbpath("known", name(), "database");
         if ( !tenants.has_key(dbpath) ) {
-            fostlib::log::debug()
+            fostlib::log::debug(c_fost_rask)
                 ("", "No tenant database found")
                 ("tenants", "db-configuration", c_tenant_db.value())
                 ("name", name())
@@ -164,8 +165,8 @@ void rask::tenant::local_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.io_service.post([dbconf](){rehash_inodes(dbconf);});
-                fostlib::log::info()
+                w.high_latency.get_io_service().post([dbconf](){rehash_inodes(dbconf);});
+                fostlib::log::info(c_fost_rask)
                     ("", inode_type)
                     ("broadcast", "to", broadcast(builder(*self, priority, path)))
                     ("tenant", self->name())
@@ -201,8 +202,8 @@ void rask::tenant::remote_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.io_service.post([dbconf](){rehash_inodes(dbconf);});
-                fostlib::log::info()
+                w.high_latency.get_io_service().post([dbconf](){rehash_inodes(dbconf);});
+                fostlib::log::info(c_fost_rask)
                     ("", inode_type)
                     ("tenant", self->name())
                     ("path", "relative", path)

@@ -20,7 +20,7 @@ rask::connection::out rask::create_directory_out(
 
 
 void rask::create_directory(rask::connection::in &packet) {
-    auto logger(fostlib::log::info());
+    auto logger(fostlib::log::info(c_fost_rask));
     logger("", "Create directory");
     auto priority(packet.read<tick>());
     logger("priority", priority);
@@ -29,7 +29,7 @@ void rask::create_directory(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
-    packet.socket->workers.high_latency.io_service.post(
+    packet.socket->workers.high_latency.get_io_service().post(
         [tenant, name = std::move(name), priority](){
             auto location = tenant->local_path() /
                 fostlib::coerce<boost::filesystem::path>(name);
