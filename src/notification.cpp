@@ -14,6 +14,7 @@
 #include <f5/fsnotify.hpp>
 #include <f5/fsnotify/boost-asio.hpp>
 #include <f5/fsnotify/fost.hpp>
+#include <f5/threading/map.hpp>
 
 #include <fost/counter>
 #include <fost/log>
@@ -22,8 +23,8 @@
 
 
 namespace {
-    fostlib::threadsafe_store<
-        std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>, int>
+    f5::tsmap<int,
+        std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>>
             g_watches;
 
     fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
@@ -38,7 +39,8 @@ namespace {
         void process(const inotify_event &event) {
             std::shared_ptr<rask::tenant> tenant;
             boost::filesystem::path parent;
-            std::tie(tenant, parent) = g_watches.find(event.wd)[0];
+            std::tie(tenant, parent) = g_watches.find(event.wd);
+            if ( not tenant ) return;
             boost::filesystem::path name;
             if ( event.len ) {
                 name = boost::filesystem::path(event.name);
@@ -100,20 +102,14 @@ bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::file
     pimpl->notifications.watch(folder.c_str(),
         [this, &watched, tenant, &folder](int wd) {
             watched = true;
-            if ( g_watches.find(wd).size() == 0 ) {
-                g_watches.add(wd, std::make_pair(tenant, folder));
+            g_watches.add_if_not_found(wd, [tenant, &folder, wd]() {
                 fostlib::log::debug(c_fost_rask)
                     ("", "Watch added")
                     ("wd", wd)
                     ("tenant", tenant->name())
                     ("directory", folder);
-            } else {
-                fostlib::log::debug(c_fost_rask)
-                    ("", "Already watching")
-                    ("wd", wd)
-                    ("tenant", tenant->name())
-                    ("directory", folder);
-            }
+                return std::make_pair(tenant, folder);
+            });
         },
         [](){});
     return watched;
