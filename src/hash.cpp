@@ -13,9 +13,16 @@
 #include <rask/tenant.hpp>
 
 #include <beanbag/beanbag>
+#include <fost/counter>
 #include <fost/crypto>
 #include <fost/insert>
 #include <fost/log>
+
+
+namespace {
+    fostlib::performance p_inodes(rask::c_fost_rask, "hash", "inodes");
+    fostlib::performance p_tenants(rask::c_fost_rask, "hash", "tenants");
+}
 
 
 rask::name_hash_type rask::name_hash(const fostlib::string &s) {
@@ -46,6 +53,7 @@ namespace {
 
 
 void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
+    ++p_inodes;
     const fostlib::jcursor inode_hash_path("hash", "inode");
     std::vector<unsigned char> hash(
         digest(inode_hash_path, tdb["inodes"]));
@@ -91,13 +99,14 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
 
 
 void rask::rehash_inodes(const fostlib::json &dbconfig) {
-    fostlib::log::debug("rehash_inodes", dbconfig);
+    fostlib::log::debug(c_fost_rask, "rehash_inodes", dbconfig);
     auto pdb(beanbag::database(dbconfig));
     rehash_inodes(fostlib::jsondb::local(*pdb));
 }
 
 
 void rask::rehash_tenants(const fostlib::jsondb::local &tsdb) {
+    ++p_tenants;
     std::vector<unsigned char> hash(
         digest(fostlib::jcursor("hash", "data"), tsdb["known"]));
     beanbag::jsondb_ptr dbp(beanbag::database(
