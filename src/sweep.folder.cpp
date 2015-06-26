@@ -25,11 +25,20 @@ namespace {
     fostlib::performance p_recursed(rask::c_fost_rask, "sweep", "recursed");
     fostlib::performance p_paused(rask::c_fost_rask, "sweep", "pauses");
 
+    auto get_eventfd() {
+        auto fd = eventfd(0, 0);
+        if ( fd < 0 ) {
+            std::error_code error(errno, std::system_category());
+            throw fostlib::exceptions::null(
+                "Bad file descriptor given to limiter", error.message().c_str());
+        }
+        return fd;
+    }
     struct limiter {
         boost::asio::posix::stream_descriptor fd;
         uint64_t outstanding;
         limiter(rask::workers &w)
-        : fd(w.high_latency.get_io_service(), eventfd(0, 0)), outstanding(0) {
+        : fd(w.high_latency.get_io_service(), get_eventfd()), outstanding(0) {
             ++p_starts;
         }
         ~limiter() {
