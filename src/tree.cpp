@@ -12,11 +12,15 @@
 #include <rask/configuration.hpp>
 #include <rask/workers.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 
 namespace {
     const fostlib::json c_db_cluster("db-cluster");
+
+    fostlib::performance p_deferred(rask::c_fost_rask,
+        "tree", "partitioned-during-commit");
 
     template<typename D>
     inline bool partitioned(const D &d) {
@@ -69,6 +73,38 @@ namespace {
         const rask::name_hash_type &hash,
         rask::tree::manipulator_fn manipulator
     ) {
+        meta.transformation(
+            [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
+                const bool recurse = partitioned(data);
+                try {
+                    if ( recurse ) {
+                        ++p_deferred;
+                        /// If we find that we need to recurse down, then we are almost
+                        /// certainly recursing up at the same time due to child inode
+                        /// rehashing. Therefore we'll allow this commit to complete
+                        /// and recurse down in a new job so we aren't holding the lock
+                        /// for any longer than we need to.
+                        workers.high_latency.get_io_service().post(
+                            [&workers, &tree, manipulator, dbpath, layer, hash]() {
+                                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+                                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
+                                    tree, dbpath, hash, manipulator);
+                            });
+                    } else {
+                        if ( !data.has_key(dbpath) ) {
+                            dbpath.insert(data, fostlib::json::object_t());
+                        }
+                        manipulator(workers, data, tree.layer_db_config(layer, hash));
+                    }
+                } catch ( fostlib::exceptions::exception &e ) {
+                    fostlib::push_back(e.data(), "add", "stack", "meta.transformation");
+                    fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
+                    fostlib::push_back(e.data(), "add", "hash", hash);
+                    fostlib::push_back(e.data(), "add", "recurse", recurse);
+                    fostlib::push_back(e.data(), "add", "data", data);
+                    throw;
+                }
+            });
         meta.pre_commit(
             [&workers, layer, &tree](fostlib::json &data) {
                 if ( data[tree.key()].size() > 96 ) {
@@ -105,37 +141,6 @@ namespace {
                                 });
                         }
                     }
-                }
-            });
-        meta.transformation(
-            [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
-                const bool recurse = partitioned(data);
-                try {
-                    if ( recurse ) {
-                        /// If we find that we need to recurse down, then we are almost
-                        /// certainly recursing up at the same time due to child inode
-                        /// rehashing. Therefore we'll allow this commit to complete
-                        /// and recurse down in a new job so we aren't holding the lock
-                        /// for any longer than we need to.
-                        workers.high_latency.get_io_service().post(
-                            [&workers, &tree, manipulator, dbpath, layer, hash]() {
-                                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
-                                add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                                    tree, dbpath, hash, manipulator);
-                            });
-                    } else {
-                        if ( !data.has_key(dbpath) ) {
-                            dbpath.insert(data, fostlib::json::object_t());
-                        }
-                        manipulator(workers, data, tree.layer_db_config(layer, hash));
-                    }
-                } catch ( fostlib::exceptions::exception &e ) {
-                    fostlib::push_back(e.data(), "add", "stack", "meta.transformation");
-                    fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
-                    fostlib::push_back(e.data(), "add", "hash", hash);
-                    fostlib::push_back(e.data(), "add", "recurse", recurse);
-                    fostlib::push_back(e.data(), "add", "data", data);
-                    throw;
                 }
             });
         meta.commit();
