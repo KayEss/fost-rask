@@ -21,8 +21,6 @@ namespace {
     fostlib::performance p_starts(rask::c_fost_rask, "sweep", "started");
     fostlib::performance p_completed(rask::c_fost_rask, "sweep", "completed");
     fostlib::performance p_swept(rask::c_fost_rask, "sweep", "folders");
-    fostlib::performance p_recursing(rask::c_fost_rask, "sweep", "recursing");
-    fostlib::performance p_recursed(rask::c_fost_rask, "sweep", "recursed");
     fostlib::performance p_paused(rask::c_fost_rask, "sweep", "pauses");
 
     auto get_eventfd() {
@@ -62,7 +60,7 @@ namespace {
                 fostlib::log::debug(rask::c_fost_rask, "Sweep recursing into folder", folder);
                 tenant->local_change(
                     folder, rask::tenant::directory_inode, rask::create_directory_out);
-                auto watched = w.notify.watch(tenant, folder);
+                w.notify.watch(tenant, folder);
                 auto wait_for_outstanding =
                     [&limit, &yield]() {
                         ++p_paused;
@@ -82,28 +80,31 @@ namespace {
                             ("just-completed", count);
                     };
                 std::size_t files = 0, directories = 0, ignored = 0;
-                using d_iter = boost::filesystem::directory_iterator;
+                using d_iter = boost::filesystem::recursive_directory_iterator;
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
-                        ++limit.outstanding;
                         ++directories;
-                        ++p_recursing;
-                        w.high_latency.get_io_service().post(
-                            [&w, filename = inode->path(), tenant, &limit]() {
-                                ++p_recursed;
-                                uint64_t count = 1;
-                                boost::asio::async_write(limit.fd,
-                                    boost::asio::buffer(&count, sizeof(count)),
-                                    [](const boost::system::error_code &error, std::size_t bytes) {
-                                        if ( error || bytes != sizeof(count) ) {
-                                            fostlib::log::error(rask::c_fost_rask)
-                                                ("", "Whilst notifying parent task that this one has started.")
-                                                ("error", error.message().c_str())
-                                                ("bytes", bytes);
-                                        }
-                                    });
-                                sweep(w, tenant, filename);
-                            });
+                        tenant->local_change(inode->path(),
+                            rask::tenant::directory_inode, rask::create_directory_out);
+                        w.notify.watch(tenant, inode->path());
+//                         ++limit.outstanding;
+//                         w.high_latency.get_io_service().post(
+//                             [&w, filename = inode->path(), tenant, &limit]() {
+//                                 uint64_t count = 1;
+//                                 boost::asio::async_write(limit.fd,
+//                                     boost::asio::buffer(&count, sizeof(count)),
+//                                     [](const boost::system::error_code &error, std::size_t bytes) {
+//                                         if ( error || bytes != sizeof(count) ) {
+//                                             fostlib::log::error(rask::c_fost_rask)
+//                                                 ("", "Whilst notifying parent task that this one has started.")
+//                                                 ("error", error.message().c_str())
+//                                                 ("bytes", bytes);
+//                                         }
+//                                     });
+//                                 sweep(w, tenant, filename);
+//                             });
+                    } else {
+                        ++ignored;
                     }
                     while ( limit.outstanding > 2 ) {
                         wait_for_outstanding();
@@ -117,8 +118,7 @@ namespace {
                     ("folder", folder)
                     ("directories", directories)
                     ("files", files)
-                    ("ignored", ignored)
-                    ("watched", watched);
+                    ("ignored", ignored);
             });
     }
 }
