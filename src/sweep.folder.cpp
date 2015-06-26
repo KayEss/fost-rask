@@ -59,10 +59,28 @@ namespace {
                         "Trying to recurse into a non-directory",
                         fostlib::coerce<fostlib::string>(folder));
                 }
+                fostlib::log::debug(rask::c_fost_rask, "Sweep recursing into folder", folder);
                 tenant->local_change(
                     folder, rask::tenant::directory_inode, rask::create_directory_out);
-                fostlib::log::debug(rask::c_fost_rask, "Sweep recursing into folder", folder);
                 auto watched = w.notify.watch(tenant, folder);
+                auto wait_for_outstanding =
+                    [&limit, &yield]() {
+                        ++p_paused;
+                        uint64_t count = 0;
+                        boost::asio::streambuf buffer;
+                        boost::asio::async_read(limit.fd, buffer,
+                            boost::asio::transfer_exactly(sizeof(count)), yield);
+                        buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
+                        if ( count > limit.outstanding )
+                            throw fostlib::exceptions::out_of_range<uint64_t>(
+                                "Just completed jobs is higher than the outsanding number",
+                                0, limit.outstanding, count);
+                        limit.outstanding -= count;
+                        fostlib::log::debug(rask::c_fost_rask)
+                            ("", "Rate limit on rask::sweep_folder")
+                            ("outstanding", limit.outstanding)
+                            ("just-completed", count);
+                    };
                 std::size_t files = 0, directories = 0, ignored = 0;
                 using d_iter = boost::filesystem::directory_iterator;
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
@@ -88,22 +106,11 @@ namespace {
                             });
                     }
                     while ( limit.outstanding > 2 ) {
-                        ++p_paused;
-                        uint64_t count = 0;
-                        boost::asio::streambuf buffer;
-                        boost::asio::async_read(limit.fd, buffer,
-                            boost::asio::transfer_exactly(sizeof(count)), yield);
-                        buffer.sgetn(reinterpret_cast<char *>(&count), sizeof(count));
-                        if ( count > limit.outstanding )
-                            throw fostlib::exceptions::out_of_range<uint64_t>(
-                                "Just completed jobs is higher than the outsanding number",
-                                0, limit.outstanding, count);
-                        limit.outstanding -= count;
-                        fostlib::log::debug(rask::c_fost_rask)
-                            ("", "Rate limit on rask::sweep_folder")
-                            ("outstanding", limit.outstanding)
-                            ("just-completed", count);
+                        wait_for_outstanding();
                     }
+                }
+                while ( limit.outstanding != 0 ) {
+                    wait_for_outstanding();
                 }
                 fostlib::log::info(rask::c_fost_rask)
                     ("", "Swept folder")
