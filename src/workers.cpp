@@ -15,9 +15,27 @@
 namespace {
     auto eh() {
         return []() {
-            fostlib::log::critical(rask::c_fost_rask, "Rask pool thread caught an exception");
-            fostlib::absorb_exception();
-            return true;
+            auto eptr = std::current_exception();
+            if ( eptr ) {
+                try {
+                    std::rethrow_exception(eptr);
+                } catch ( fostlib::exceptions::exception &e ) {
+                    fostlib::log::critical(rask::c_fost_rask)
+                        ("", "Rask thread pool caught an exception")
+                        ("message", e.message())
+                        ("data", e.data());
+                } catch ( std::exception &e ) {
+                    fostlib::log::critical(rask::c_fost_rask)
+                        ("", "Rask thread pool caught an exception")
+                        ("what", e.what());
+                } catch ( ... ) {
+                    fostlib::log::critical(rask::c_fost_rask,
+                        "Rask thread pool caught an unknown exception");
+                }
+                fostlib::absorb_exception();
+                return true;
+            } else
+                return false;
         };
     }
 }
