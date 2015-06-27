@@ -19,3 +19,5 @@ const fostlib::setting<fostlib::json> rask::c_server_db(
 const fostlib::setting<fostlib::json> rask::c_tenant_db(
     "fost-rask/configuration.cpp", "rask", "tenants", fostlib::json(), true);
 
+const fostlib::setting<bool> rask::c_terminate_on_exception(
+    "fost-rask/configuration.cpp", "rask", "terminate on exception", true, true);

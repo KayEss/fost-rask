@@ -26,6 +26,12 @@ namespace rask {
     /// The tenants database to use
     extern const fostlib::setting<fostlib::json> c_tenant_db;
 
+    /// Set this to true if you want rask to terminate after the reactor pool
+    /// catches any exception. If false then rask will attempt to carry on.
+    /// When terminating the log queue is flushed before `std::terminate` is
+    /// called.
+    extern const fostlib::setting<bool> c_terminate_on_exception;
+
 
 }
 

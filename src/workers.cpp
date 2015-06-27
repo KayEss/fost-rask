@@ -33,6 +33,10 @@ namespace {
                         "Rask thread pool caught an unknown exception");
                 }
                 fostlib::absorb_exception();
+                if ( rask::c_terminate_on_exception.value() ) {
+                    fostlib::log::flush();
+                    std::terminate();
+                }
                 return true;
             } else
                 return false;
