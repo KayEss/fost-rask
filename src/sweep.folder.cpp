@@ -16,6 +16,8 @@
 
 #include <boost/asio/spawn.hpp>
 
+#include <system_error>
+
 
 namespace {
     fostlib::performance p_starts(rask::c_fost_rask, "sweep", "started");
