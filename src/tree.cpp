@@ -35,7 +35,8 @@ namespace {
 
 
 rask::tree::tree(
-    rask::workers &w, fostlib::json c, fostlib::jcursor r, fostlib::jcursor nh, fostlib::jcursor ih
+    rask::workers &w, fostlib::json c, fostlib::jcursor r,
+    fostlib::jcursor nh, fostlib::jcursor ih
 ) : workers(w), root_db_config(std::move(c)), root(std::move(r)),
         name_hash_path(std::move(nh)), item_hash_path(std::move(ih)) {
 }
@@ -86,7 +87,7 @@ namespace {
                         /// for any longer than we need to.
                         workers.high_latency.get_io_service().post(
                             [&workers, &tree, manipulator, dbpath, layer, hash]() {
-                                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer, hash));
+                                beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
                                 add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
                                     tree, dbpath, hash, manipulator);
                             });
@@ -219,9 +220,6 @@ fostlib::json rask::tree::layer_db_config(
             ("", "layer_db_config")
             ("layer", layer)
             ("config", conf);
-//         if ( layer == 2 ) {
-//             throw fostlib::exceptions::not_implemented("Not allowing layer 2");
-//         }
         return conf;
     }
 }
