@@ -25,7 +25,7 @@ namespace {
                 position(t->inodes().begin()), end(t->inodes().end()) {
         }
     };
-    void block(boost::asio::io_service &s, std::shared_ptr<closure> c) {
+    void check_block(boost::asio::io_service &s, std::shared_ptr<closure> c) {
         for ( ; c->position != c->end; ++c->position ) {
             auto inode = *c->position;
             auto filetype = inode["filetype"];
@@ -48,7 +48,7 @@ void rask::sweep_inodes(
     auto c = std::make_shared<closure>(t, std::move(f));
     w.high_latency.get_io_service().post(
         [&io_service = w.high_latency.get_io_service(), c]() {
-            block(io_service, c);
+            check_block(io_service, c);
         });
 }
 
