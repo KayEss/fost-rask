@@ -27,7 +27,9 @@ namespace {
         std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>>
             g_watches;
 
+    fostlib::performance p_watches(rask::c_fost_rask, "inotify", "watches");
     fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
+    fostlib::performance p_in_delete_self(rask::c_fost_rask, "inotify", "IN_DELETE_SELF");
 
     struct callback : public f5::fsnotify::boost_asio::reader {
         rask::workers &w;
@@ -64,6 +66,7 @@ namespace {
                         });
                 }
             } else if ( event.mask & IN_DELETE_SELF ) {
+                ++p_in_delete_self;
                 w.high_latency.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
                         rask::rm_directory(w, tenant, filename);
@@ -76,7 +79,6 @@ namespace {
 
 struct rask::notification::impl {
     f5::notifications<callback> notifications;
-
     impl(workers &w)
     : notifications(w) {
     }
@@ -88,8 +90,7 @@ rask::notification::notification(workers &w)
 }
 
 
-rask::notification::~notification() {
-}
+rask::notification::~notification() = default;
 
 
 void rask::notification::operator () () {
@@ -103,6 +104,7 @@ bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::file
         [this, &watched, tenant, &folder](int wd) {
             watched = true;
             g_watches.add_if_not_found(wd, [tenant, &folder, wd]() {
+                ++p_watches;
                 fostlib::log::debug(c_fost_rask)
                     ("", "Watch added")
                     ("wd", wd)
