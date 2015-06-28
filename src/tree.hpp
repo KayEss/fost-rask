@@ -9,7 +9,7 @@
 #pragma once
 
 
-#include "hash.hpp"
+#include "hash-block.hpp"
 #include <beanbag/beanbag>
 
 
@@ -54,6 +54,10 @@ namespace rask {
         ) const {
             return beanbag::database(layer_db_config(layer, hash));
         }
+
+        /// Stores the blocks and the hashes. For now store the JSON for the
+        /// inode at the leaf positions.
+        root_block<fostlib::json> hash;
 
         /// The type of the manipulator that runs inside the node database
         using manipulator_fn =
