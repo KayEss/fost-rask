@@ -11,6 +11,8 @@
 
 #include <fost/jsondb>
 
+#include <atomic>
+
 
 namespace rask {
 
@@ -21,6 +23,8 @@ namespace rask {
     /// The name hash
     using name_hash_type = fostlib::string;
 
+    /// A single hash value that can be atomically updated
+    using hash_value = std::atomic<std::array<unsigned char, 32>>;
 
     /// Return the hash for a name
     name_hash_type name_hash(const fostlib::string &);

@@ -14,6 +14,6 @@
 
 
 rask::block::block(const tree &t, block *p, std::size_t d, name_hash_type px)
-: part_of(t), parent(p), depth(d), prefix(std::move(px)) {
+: depth(d), prefix(std::move(px)), parent(p), part_of(t) {
 }
 

@@ -11,13 +11,12 @@
 
 #include "hash.hpp"
 
-#include <atomic>
-#include <mutex>
-#include <vector>
+#include <f5/threading/map.hpp>
 
 #include <fost/core>
 
-#include <f5/threading/map.hpp>
+#include <mutex>
+#include <vector>
 
 
 namespace rask {
@@ -31,10 +30,6 @@ namespace rask {
     protected:
         /// Allow the sub-class to construct the block
         block(const tree &, block *, std::size_t, name_hash_type);
-        /// The parent block to this one -- is nullptr for the root block
-        const block *parent;
-        /// The tree that this block is part of
-        const tree &part_of;
 
     public:
         /// Allow safe sub-classing
@@ -46,8 +41,12 @@ namespace rask {
         const std::size_t depth;
         /// The hash prefix for this part of the tree
         const name_hash_type prefix;
-        /// The actual hash value itself
-        std::atomic<std::array<unsigned char, 32>> hash;
+
+    private:
+        /// The parent block to this one -- is nullptr for the root block
+        const block *parent;
+        /// The tree that this block is part of
+        const tree &part_of;
     };
 
 
@@ -67,19 +66,24 @@ namespace rask {
     /// A mid-tree block
     template<typename L>
     class mid_block : public block {
+    protected:
+        mid_block(const tree &t, block *b, std::size_t d, name_hash_type px)
+        : block(t, b, d, std::move(px)) {
+        }
+    public:
     };
 
 
     /// A root block
     template<typename L>
-    class root_block : public block {
+    class root_block : public mid_block<L> {
         using mid_blocks = f5::tsmap<
             name_hash_type, std::shared_ptr<mid_block<L>>>;
         f5::tsmap<std::size_t, mid_blocks> mids;
     public:
         /// Construct a root block
         root_block(const tree &t)
-        : block(t, nullptr, 0u, name_hash_type()) {
+        : mid_block<L>(t, nullptr, 0u, name_hash_type()) {
         }
     };
 
