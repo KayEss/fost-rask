@@ -52,9 +52,16 @@ namespace {
 }
 
 
-void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
+void rask::rehash_inodes(const fostlib::json &dbconfig) {
+    auto pdb(beanbag::database(dbconfig));
+    rehash_inodes(pdb);
+}
+
+
+void rask::rehash_inodes(beanbag::jsondb_ptr pdb) {
+    static const fostlib::jcursor inode_hash_path("hash", "inode");
     ++p_inodes;
-    const fostlib::jcursor inode_hash_path("hash", "inode");
+    fostlib::jsondb::local tdb(*pdb);
     std::vector<unsigned char> hash(
         digest(inode_hash_path, tdb["inodes"]));
     if ( tdb.has_key("layer") ) {
@@ -73,7 +80,7 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
                     fostlib::coerce<fostlib::base64_string>(hash))
                 .commit();
             // Then rehash the parent and on up
-            rehash_inodes(parent);
+            rehash_inodes(pdbp);
         } catch ( fostlib::exceptions::exception &e ) {
             fostlib::json level;
             fostlib::insert(level, "tdb", tdb.data());
@@ -90,7 +97,7 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
                 fostlib::coerce<fostlib::string>(
                     fostlib::coerce<fostlib::base64_string>(hash)))
             .commit();
-        rehash_tenants(tenants);
+        rehash_tenants(dbp);
         std::array<unsigned char, 32> hash_array;
         std::copy(hash.begin(), hash.end(), hash_array.begin());
         tenantp->hash = hash_array;
@@ -98,15 +105,9 @@ void rask::rehash_inodes(const fostlib::jsondb::local &tdb) {
 }
 
 
-void rask::rehash_inodes(const fostlib::json &dbconfig) {
-    fostlib::log::debug(c_fost_rask, "rehash_inodes", dbconfig);
-    auto pdb(beanbag::database(dbconfig));
-    rehash_inodes(fostlib::jsondb::local(*pdb));
-}
-
-
-void rask::rehash_tenants(const fostlib::jsondb::local &tsdb) {
+void rask::rehash_tenants(beanbag::jsondb_ptr pdb) {
     ++p_tenants;
+    fostlib::jsondb::local tsdb(*pdb);
     std::vector<unsigned char> hash(
         digest(fostlib::jcursor("hash", "data"), tsdb["known"]));
     beanbag::jsondb_ptr dbp(beanbag::database(

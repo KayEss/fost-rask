@@ -135,7 +135,7 @@ namespace {
                         if ( dbp ) {
                             workers.high_latency.get_io_service().post(
                                 [dbp]() {
-                                    rask::rehash_inodes(fostlib::jsondb::local(*dbp));
+                                    rask::rehash_inodes(dbp);
                                 });
                         }
                     }

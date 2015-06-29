@@ -9,7 +9,7 @@
 #pragma once
 
 
-#include <fost/jsondb>
+#include <beanbag/beanbag>
 
 #include <atomic>
 
@@ -29,13 +29,12 @@ namespace rask {
     /// Return the hash for a name
     name_hash_type name_hash(const fostlib::string &);
 
-    /// Re-hash starting at the inode list level
-    void rehash_inodes(const fostlib::jsondb::local &);
     /// Re-hash starting at specified database
+    void rehash_inodes(beanbag::jsondb_ptr);
     void rehash_inodes(const fostlib::json &dbconfig);
 
     /// Re-hash starting at the tenants level
-    void rehash_tenants(const fostlib::jsondb::local &);
+    void rehash_tenants(beanbag::jsondb_ptr);
 
 
 }
