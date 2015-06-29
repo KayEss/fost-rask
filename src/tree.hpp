@@ -19,6 +19,19 @@ namespace rask {
     struct workers;
 
 
+    /// Value for the @context member of the JSON when it represents
+    /// a partitioned layer in the tree.
+    extern const fostlib::json c_db_cluster;
+
+
+    /// Given either a local transaction or JSON returns true if it represents
+    /// a partitioned data layer.
+    template<typename D>
+    inline bool partitioned(const D &d) {
+        return d["@context"] == c_db_cluster;
+    }
+
+
     /// Class that can be used to provide an interface onto the beanbags
     /// needed to implement the tree for large collections of names -- tenants
     /// and inodes.

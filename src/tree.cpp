@@ -17,16 +17,12 @@
 
 
 namespace {
-    const fostlib::json c_db_cluster("db-cluster");
-
     fostlib::performance p_deferred(rask::c_fost_rask,
         "tree", "partitioned-during-commit");
-
-    template<typename D>
-    inline bool partitioned(const D &d) {
-        return d["@context"] == c_db_cluster;
-    }
 }
+
+
+const fostlib::json rask::c_db_cluster("db-cluster");
 
 
 /*
@@ -77,7 +73,7 @@ namespace {
     ) {
         meta.transformation(
             [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
-                const bool recurse = partitioned(data);
+                const bool recurse = rask::partitioned(data);
                 try {
                     if ( recurse ) {
                         ++p_deferred;
@@ -116,7 +112,7 @@ namespace {
                     std::vector<beanbag::jsondb_ptr> children(32);
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
-                    fostlib::insert(data, "@context", c_db_cluster);
+                    fostlib::insert(data, "@context", rask::c_db_cluster);
                     for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
                         auto item = *niter;
                         const auto hash = fostlib::coerce<fostlib::string>(
@@ -153,7 +149,7 @@ namespace {
         const rask::name_hash_type &hash,
         rask::tree::manipulator_fn manipulator
     ) {
-        const bool recurse = partitioned(meta);
+        const bool recurse = rask::partitioned(meta);
         if ( recurse ) {
             try {
                 beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
