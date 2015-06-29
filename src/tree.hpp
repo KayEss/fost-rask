@@ -70,7 +70,7 @@ namespace rask {
 
         /// Stores the blocks and the hashes. For now store the JSON for the
         /// inode at the leaf positions.
-        root_block<fostlib::json> hash;
+        root_block hash;
 
         /// The type of the manipulator that runs inside the node database
         using manipulator_fn =
