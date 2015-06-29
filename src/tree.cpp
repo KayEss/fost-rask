@@ -134,8 +134,8 @@ namespace {
                     for ( auto dbp : children ) {
                         if ( dbp ) {
                             workers.high_latency.get_io_service().post(
-                                [dbp]() {
-                                    rask::rehash_inodes(dbp);
+                                [&workers, dbp]() {
+                                    rask::rehash_inodes(workers, dbp);
                                 });
                         }
                     }

@@ -18,6 +18,7 @@ namespace rask {
 
 
     class tenant;
+    struct workers;
 
 
     /// The name hash
@@ -30,8 +31,8 @@ namespace rask {
     name_hash_type name_hash(const fostlib::string &);
 
     /// Re-hash starting at specified database
-    void rehash_inodes(beanbag::jsondb_ptr);
-    void rehash_inodes(const fostlib::json &dbconfig);
+    void rehash_inodes(workers&, beanbag::jsondb_ptr);
+    void rehash_inodes(workers&, const fostlib::json &dbconfig);
 
     /// Re-hash starting at the tenants level
     void rehash_tenants(beanbag::jsondb_ptr);
