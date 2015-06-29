@@ -43,6 +43,14 @@ rask::leaf_block::leaf_block(const tree &t, block *b, std::size_t d, name_hash_t
 }
 
 
+void rask::leaf_block::manipulate(
+    const boost::filesystem::path &location,
+    const name_hash_type &hash,
+    manipulator_fn manipulator
+) {
+}
+
+
 /*
     rask::mid_block
 */
@@ -53,6 +61,14 @@ rask::mid_block::mid_block(const tree &t, block *b, std::size_t d, name_hash_typ
     beanbag::jsondb_ptr dbp(partof.layer_dbp(depth, prefix));
     fostlib::jsondb::local db(*dbp);
     ++p_loaded_mid;
+}
+
+
+void rask::mid_block::manipulate(
+    const boost::filesystem::path &location,
+    const name_hash_type &hash,
+    manipulator_fn manipulator
+) {
 }
 
 

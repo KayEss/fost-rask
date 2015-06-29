@@ -24,6 +24,14 @@ namespace rask {
 
     class root_block;
     class tree;
+    struct workers;
+
+
+    /**
+        I'm starting to think that this is not a smart way of doing this at all. The
+        beanbags already take care of these things and have a correct
+        implementation already (well, probably correct).
+    */
 
 
     /// Parent class for all blocks
@@ -37,6 +45,10 @@ namespace rask {
         /// worked on. Other times we need to grab a lock on the mutex for
         /// the parent block.
         std::mutex mutex;
+
+        /// This is the lock type that we need to grab
+        using lock_type = std::unique_lock<std::mutex>;
+
     public:
         /// Allow safe sub-classing
         virtual ~block() = default;
@@ -49,6 +61,16 @@ namespace rask {
         const std::size_t depth;
         /// The hash prefix for this part of the tree
         const name_hash_type prefix;
+
+        /// The type of the manipulator that runs inside the node database
+        using manipulator_fn =
+            std::function<void(workers &, fostlib::json &, const fostlib::json &)>;
+
+        /// Check a leaf node has the correct entry
+        virtual void manipulate(
+            const boost::filesystem::path &location,
+            const name_hash_type &hash,
+            manipulator_fn manipulator) = 0;
 
     protected:
         /// The parent block to this one -- is nullptr for the root block
@@ -63,6 +85,11 @@ namespace rask {
         friend root_block;
         leaf_block(const tree &t, block *b, std::size_t d, name_hash_type px);
     public:
+        /// Check a leaf node has the correct entry
+        void manipulate(
+            const boost::filesystem::path &location,
+            const name_hash_type &hash,
+            manipulator_fn manipulator);
     };
 
 
@@ -70,7 +97,14 @@ namespace rask {
     class mid_block : public block {
         friend root_block;
         mid_block(const tree &t, block *b, std::size_t d, name_hash_type px);
+
+        std::array<std::shared_ptr<block>, 32> children;
     public:
+        /// Check a leaf node has the correct entry
+        void manipulate(
+            const boost::filesystem::path &location,
+            const name_hash_type &hash,
+            manipulator_fn manipulator);
     };
 
 
@@ -78,10 +112,19 @@ namespace rask {
     class root_block : public block {
         /// Stores the actual block itself because we don't statically know
         /// if the root has been partitioned yet
-        std::unique_ptr<block> actual;
+        std::shared_ptr<block> actual;
     public:
         /// Construct a root block
         root_block(const tree &);
+
+        /// Check a leaf node has the correct entry
+        void manipulate(
+            const boost::filesystem::path &location,
+            const name_hash_type &hash,
+            manipulator_fn manipulator
+        ) {
+            actual->manipulate(location, hash, manipulator);
+        }
     };
 
 
