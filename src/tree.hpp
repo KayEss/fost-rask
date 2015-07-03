@@ -118,6 +118,8 @@ namespace rask {
             /// Move constructor
             const_iterator(const_iterator &&);
 
+            /// Return the key for the JSON in the lowest level beanbag
+            fostlib::string key() const;
             /// Return the current JSON
             fostlib::json operator * () const;
 
