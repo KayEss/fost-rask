@@ -28,6 +28,7 @@ namespace {
             g_watches;
 
     fostlib::performance p_watches(rask::c_fost_rask, "inotify", "watches");
+    fostlib::performance p_watches_failed(rask::c_fost_rask, "inotify", "watches-failed");
     fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
     fostlib::performance p_in_delete_self(rask::c_fost_rask, "inotify", "IN_DELETE_SELF");
 
@@ -113,7 +114,14 @@ bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::file
                 return std::make_pair(tenant, folder);
             });
         },
-        [](){});
+        [tenant, &folder]() {
+            ++p_watches_failed;
+            fostlib::log::error(c_fost_rask)
+                ("", "Watch failed")
+                ("check", "/proc/sys/fs/inotify/max_user_watches")
+                ("tenant", tenant->name())
+                ("directory", folder);
+        });
     return watched;
 }
 
