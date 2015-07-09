@@ -9,7 +9,7 @@
 #pragma once
 
 
-#include "hash.hpp"
+#include "hash-block.hpp"
 #include <beanbag/beanbag>
 
 
@@ -17,6 +17,19 @@ namespace rask {
 
 
     struct workers;
+
+
+    /// Value for the @context member of the JSON when it represents
+    /// a partitioned layer in the tree.
+    extern const fostlib::json c_db_cluster;
+
+
+    /// Given either a local transaction or JSON returns true if it represents
+    /// a partitioned data layer.
+    template<typename D>
+    inline bool partitioned(const D &d) {
+        return d["@context"] == c_db_cluster;
+    }
 
 
     /// Class that can be used to provide an interface onto the beanbags
@@ -54,6 +67,10 @@ namespace rask {
         ) const {
             return beanbag::database(layer_db_config(layer, hash));
         }
+
+        /// Stores the blocks and the hashes. For now store the JSON for the
+        /// inode at the leaf positions.
+        root_block hash;
 
         /// The type of the manipulator that runs inside the node database
         using manipulator_fn =
@@ -101,6 +118,17 @@ namespace rask {
             /// Move constructor
             const_iterator(const_iterator &&);
 
+            /// Return the current database pointer for the leaf we're in
+            beanbag::jsondb_ptr leaf_dbp() const {
+                if ( layers.empty() ) {
+                    return beanbag::jsondb_ptr();
+                } else {
+                    return layers.back().pdb;
+                }
+            }
+
+            /// Return the key for the JSON in the lowest level beanbag
+            fostlib::string key() const;
             /// Return the current JSON
             fostlib::json operator * () const;
 

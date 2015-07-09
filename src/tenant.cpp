@@ -165,7 +165,10 @@ void rask::tenant::local_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.get_io_service().post([dbconf](){rehash_inodes(dbconf);});
+                w.high_latency.get_io_service().post(
+                    [&w, dbconf](){
+                        rehash_inodes(w, dbconf);
+                    });
                 fostlib::log::info(c_fost_rask)
                     ("", inode_type)
                     ("broadcast", "to", broadcast(builder(*self, priority, path)))
@@ -202,7 +205,10 @@ void rask::tenant::remote_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.get_io_service().post([dbconf](){rehash_inodes(dbconf);});
+                w.high_latency.get_io_service().post(
+                    [&w, dbconf](){
+                        rehash_inodes(w, dbconf);
+                    });
                 fostlib::log::info(c_fost_rask)
                     ("", inode_type)
                     ("tenant", self->name())

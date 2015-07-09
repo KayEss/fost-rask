@@ -17,16 +17,12 @@
 
 
 namespace {
-    const fostlib::json c_db_cluster("db-cluster");
-
     fostlib::performance p_deferred(rask::c_fost_rask,
         "tree", "partitioned-during-commit");
-
-    template<typename D>
-    inline bool partitioned(const D &d) {
-        return d["@context"] == c_db_cluster;
-    }
 }
+
+
+const fostlib::json rask::c_db_cluster("db-cluster");
 
 
 /*
@@ -38,7 +34,8 @@ rask::tree::tree(
     rask::workers &w, fostlib::json c, fostlib::jcursor r,
     fostlib::jcursor nh, fostlib::jcursor ih
 ) : workers(w), root_db_config(std::move(c)), root(std::move(r)),
-        name_hash_path(std::move(nh)), item_hash_path(std::move(ih)) {
+        name_hash_path(std::move(nh)), item_hash_path(std::move(ih)),
+        hash(*this) {
 }
 
 
@@ -76,7 +73,7 @@ namespace {
     ) {
         meta.transformation(
             [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
-                const bool recurse = partitioned(data);
+                const bool recurse = rask::partitioned(data);
                 try {
                     if ( recurse ) {
                         ++p_deferred;
@@ -115,7 +112,7 @@ namespace {
                     std::vector<beanbag::jsondb_ptr> children(32);
                     fostlib::json items(data[tree.key()]);
                     tree.key().replace(data, fostlib::json::object_t());
-                    fostlib::insert(data, "@context", c_db_cluster);
+                    fostlib::insert(data, "@context", rask::c_db_cluster);
                     for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
                         auto item = *niter;
                         const auto hash = fostlib::coerce<fostlib::string>(
@@ -137,8 +134,8 @@ namespace {
                     for ( auto dbp : children ) {
                         if ( dbp ) {
                             workers.high_latency.get_io_service().post(
-                                [dbp]() {
-                                    rask::rehash_inodes(fostlib::jsondb::local(*dbp));
+                                [&workers, dbp]() {
+                                    rask::rehash_inodes(workers, dbp);
                                 });
                         }
                     }
@@ -152,7 +149,7 @@ namespace {
         const rask::name_hash_type &hash,
         rask::tree::manipulator_fn manipulator
     ) {
-        const bool recurse = partitioned(meta);
+        const bool recurse = rask::partitioned(meta);
         if ( recurse ) {
             try {
                 beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
@@ -281,6 +278,16 @@ void rask::tree::const_iterator::begin(beanbag::jsondb_ptr dbp) {
 /// We don't need this to do something if the iterator advancement
 /// and begin can leave the layer empty when they get to the end
 void rask::tree::const_iterator::end() {
+}
+
+
+fostlib::string rask::tree::const_iterator::key() const {
+    if ( layers.size() ) {
+        return fostlib::coerce<fostlib::string>(layers.rbegin()->pos.key());
+    } else {
+        throw fostlib::exceptions::not_implemented(
+            "rask::tree::const_iterator::key when layers is empty");
+    }
 }
 
 

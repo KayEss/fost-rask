@@ -10,34 +10,52 @@
 #include "tree.hpp"
 #include <rask/tenant.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 
 namespace {
+    fostlib::performance p_directory(rask::c_fost_rask, "inode", "directory");
+    fostlib::performance p_file(rask::c_fost_rask, "inode", "file");
+    fostlib::performance p_unknown(rask::c_fost_rask, "inode", "unknown");
+
     struct closure {
         std::shared_ptr<rask::tenant> tenant;
         boost::filesystem::path folder;
         rask::tree::const_iterator position;
         rask::tree::const_iterator end;
+        beanbag::jsondb_ptr leaf_dbp;
 
         closure(std::shared_ptr<rask::tenant> t, boost::filesystem::path f)
         : tenant(t), folder(std::move(f)),
                 position(t->inodes().begin()), end(t->inodes().end()) {
+            leaf_dbp = position.leaf_dbp();
         }
     };
-    void block(boost::asio::io_service &s, std::shared_ptr<closure> c) {
+    void check_block(rask::workers &w, std::shared_ptr<closure> c) {
         for ( ; c->position != c->end; ++c->position ) {
             auto inode = *c->position;
             auto filetype = inode["filetype"];
+            auto filename = fostlib::coerce<boost::filesystem::path>(c->position.key());
             if ( filetype == rask::tenant::directory_inode ) {
+                ++p_directory;
+                w.notify.watch(c->tenant, filename);
             } else if ( filetype == rask::tenant::move_inode_out ) {
+                ++p_file;
             } else {
+                ++p_unknown;
                 fostlib::log::error(rask::c_fost_rask)
                     ("", "Sweeping inodes -- unknown filetype")
                     ("filetype", filetype)
                     ("inode", inode);
             }
+            auto cpdb = c->position.leaf_dbp();
+            if ( not(c->leaf_dbp == cpdb) ) {
+                rehash_inodes(w, c->leaf_dbp);
+                c->leaf_dbp = cpdb;
+            }
         }
+        rehash_inodes(w, c->leaf_dbp);
     }
 }
 
@@ -47,8 +65,8 @@ void rask::sweep_inodes(
 ) {
     auto c = std::make_shared<closure>(t, std::move(f));
     w.high_latency.get_io_service().post(
-        [&io_service = w.high_latency.get_io_service(), c]() {
-            block(io_service, c);
+        [&w, c]() {
+            check_block(w, c);
         });
 }
 
