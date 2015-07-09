@@ -24,10 +24,12 @@ namespace {
         boost::filesystem::path folder;
         rask::tree::const_iterator position;
         rask::tree::const_iterator end;
+        beanbag::jsondb_ptr leaf_dbp;
 
         closure(std::shared_ptr<rask::tenant> t, boost::filesystem::path f)
         : tenant(t), folder(std::move(f)),
                 position(t->inodes().begin()), end(t->inodes().end()) {
+            leaf_dbp = position.leaf_dbp();
         }
     };
     void check_block(rask::workers &w, std::shared_ptr<closure> c) {
@@ -47,7 +49,13 @@ namespace {
                     ("filetype", filetype)
                     ("inode", inode);
             }
+            auto cpdb = c->position.leaf_dbp();
+            if ( not(c->leaf_dbp == cpdb) ) {
+                rehash_inodes(w, c->leaf_dbp);
+                c->leaf_dbp = cpdb;
+            }
         }
+        rehash_inodes(w, c->leaf_dbp);
     }
 }
 

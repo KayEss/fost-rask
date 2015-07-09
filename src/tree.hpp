@@ -118,6 +118,15 @@ namespace rask {
             /// Move constructor
             const_iterator(const_iterator &&);
 
+            /// Return the current database pointer for the leaf we're in
+            beanbag::jsondb_ptr leaf_dbp() const {
+                if ( layers.empty() ) {
+                    return beanbag::jsondb_ptr();
+                } else {
+                    return layers.back().pdb;
+                }
+            }
+
             /// Return the key for the JSON in the lowest level beanbag
             fostlib::string key() const;
             /// Return the current JSON
