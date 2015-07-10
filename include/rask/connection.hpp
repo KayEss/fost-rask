@@ -16,6 +16,8 @@
 #include <fost/jsondb>
 #include <fost/log>
 
+#include <f5/threading/ring.hpp>
+
 #include <boost/asio/streambuf.hpp>
 #include <boost/endian/conversion.hpp>
 
@@ -56,6 +58,9 @@ namespace rask {
         boost::asio::streambuf input_buffer;
         /// Heartbeat timer
         boost::asio::deadline_timer heartbeat;
+
+        /// Buffer of outbound packets
+        f5::tsring<std::function<rask::connection::out(void)>> packets;
 
         /// Structure used to manage
         class reconnect {
