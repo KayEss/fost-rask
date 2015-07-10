@@ -65,9 +65,7 @@ void rask::receive_version(connection::in &packet) {
             server->hash = hash_array;
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
-            if ( packet.socket->conversing ) {
-                logger("conversation", "ongoing");
-            } else if ( !myhash.second.isnull() &&
+            if ( !myhash.second.isnull() &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
                 auto chat = std::make_shared<connection::conversation>(packet.socket);
                 chat->tenants(chat);

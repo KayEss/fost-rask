@@ -59,9 +59,6 @@ namespace rask {
         /// Heartbeat timer
         boost::asio::deadline_timer heartbeat;
 
-        /// Buffer of outbound packets
-        f5::tsring<std::function<rask::connection::out(void)>> packets;
-
         /// Structure used to manage
         class reconnect {
         public:
@@ -82,8 +79,6 @@ namespace rask {
         class conversation;
         /// The identity of the server we're connected with
         std::atomic<uint32_t> identity;
-        /// True if there is an active conversation instance
-        std::atomic<bool> conversing;
 
 
         /// Build an outbound packet
@@ -167,6 +162,8 @@ namespace rask {
             static void size_sequence(std::size_t, boost::asio::streambuf &);
         };
 
+        /// Buffer of outbound packets
+        f5::tsring<std::function<rask::connection::out(void)>> packets;
 
         /// Allows a network connection to be read from
         class in {

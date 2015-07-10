@@ -33,12 +33,6 @@ namespace rask {
         conversation(std::shared_ptr<connection>);
         /// Destructor so we can reset the conversing flag
         ~conversation();
-
-        /// Send information about tenants
-        static void tenants(std::shared_ptr<conversation>);
-        /// Send information about inodes
-        static void inodes(
-            std::shared_ptr<conversation>, std::shared_ptr<tenant>);
     };
 
 
