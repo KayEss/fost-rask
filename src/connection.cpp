@@ -113,7 +113,7 @@ rask::connection::connection(rask::workers &w)
 : workers(w), id(++g_id), cnx(w.low_latency.get_io_service()),
         sender(w.low_latency.get_io_service()),
         heartbeat(w.low_latency.get_io_service()),
-        identity(0), conversing(false) {
+        packets(200), identity(0), conversing(false) {
 }
 
 
