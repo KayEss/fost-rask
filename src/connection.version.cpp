@@ -40,7 +40,7 @@ void rask::send_version(std::shared_ptr<connection> socket) {
 
 
 void rask::receive_version(connection::in &packet) {
-    auto logger(fostlib::log::info());
+    auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Version block")
         ("connection", packet.socket_id());
