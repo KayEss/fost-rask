@@ -16,7 +16,7 @@
 
 
 void rask::peer_with(workers &w, const fostlib::json &dbconf) {
-    fostlib::log::debug("Starting peering", dbconf);
+    fostlib::log::debug(c_fost_rask, "Starting peering", dbconf);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconf));
     auto configure = [&w, dbp](const fostlib::json &peers) {
         if ( peers.has_key("connect") ) {
@@ -34,7 +34,7 @@ void rask::peer_with(workers &w, const fostlib::json &dbconf) {
 
 
 void rask::peer_with(workers &w, std::shared_ptr<connection::reconnect> client) {
-    fostlib::log::debug("About to try to connect to", client->configuration);
+    fostlib::log::debug(c_fost_rask, "About to try to connect to", client->configuration);
     auto socket = std::make_shared<rask::connection>(w);
     socket->restart = client;
     client->socket = socket;
@@ -46,9 +46,9 @@ void rask::peer_with(workers &w, std::shared_ptr<connection::reconnect> client) 
     boost::asio::async_connect(socket->cnx, resolver.resolve(q),
         [socket](const boost::system::error_code &error, auto iterator) {
             if ( error ) {
-                fostlib::log::error("Connected to peer", error.message().c_str());
+                fostlib::log::error(c_fost_rask, "Connected to peer", error.message().c_str());
             } else {
-                fostlib::log::debug("Connected to peer");
+                fostlib::log::debug(c_fost_rask, "Connected to peer");
                 monitor_connection(socket);
                 read_and_process(socket);
             }
@@ -62,7 +62,7 @@ void rask::reset_watchdog(workers &w, std::shared_ptr<connection::reconnect> cli
         [&w, client](const boost::system::error_code &error) {
             std::shared_ptr<connection> socket(client->socket.lock());
             if ( !error ) {
-                fostlib::log::error()
+                fostlib::log::error(c_fost_rask)
                     ("", "Watchdog timer fired")
                     ("connection", socket ? fostlib::json(socket->id) : fostlib::json())
                     ("peer", client->configuration);
