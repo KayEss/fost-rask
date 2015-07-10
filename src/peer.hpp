@@ -54,7 +54,6 @@ namespace rask {
 }
 
 
-
 class rask::peer::tenant {
 public:
     /// The other server's hash for this tenant
