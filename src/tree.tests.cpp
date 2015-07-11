@@ -27,15 +27,16 @@ FSL_TEST_FUNCTION(sub_db_config) {
     fostlib::insert(tenants, "initial", "known", "t1", "database", "name", "tenant/t1");
     fostlib::insert(tenants, "initial", "known", "t1", "database", "filepath", "/tmp/t1.json");
     fostlib::insert(tenants, "initial", "known", "t1", "database", "initial", "tenant", "t1");
-    fostlib::insert(tenants, "initial", "subscription", "t1", "path", "/tmp/t1");
+    fostlib::insert(tenants, "initial", "known", "t1", "subscription", "path", "/tmp/t1");
     fostlib::setting<fostlib::json> tenants_setting(
         "tree.tests.cpp", rask::c_tenant_db, tenants);
 
     rask::workers w;
-    rask::tenant t(w, "t1", tenants["initial"]["subscription"]["t1"]);
+    rask::tenant t(w, "t1", tenants["initial"]["known"]["t1"]["subscription"]);
 
     FSL_CHECK_EQ(t.inodes().layer_db_config(0, "01234"),
         tenants["initial"]["known"]["t1"]["database"]);
+    FSL_CHECK_EQ(t.local_path(), "/tmp/t1/");
 
     auto layer1 = t.inodes().layer_db_config(1, "01234");
     fostlib::log::debug(rask::c_fost_rask, "layer1", layer1);
