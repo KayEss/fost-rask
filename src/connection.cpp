@@ -8,8 +8,10 @@
 
 #include "peer.hpp"
 #include <rask/clock.hpp>
+#include <rask/configuration.hpp>
 #include <rask/workers.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 #include <boost/asio/spawn.hpp>
@@ -20,6 +22,9 @@
 namespace {
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
+
+    fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
+    fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
 }
 
 
@@ -128,6 +133,7 @@ rask::connection::~connection() {
 void rask::connection::queue(std::function<out(void)> fn) {
     const auto size = packets.emplace_back(
         [fn]() {
+            ++p_queued;
             return fn;
         });
     if ( size == buffer_capacity - 1 ) {
@@ -152,6 +158,7 @@ void rask::connection::send_head() {
     auto fn = packets.pop_front(
         fostlib::nullable<std::function<out(void)>>());
     if ( !fn.isnull() ) {
+        ++p_sends;
         fn.value()()(self,
             [self]() {
                 self->send_head();
