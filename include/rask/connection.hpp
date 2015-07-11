@@ -37,7 +37,7 @@ namespace rask {
 
 
     /// A connection between two Rask servers
-    class connection {
+    class connection : public std::enable_shared_from_this<connection> {
         static std::atomic<int64_t> g_id;
     public:
         /// Construct a connection
@@ -162,8 +162,9 @@ namespace rask {
             static void size_sequence(std::size_t, boost::asio::streambuf &);
         };
 
-        /// Buffer of outbound packets
-        f5::tsring<std::function<rask::connection::out(void)>> packets;
+        /// Queue a packet for outbound sending. Can be called from multiple
+        /// threads.
+        void queue(std::function<out(void)>);
 
         /// Allows a network connection to be read from
         class in {
@@ -231,6 +232,10 @@ namespace rask {
             /// The number of bytes remaining to be read
             std::size_t remaining;
         };
+
+    private:
+        /// Buffer of outbound packets
+        f5::tsring<std::function<rask::connection::out(void)>> packets;
     };
 
 

@@ -9,7 +9,9 @@
 #include "connection.conversation.hpp"
 #include "peer.hpp"
 #include <rask/clock.hpp>
+#include <rask/tenant.hpp>
 #include <rask/server.hpp>
+#include <rask/workers.hpp>
 
 #include <fost/log>
 
@@ -67,9 +69,28 @@ void rask::receive_version(connection::in &packet) {
             auto myhash = tick::now();
             if ( !myhash.second.isnull() &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
-                auto chat = std::make_shared<connection::conversation>(packet.socket);
-                chat->tenants(chat);
-                logger("conversation", "started");
+                logger("conversation", "sending tenants");
+                packet.socket->workers.high_latency.get_io_service().post(
+                    [socket = packet.socket]() {
+                        auto tdbconf = c_tenant_db.value();
+                        if ( !tdbconf.isnull() ) {
+                            auto tenants_dbp = beanbag::database(tdbconf);
+                            fostlib::jsondb::local tenants(*tenants_dbp);
+                            fostlib::jcursor pos("known");
+                            for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
+                                auto name = fostlib::coerce<fostlib::string>(iter.key());
+                                auto partner = peer::server(socket->identity);
+                                auto ptenant = partner->tenants.find(name);
+                                std::shared_ptr<tenant> mytenant(known_tenant(name));
+                                if ( !ptenant || mytenant->hash.load() != ptenant->hash.load() ) {
+                                    socket->queue(
+                                        [name = std::move(name), data = *iter]() {
+                                            return tenant_packet(name, data);
+                                        });
+                                }
+                            }
+                        }
+                    });
             } else {
                 logger("conversation", "not needed");
             }

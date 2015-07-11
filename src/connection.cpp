@@ -106,6 +106,9 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 */
 
 
+const std::size_t buffer_capacity = 200;
+
+
 std::atomic<int64_t> rask::connection::g_id(0);
 
 
@@ -113,12 +116,30 @@ rask::connection::connection(rask::workers &w)
 : workers(w), id(++g_id), cnx(w.low_latency.get_io_service()),
         sender(w.low_latency.get_io_service()),
         heartbeat(w.low_latency.get_io_service()),
-        identity(0), packets(200) {
+        identity(0), packets(buffer_capacity) {
 }
 
 
 rask::connection::~connection() {
     fostlib::log::debug(c_fost_rask, "Connection closed", id);
+}
+
+
+void rask::connection::queue(std::function<out(void)> fn) {
+    const auto size = packets.emplace_back(
+        [fn]() {
+            return fn;
+        });
+    if ( size == buffer_capacity - 1 ) {
+        std::shared_ptr<connection> self(shared_from_this());
+        fostlib::log::info(c_fost_rask)
+            ("", "Queueing packet")
+            ("buffer", "length", size);
+    } else {
+        fostlib::log::debug(c_fost_rask)
+            ("", "Queueing packet")
+            ("buffer", "length", size);
+    }
 }
 
 
