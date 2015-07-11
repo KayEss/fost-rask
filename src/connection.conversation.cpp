@@ -25,31 +25,6 @@ rask::connection::conversation::conversation(std::shared_ptr<connection> socket)
 rask::connection::conversation::~conversation() = default;
 
 
-// void rask::connection::conversation::tenants(std::shared_ptr<conversation> self) {
-//     if ( !self->tenants_dbp ) return;
-//     self->socket->workers.high_latency.get_io_service().post(
-//         [self]() {
-//             fostlib::jsondb::local tenants(*self->tenants_dbp);
-//             fostlib::jcursor pos("known");
-//             for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
-//                 auto name = fostlib::coerce<fostlib::string>(iter.key());
-//                 auto ptenant = self->partner->tenants.find(name);
-//                 if ( !ptenant ) {
-//                     tenant_packet(name, *iter)(self->socket);
-//                 } else {
-//                     std::shared_ptr<tenant> mytenant(known_tenant(name));
-//                     if ( mytenant->hash.load() != ptenant->hash.load() ) {
-//                         self->socket->workers.high_latency.get_io_service().post(
-//                             [self, mytenant]() {
-//                                 inodes(self, mytenant);
-//                             });
-//                     }
-//                 }
-//             }
-//         });
-// }
-
-
 // void rask::connection::conversation::inodes(
 //     std::shared_ptr<conversation> self, std::shared_ptr<tenant> tenant
 // ) {
