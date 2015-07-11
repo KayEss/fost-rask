@@ -236,6 +236,8 @@ namespace rask {
     private:
         /// Buffer of outbound packets
         f5::tsring<std::function<rask::connection::out(void)>> packets;
+        /// Send the head of the queue
+        void send_head();
     };
 
 

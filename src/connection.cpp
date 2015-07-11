@@ -131,7 +131,11 @@ void rask::connection::queue(std::function<out(void)> fn) {
             return fn;
         });
     if ( size == buffer_capacity - 1 ) {
-        std::shared_ptr<connection> self(shared_from_this());
+        auto self(shared_from_this());
+        workers.low_latency.get_io_service().post(
+            [self]() {
+                self->send_head();
+            });
         fostlib::log::info(c_fost_rask)
             ("", "Queueing packet")
             ("buffer", "length", size);
@@ -139,6 +143,19 @@ void rask::connection::queue(std::function<out(void)> fn) {
         fostlib::log::debug(c_fost_rask)
             ("", "Queueing packet")
             ("buffer", "length", size);
+    }
+}
+
+
+void rask::connection::send_head() {
+    auto self(shared_from_this());
+    auto fn = packets.pop_front(
+        fostlib::nullable<std::function<out(void)>>());
+    if ( !fn.isnull() ) {
+        fn.value()()(self,
+            [self]() {
+                self->send_head();
+            });
     }
 }
 
