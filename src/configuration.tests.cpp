@@ -14,4 +14,3 @@ namespace {
         "rask/configuration.tests.cpp", fostlib::c_jsondb_root,
         fostlib::coerce<fostlib::string>(fostlib::unique_filename()));
 }
-
