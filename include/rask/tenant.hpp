@@ -23,7 +23,9 @@ namespace rask {
 
 
     /// Check the configuration for changes in tenants
-    void tenants(workers &, const fostlib::json &dbconfig);
+    void tenants(workers &,
+        const fostlib::json &tenant_config,
+        const fostlib::json &subscribers_config);
 
     /// The type of the current tenants
     typedef std::vector<fostlib::string> tenants_type;

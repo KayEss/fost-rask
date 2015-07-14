@@ -69,8 +69,8 @@ void rask::server(workers &w) {
         // Start listening for connections
         rask::listen(w, c_server_db.value()["socket"]);
         // Load tenants and start sweeping
-        if ( !c_tenant_db.value().isnull() ) {
-            rask::tenants(w, rask::c_tenant_db.value());
+        if ( !c_tenant_db.value().isnull() || !c_subscriptions_db.value().isnull() ) {
+            rask::tenants(w, c_tenant_db.value(), c_subscriptions_db.value());
             w.notify();
         }
     }

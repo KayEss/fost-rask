@@ -25,18 +25,23 @@ namespace {
 }
 
 
-void rask::tenants(workers &w, const fostlib::json &dbconfig) {
-    fostlib::log::debug(c_fost_rask, "Loading tenants database", dbconfig);
-    beanbag::jsondb_ptr dbp(beanbag::database(dbconfig));
-    auto configure = [&w, dbp](const fostlib::json &tenants) {
-        if ( tenants.has_key("subscription") ) {
-            const fostlib::json subscriptions(tenants["subscription"]);
+void rask::tenants(
+    workers &w, const fostlib::json &tdbconfig, const fostlib::json &sdbconfig
+) {
+    fostlib::log::debug(c_fost_rask)
+        ("", "Loading tenants database")
+        ("config", "tenants", tdbconfig)
+        ("config", "subscriptions", sdbconfig);
+    beanbag::jsondb_ptr dbp(beanbag::database(sdbconfig));
+    auto configure = [&w, dbp](const fostlib::json &subscribers) {
+        if ( subscribers.has_key("subscription") ) {
+            const fostlib::json subscriptions(subscribers["subscription"]);
             for ( auto t(subscriptions.begin()); t != subscriptions.end(); ++t ) {
                 auto key(fostlib::coerce<fostlib::string>(t.key()));
                 g_tenants.add_if_not_found(key,
                     [&]() {
                         fostlib::log::info(c_fost_rask,
-                            "New tenant for processing", t.key(), *t);
+                            "New subscriber for processing", t.key(), *t);
                         auto tp = std::make_shared<tenant>(w, key, *t);
                         start_sweep(w, tp);
                         return tp;
