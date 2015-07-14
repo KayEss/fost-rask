@@ -25,6 +25,8 @@ namespace rask {
     extern const fostlib::setting<fostlib::json> c_server_db;
     /// The tenants database to use
     extern const fostlib::setting<fostlib::json> c_tenant_db;
+    /// The subscriptions database to use
+    extern const fostlib::setting<fostlib::json> c_subscriptions_db;
 
     /// Set this to true if you want rask to terminate after the reactor pool
     /// catches any exception. If false then rask will attempt to carry on.
