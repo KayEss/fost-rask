@@ -18,6 +18,7 @@
 namespace rask {
 
 
+    class subscriber;
     class tree;
     struct workers;
 
@@ -56,8 +57,10 @@ namespace rask {
 
         /// The tenant's name
         const fostlib::accessors<fostlib::string> name;
-        /// The tenant's configuration
+        /// The tenant's subscription configuration
         const fostlib::accessors<fostlib::json> configuration;
+        /// The subscription (if present)
+        const std::shared_ptr<subscriber> subscription;
         /// The tenant beanbag
         beanbag::jsondb_ptr beanbag() const;
         /// The local filesystem path

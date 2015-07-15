@@ -93,6 +93,9 @@ namespace {
         }
     }
 }
+rask::tenant::tenant(workers &w, const fostlib::string &n)
+: name(n) {
+}
 rask::tenant::tenant(workers &w, const fostlib::string &n, const fostlib::json &c)
 : root(slash(c)), name(n), configuration(c),
         local_path(fostlib::coerce<boost::filesystem::path>(root)) {
