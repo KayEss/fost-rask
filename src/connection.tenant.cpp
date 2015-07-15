@@ -75,15 +75,9 @@ void rask::tenant_packet(connection::in &packet) {
     auto hash(packet.read(32));
     auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
     logger("hash",  hash64.underlying().underlying().c_str());
-    packet.socket->workers.high_latency.get_io_service().post(
-        [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
-            if ( socket->identity ) {
-                auto partner(peer::server(socket->identity));
-                auto tenant(partner->tenants.add_if_not_found(name,
-                    [](){ return std::make_shared<peer::tenant>(); }));
-                std::array<unsigned char, 32> hash_array;
-                std::copy(hash.begin(), hash.end(), hash_array.begin());
-                tenant->hash = hash_array;
+    if ( packet.socket->identity ) {
+        packet.socket->workers.high_latency.get_io_service().post(
+            [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
                 throw fostlib::exceptions::not_implemented(
                     "Need to update tenant_packet for new subscriber code");
 //                 if ( !c_subscriptions_db.value().isnull() ) {
@@ -98,7 +92,7 @@ void rask::tenant_packet(connection::in &packet) {
 //                 }
 //                 // We're not subscribed to this, so we just store the hash in our
 //                 // tenants database so we can use it to calculate our server hash
-            }
-        });
+                });
+    }
 }
 
