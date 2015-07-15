@@ -42,7 +42,9 @@ namespace rask {
         /// Used for internal caclulations
         const fostlib::string root;
     public:
-        /// Construct a tenant representation
+        /// Construct a tenant representation that can't have a subscription
+        tenant(workers &, const fostlib::string &name);
+        /// Construct a tenant representation with optional subscription
         tenant(workers &, const fostlib::string &name, const fostlib::json &configuration);
         /// Explicit desctructor
         ~tenant();
@@ -89,8 +91,8 @@ namespace rask {
         std::unique_ptr<tree> inodes_p;
     };
 
-    /// Return in-memory description of tenant -- empty if unknown
-    std::shared_ptr<tenant> known_tenant(const fostlib::string &);
+    /// Return in-memory description of tenant
+    std::shared_ptr<tenant> known_tenant(workers &,  const fostlib::string &);
 
 
 }

@@ -89,7 +89,7 @@ void rask::tenant_packet(connection::in &packet) {
                     fostlib::jsondb::local subscriptions(*dbp, "subscription");
                     if ( subscriptions.has_key(fostlib::jcursor("t1", "path")) ) {
                         // Ok, we really are subscribed to this tenant
-                        send_tenant_content(known_tenant(name), socket);
+                        send_tenant_content(known_tenant(socket->workers, name), socket);
                         return;
                     }
                 }

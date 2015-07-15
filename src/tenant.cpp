@@ -55,14 +55,17 @@ void rask::tenants(
 }
 
 
-std::shared_ptr<rask::tenant> rask::known_tenant(const fostlib::string &n) {
-    const std::shared_ptr<tenant> pt(g_tenants.find(n));
-    if ( pt ) {
-        return pt;
-    } else {
-        throw fostlib::exceptions::not_implemented(
-            "rask::known_tenant for unknown tenant");
-    }
+std::shared_ptr<rask::tenant> rask::known_tenant(
+    workers &w, const fostlib::string &tenant_name
+) {
+    return g_tenants.add_if_not_found(tenant_name,
+        [&]() {
+            fostlib::log::info(c_fost_rask,
+                "New tenant (without subscription) added to internal database",
+                tenant_name);
+            auto tp = std::make_shared<tenant>(w, tenant_name);
+            return tp;
+        });
 }
 
 

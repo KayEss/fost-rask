@@ -80,7 +80,7 @@ void rask::receive_version(connection::in &packet) {
                                 auto name = fostlib::coerce<fostlib::string>(iter.key());
                                 auto partner = peer::server(socket->identity);
                                 auto ptenant = partner->tenants.find(name);
-                                std::shared_ptr<tenant> mytenant(known_tenant(name));
+                                auto mytenant(known_tenant(socket->workers, name));
                                 if ( !ptenant || mytenant->hash.load() != ptenant->hash.load() ) {
                                     socket->queue(
                                         [name = std::move(name), data = *iter]() {

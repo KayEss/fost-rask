@@ -26,7 +26,8 @@ void rask::move_out(rask::connection::in &packet) {
     logger("", "Remove inode");
     auto priority(packet.read<tick>());
     logger("priority", priority);
-    auto tenant(known_tenant(packet.read<fostlib::string>()));
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
     auto name(packet.read<fostlib::string>());
     logger
         ("tenant", tenant->name())

@@ -72,7 +72,7 @@ namespace {
         if ( tdb.has_key("layer") ) {
             try {
                 const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
-                auto tenant = rask::known_tenant(tenant_name);
+                auto tenant = rask::known_tenant(w, tenant_name);
                 auto pdbp = tenant->inodes().layer_dbp(
                     fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
                     fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
@@ -94,7 +94,7 @@ namespace {
             }
         } else {
             std::shared_ptr<rask::tenant> tenantp(
-                rask::known_tenant(fostlib::coerce<fostlib::string>(tdb["tenant"])));
+                rask::known_tenant(w, fostlib::coerce<fostlib::string>(tdb["tenant"])));
             beanbag::jsondb_ptr dbp(beanbag::database(rask::c_tenant_db.value()));
             fostlib::jsondb::local tenants(*dbp);
             tenants

@@ -24,7 +24,8 @@ void rask::create_directory(rask::connection::in &packet) {
     logger("", "Create directory");
     auto priority(packet.read<tick>());
     logger("priority", priority);
-    auto tenant(known_tenant(packet.read<fostlib::string>()));
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
     auto name(packet.read<fostlib::string>());
     logger
         ("tenant", tenant->name())
