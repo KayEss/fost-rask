@@ -6,7 +6,6 @@
 */
 
 
-#include "connection.conversation.hpp"
 #include "peer.hpp"
 #include <rask/clock.hpp>
 #include <rask/tenant.hpp>

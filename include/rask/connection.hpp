@@ -75,8 +75,6 @@ namespace rask {
         std::shared_ptr<reconnect> restart;
 
 
-        /// Class for storing conversation state
-        class conversation;
         /// The identity of the server we're connected with
         std::atomic<uint32_t> identity;
 
