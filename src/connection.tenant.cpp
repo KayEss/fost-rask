@@ -9,6 +9,7 @@
 #include "peer.hpp"
 #include "tree.hpp"
 #include <rask/connection.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 
@@ -33,7 +34,7 @@ namespace {
     void send_tenant_content(
         std::shared_ptr<rask::tenant> tenant, std::shared_ptr<rask::connection> socket
     ) {
-        for ( auto iter(tenant->inodes().begin()); iter != tenant->inodes().end(); ++iter ) {
+        for ( auto iter(tenant->subscription->inodes().begin()); iter != tenant->subscription->inodes().end(); ++iter ) {
             const fostlib::json inode(*iter);
             auto &filetype = inode["filetype"];
             if ( filetype == rask::tenant::directory_inode ) {
@@ -83,18 +84,20 @@ void rask::tenant_packet(connection::in &packet) {
                 std::array<unsigned char, 32> hash_array;
                 std::copy(hash.begin(), hash.end(), hash_array.begin());
                 tenant->hash = hash_array;
-                if ( !c_subscriptions_db.value().isnull() ) {
-                    // work out if we're subscribed....
-                    beanbag::jsondb_ptr dbp(beanbag::database(c_subscriptions_db.value()));
-                    fostlib::jsondb::local subscriptions(*dbp, "subscription");
-                    if ( subscriptions.has_key(fostlib::jcursor("t1", "path")) ) {
-                        // Ok, we really are subscribed to this tenant
-                        send_tenant_content(known_tenant(socket->workers, name), socket);
-                        return;
-                    }
-                }
-                // We're not subscribed to this, so we just store the hash in our
-                // tenants database so we can use it to calculate our server hash
+                throw fostlib::exceptions::not_implemented(
+                    "Need to update tenant_packet for new subscriber code");
+//                 if ( !c_subscriptions_db.value().isnull() ) {
+//                     // work out if we're subscribed....
+//                     beanbag::jsondb_ptr dbp(beanbag::database(c_subscriptions_db.value()));
+//                     fostlib::jsondb::local subscriptions(*dbp, "subscription");
+//                     if ( subscriptions.has_key(fostlib::jcursor("t1", "path")) ) {
+//                         // Ok, we really are subscribed to this tenant
+//                         send_tenant_content(known_tenant(socket->workers, name), socket);
+//                         return;
+//                     }
+//                 }
+//                 // We're not subscribed to this, so we just store the hash in our
+//                 // tenants database so we can use it to calculate our server hash
             }
         });
 }

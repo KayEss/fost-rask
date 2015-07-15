@@ -12,8 +12,6 @@
 #include <rask/connection.hpp>
 #include <rask/workers.hpp>
 
-#include <beanbag/beanbag>
-
 
 namespace rask {
 
@@ -34,14 +32,8 @@ namespace rask {
     /// Return all of the current tenants
     tenants_type all_tenants();
 
-    /// The type of a function used to build inode packets
-    typedef std::function<
-        connection::out(tenant &, const rask::tick &, const fostlib::string &)> packet_builder;
-
     /// Tenant working data
     class tenant {
-        /// Used for internal caclulations
-        const fostlib::string root;
     public:
         /// Construct a tenant representation that can't have a subscription
         tenant(workers &, const fostlib::string &name);
@@ -61,37 +53,9 @@ namespace rask {
         const fostlib::accessors<fostlib::json> configuration;
         /// The subscription (if present)
         const std::shared_ptr<subscriber> subscription;
-        /// The tenant beanbag
-        beanbag::jsondb_ptr beanbag() const;
-        /// The local filesystem path
-        const fostlib::accessors<boost::filesystem::path> local_path;
 
         /// The current hash
         std::atomic<std::array<unsigned char, 32>> hash;
-
-        /// Write details about something observed on this file system. After
-        /// recording in the database it will build a packet and broadcast it to
-        /// the other connected nodes
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            packet_builder);
-        /// Record a change that has come from another server
-        void remote_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            const tick &priority);
-
-        /// The inodes
-        const tree &inodes() const {
-            return *inodes_p;
-        }
-        tree &inodes() {
-            return *inodes_p;
-        }
-
-    private:
-        std::unique_ptr<tree> inodes_p;
     };
 
     /// Return in-memory description of tenant

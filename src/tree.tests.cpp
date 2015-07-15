@@ -8,6 +8,7 @@
 
 #include "tree.hpp"
 #include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 #include <fost/log>
@@ -42,25 +43,26 @@ FSL_TEST_FUNCTION(sub_db_config) {
     rask::workers w;
     rask::tenant t(w, "t1", subscriptions["initial"]["subscription"]["t1"]);
 
-    FSL_CHECK_EQ(t.inodes().layer_db_config(0, "01234"),
+    FSL_CHECK_EQ(t.subscription->inodes().layer_db_config(0, "01234"),
         tenants["initial"]["known"]["t1"]["database"]);
-    FSL_CHECK_EQ(t.local_path(), "/tmp/t1/");
+    FSL_CHECK(t.subscription.get());
+    FSL_CHECK_EQ(t.subscription->local_path(), "/tmp/t1/");
 
-    auto layer1 = t.inodes().layer_db_config(1, "01234");
+    auto layer1 = t.subscription->inodes().layer_db_config(1, "01234");
     fostlib::log::debug(rask::c_fost_rask, "layer1", layer1);
     FSL_CHECK_EQ(layer1["filepath"],
         fostlib::json(fostlib::c_jsondb_root.value() + "/t1/0.json"));
     FSL_CHECK_EQ(layer1["initial"]["layer"]["current"], fostlib::json("0"));
     FSL_CHECK_EQ(layer1["initial"]["layer"]["hash"], fostlib::json("0"));
 
-    auto layer2 = t.inodes().layer_db_config(2, "01234");
+    auto layer2 = t.subscription->inodes().layer_db_config(2, "01234");
     fostlib::log::debug(rask::c_fost_rask, "layer2", layer2);
     FSL_CHECK_EQ(layer2["filepath"],
         fostlib::json(fostlib::c_jsondb_root.value() + "/t1/01.json"));
     FSL_CHECK_EQ(layer2["initial"]["layer"]["current"], fostlib::json("1"));
     FSL_CHECK_EQ(layer2["initial"]["layer"]["hash"], fostlib::json("01"));
 
-    auto layer3 = t.inodes().layer_db_config(3, "01234");
+    auto layer3 = t.subscription->inodes().layer_db_config(3, "01234");
     fostlib::log::debug(rask::c_fost_rask, "layer3", layer3);
     FSL_CHECK_EQ(layer3["filepath"],
         fostlib::json(fostlib::c_jsondb_root.value() + "/t1/01/2.json"));

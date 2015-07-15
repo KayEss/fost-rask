@@ -6,6 +6,7 @@
 */
 
 
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 #include <fost/test>
@@ -22,7 +23,8 @@ FSL_TEST_FUNCTION(path_does_not_get_double_slash) {
     fostlib::json conf;
     fostlib::insert(conf, "path", "m/");
     rask::tenant t(w, "t1", conf);
-    FSL_CHECK_EQ(t.local_path(), "m/");
+    FSL_CHECK(t.subscription.get());
+    FSL_CHECK_EQ(t.subscription->local_path(), "m/");
 }
 
 
@@ -31,6 +33,7 @@ FSL_TEST_FUNCTION(path_gets_slash) {
     fostlib::json conf;
     fostlib::insert(conf, "path", "m");
     rask::tenant t(w, "t1", conf);
-    FSL_CHECK_EQ(t.local_path(), "m/");
+    FSL_CHECK(t.subscription.get());
+    FSL_CHECK_EQ(t.subscription->local_path(), "m/");
 }
 

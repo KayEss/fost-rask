@@ -7,12 +7,13 @@
 
 
 #include "notification.hpp"
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 
 void rask::rm_directory(
     workers &w, std::shared_ptr<tenant> tenant, const boost::filesystem::path &path
 ) {
-    tenant->local_change(path, tenant::move_inode_out, move_out_packet);
+    tenant->subscription->local_change(path, tenant::move_inode_out, move_out_packet);
 }
 

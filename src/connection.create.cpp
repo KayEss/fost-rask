@@ -6,6 +6,7 @@
 */
 
 
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 
@@ -30,15 +31,17 @@ void rask::create_directory(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
-    packet.socket->workers.high_latency.get_io_service().post(
-        [tenant, name = std::move(name), priority]() {
-            auto location = tenant->local_path() /
-                fostlib::coerce<boost::filesystem::path>(name);
-            tenant->remote_change(location, tenant::directory_inode, priority);
-            // TODO: Really we should only do this if we have actually updated
-            // the tenant data. If it is older than what we have then we should send
-            // ours to the remote end
-            boost::filesystem::create_directories(location);
-        });
+    if ( tenant->subscription) {
+        packet.socket->workers.high_latency.get_io_service().post(
+            [tenant, name = std::move(name), priority]() {
+                auto location = tenant->subscription->local_path() /
+                    fostlib::coerce<boost::filesystem::path>(name);
+                tenant->subscription->remote_change(location, tenant::directory_inode, priority);
+                // TODO: Really we should only do this if we have actually updated
+                // the tenant data. If it is older than what we have then we should send
+                // ours to the remote end
+                boost::filesystem::create_directories(location);
+            });
+    }
 }
 

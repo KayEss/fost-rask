@@ -12,6 +12,8 @@
 #include <rask/server.hpp>
 #include <rask/workers.hpp>
 
+#include <beanbag/beanbag>
+
 #include <fost/log>
 
 

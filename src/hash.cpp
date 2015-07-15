@@ -10,6 +10,7 @@
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <f5/threading/set.hpp>
@@ -73,7 +74,10 @@ namespace {
             try {
                 const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
                 auto tenant = rask::known_tenant(w, tenant_name);
-                auto pdbp = tenant->inodes().layer_dbp(
+                if ( !tenant->subscription ) {
+                    throw fostlib::exceptions::null("Rehash of tenant with no subscription");
+                }
+                auto pdbp = tenant->subscription->inodes().layer_dbp(
                     fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
                     fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
                 fostlib::jsondb::local parent(*pdbp);
