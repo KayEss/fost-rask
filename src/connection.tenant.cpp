@@ -7,8 +7,12 @@
 
 
 #include "peer.hpp"
+#include "tree.hpp"
 #include <rask/connection.hpp>
+#include <rask/tenant.hpp>
 #include <rask/workers.hpp>
+
+#include <beanbag/beanbag>
 
 
 rask::connection::out rask::tenant_packet(
@@ -22,6 +26,41 @@ rask::connection::out rask::tenant_packet(
                     fostlib::coerce<fostlib::string>(meta["hash"]["data"]))));
     packet << hash;
     return std::move(packet);
+}
+
+
+namespace {
+    void send_tenant_content(
+        std::shared_ptr<rask::tenant> tenant, std::shared_ptr<rask::connection> socket
+    ) {
+        for ( auto iter(tenant->inodes().begin()); iter != tenant->inodes().end(); ++iter ) {
+            const fostlib::json inode(*iter);
+            auto &filetype = inode["filetype"];
+            if ( filetype == rask::tenant::directory_inode ) {
+                fostlib::log::debug(rask::c_fost_rask)
+                    ("", "sending create_directory")
+                    ("inode", inode);
+                socket->queue(
+                    [tenant, &inode]() {
+                        return create_directory_out(*tenant, rask::tick(inode["priority"]),
+                            fostlib::coerce<fostlib::string>(inode["name"]));
+                    });
+            } else if ( filetype == rask::tenant::move_inode_out ) {
+                fostlib::log::debug(rask::c_fost_rask)
+                    ("", "sending move_out")
+                    ("inode", inode);
+                socket->queue(
+                    [tenant, &inode]() {
+                        return move_out_packet(*tenant, rask::tick(inode["priority"]),
+                            fostlib::coerce<fostlib::string>(inode["name"]));
+                    });
+            } else {
+                fostlib::log::error(rask::c_fost_rask)
+                    ("", "Unkown inode type to send to peer")
+                    ("inode", inode);
+            }
+        }
+    }
 }
 
 
@@ -44,6 +83,17 @@ void rask::tenant_packet(connection::in &packet) {
                 std::array<unsigned char, 32> hash_array;
                 std::copy(hash.begin(), hash.end(), hash_array.begin());
                 tenant->hash = hash_array;
+                if ( !c_subscriptions_db.value().isnull() ) {
+                    // work out if we're subscribed....
+                    beanbag::jsondb_ptr dbp(beanbag::database(c_subscriptions_db.value()));
+                    fostlib::jsondb::local subscriptions(*dbp, "subscription");
+                    if ( subscriptions.has_key(fostlib::jcursor("t1", "path")) ) {
+                        // Ok, we really are subscribed to this tenant
+                        return;
+                    }
+                }
+                // We're not subscribed to this, so we just store the hash in our
+                // tenants database so we can use it to calculate our server hash
             }
         });
 }

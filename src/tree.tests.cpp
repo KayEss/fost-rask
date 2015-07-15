@@ -21,19 +21,26 @@ FSL_TEST_SUITE(tree);
 
 
 FSL_TEST_FUNCTION(sub_db_config) {
-    fostlib::json tenants;
+    fostlib::json tenants, subscriptions;
+
     fostlib::insert(tenants, "name", "tenants");
     fostlib::insert(tenants, "filepath", fostlib::c_jsondb_root.value() + "/tenants.json");
     fostlib::insert(tenants, "initial", "known", "t1", "database", "name", "tenant/t1");
     fostlib::insert(tenants, "initial", "known", "t1", "database", "filepath",
         fostlib::c_jsondb_root.value() + "/t1.json");
     fostlib::insert(tenants, "initial", "known", "t1", "database", "initial", "tenant", "t1");
-    fostlib::insert(tenants, "initial", "known", "t1", "subscription", "path", "/tmp/t1");
-    fostlib::setting<fostlib::json> tenants_setting(
-        "tree.tests.cpp", rask::c_tenant_db, tenants);
+    fostlib::setting<fostlib::json> tenants_setting("tree.tests.cpp",
+        rask::c_tenant_db, tenants);
+
+    fostlib::insert(subscriptions, "name", "subscriptions");
+    fostlib::insert(subscriptions, "filepath",
+        fostlib::c_jsondb_root.value() + "/subscriptions.json");
+    fostlib::insert(subscriptions, "initial", "subscription", "t1", "path", "/tmp/t1");
+    fostlib::setting<fostlib::json> subscriptions_setting("tree.tests.cpp",
+        rask::c_subscriptions_db, subscriptions);
 
     rask::workers w;
-    rask::tenant t(w, "t1", tenants["initial"]["known"]["t1"]["subscription"]);
+    rask::tenant t(w, "t1", subscriptions["initial"]["subscription"]["t1"]);
 
     FSL_CHECK_EQ(t.inodes().layer_db_config(0, "01234"),
         tenants["initial"]["known"]["t1"]["database"]);
