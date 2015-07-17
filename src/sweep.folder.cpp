@@ -90,9 +90,10 @@ namespace {
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
                         ++directories;
-                        tenant->subscription->local_change(inode->path(),
+                        auto directory = inode->path();
+                        tenant->subscription->local_change(directory,
                             rask::tenant::directory_inode, rask::create_directory_out);
-                        w.notify.watch(tenant, inode->path());
+                        w.notify.watch(tenant, directory);
 //                         ++limit.outstanding;
 //                         w.high_latency.get_io_service().post(
 //                             [&w, filename = inode->path(), tenant, &limit]() {
