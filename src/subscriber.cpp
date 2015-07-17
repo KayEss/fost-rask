@@ -61,7 +61,7 @@ namespace {
     fostlib::string relative_path(
         const fostlib::string &root, const boost::filesystem::path &location
     ) {
-        auto path = slash(fostlib::coerce<fostlib::string>(location));
+        auto path = fostlib::coerce<fostlib::string>(location);
         if ( path.startswith(root) ) {
             path = path.substr(root.length());
         } else {
