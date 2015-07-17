@@ -78,21 +78,14 @@ void rask::tenant_packet(connection::in &packet) {
     if ( packet.socket->identity ) {
         packet.socket->workers.high_latency.get_io_service().post(
             [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
-                throw fostlib::exceptions::not_implemented(
-                    "Need to update tenant_packet for new subscriber code");
-//                 if ( !c_subscriptions_db.value().isnull() ) {
-//                     // work out if we're subscribed....
-//                     beanbag::jsondb_ptr dbp(beanbag::database(c_subscriptions_db.value()));
-//                     fostlib::jsondb::local subscriptions(*dbp, "subscription");
-//                     if ( subscriptions.has_key(fostlib::jcursor("t1", "path")) ) {
-//                         // Ok, we really are subscribed to this tenant
-//                         send_tenant_content(known_tenant(socket->workers, name), socket);
-//                         return;
-//                     }
-//                 }
-//                 // We're not subscribed to this, so we just store the hash in our
-//                 // tenants database so we can use it to calculate our server hash
-                });
+                auto tenant = known_tenant(socket->workers, name);
+                if ( tenant->subscription ) {
+                    send_tenant_content(tenant, socket);
+                } else {
+                    // We're not subscribed to this, so we just store the hash in our
+                    // tenants database so we can use it to calculate our server hash
+                }
+            });
     }
 }
 
