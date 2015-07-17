@@ -84,6 +84,8 @@ void rask::tenant_packet(connection::in &packet) {
                 } else {
                     // We're not subscribed to this, so we just store the hash in our
                     // tenants database so we can use it to calculate our server hash
+                    throw fostlib::exceptions::not_implemented(
+                        "Receiving a tenant packet where the tenant isn't subscribed to");
                 }
             });
     }
