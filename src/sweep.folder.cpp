@@ -55,7 +55,7 @@ namespace {
                 "Trying to sweep a tenant that has no subscription");
         }
         boost::asio::spawn(w.high_latency.get_io_service(),
-            [&w, tenant, folder](boost::asio::yield_context yield) {
+            [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
                 limiter limit(w);
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
