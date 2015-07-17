@@ -99,7 +99,9 @@ void rask::notification::operator () () {
 }
 
 
-bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder) {
+bool rask::notification::watch(
+    std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder
+) {
     bool watched = false;
     pimpl->notifications.watch(folder.c_str(),
         [this, &watched, tenant, &folder](int wd) {
