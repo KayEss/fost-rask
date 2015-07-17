@@ -10,18 +10,20 @@
 #include "sweep.inodes.hpp"
 #include "sweep.tenant.hpp"
 #include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/log>
 
 
 void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
-    fostlib::log::info(c_fost_rask, "Starting sweep for", tenant->name(), tenant->configuration());
-    auto folder = fostlib::coerce<boost::filesystem::path>(tenant->configuration()["path"]);
-    w.high_latency.get_io_service().post(
-        [&w, tenant, folder]() {
-            sweep_inodes(w, tenant, folder);
-            start_sweep(w, tenant, folder);
-        });
+    if ( tenant->subscription ) {
+        fostlib::log::info(c_fost_rask, "Starting sweep for", tenant->name(), tenant->configuration());
+        w.high_latency.get_io_service().post(
+            [&w, tenant]() {
+                sweep_inodes(w, tenant, tenant->subscription->local_path());
+                start_sweep(w, tenant, tenant->subscription->local_path());
+            });
+    }
 }
 
