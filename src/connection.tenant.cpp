@@ -42,7 +42,7 @@ namespace {
                     ("", "sending create_directory")
                     ("inode", inode);
                 socket->queue(
-                    [tenant, &inode]() {
+                    [tenant, inode]() {
                         return create_directory_out(*tenant, rask::tick(inode["priority"]),
                             fostlib::coerce<fostlib::string>(inode["name"]));
                     });
@@ -51,7 +51,7 @@ namespace {
                     ("", "sending move_out")
                     ("inode", inode);
                 socket->queue(
-                    [tenant, &inode]() {
+                    [tenant, inode]() {
                         return move_out_packet(*tenant, rask::tick(inode["priority"]),
                             fostlib::coerce<fostlib::string>(inode["name"]));
                     });
