@@ -35,26 +35,24 @@ rask::connection::out rask::tenant_packet(
     rask::tenant &tenant, std::size_t layer, const rask::name_hash_type &prefix,
     const fostlib::json &data
 ) {
-    if ( !partitioned(data) ) {
-        throw fostlib::exceptions::not_implemented(
-            "Error handling when asked to send a tenant_packet of leaf inodes");
-    }
     connection::out packet(0x82);
     packet << tenant.name();
     packet << prefix.substr(0, layer);
-    for ( auto iter(data["inodes"].begin()); iter != data["inodes"].end(); ++iter ) {
-        static const fostlib::jcursor hashloc("hash", "inode");
-        if ( iter->has_key(hashloc) ) {
-            auto key = fostlib::coerce<fostlib::string>(iter.key());
-            if ( key.length() != 1 ) {
-                throw fostlib::exceptions::not_implemented(
-                    "Error handling where the inode hash suffix is corrupt");
+    if ( partitioned(data) ) {
+        for ( auto iter(data["inodes"].begin()); iter != data["inodes"].end(); ++iter ) {
+            static const fostlib::jcursor hashloc("hash", "inode");
+            if ( iter->has_key(hashloc) ) {
+                auto key = fostlib::coerce<fostlib::string>(iter.key());
+                if ( key.length() != 1 ) {
+                    throw fostlib::exceptions::not_implemented(
+                        "Error handling where the inode hash suffix is corrupt");
+                }
+                packet << from_base32_ascii_digit(key[0]);
+                auto hash64 = fostlib::base64_string(
+                    fostlib::coerce<fostlib::string>((*iter)[hashloc]).c_str());
+                auto hash = fostlib::coerce<std::vector<unsigned char>>(hash64);
+                packet << hash;
             }
-            packet << from_base32_ascii_digit(key[0]);
-            auto hash64 = fostlib::base64_string(
-                fostlib::coerce<fostlib::string>((*iter)[hashloc]).c_str());
-            auto hash = fostlib::coerce<std::vector<unsigned char>>(hash64);
-            packet << hash;
         }
     }
     return std::move(packet);
@@ -158,8 +156,18 @@ void rask::tenant_hash_packet(connection::in &packet) {
         ]() {
             auto tenant = known_tenant(socket->workers, name);
             if ( tenant->subscription ) {
-                throw fostlib::exceptions::not_implemented(
-                    "Sending tenant data in response to hashes");
+                auto dbp = tenant->subscription->inodes().layer_dbp(
+                    prefix.length(), prefix);
+                fostlib::jsondb::local db(*dbp);
+                if ( partitioned(db) ) {
+                    throw fostlib::exceptions::not_implemented(
+                        "Check parition matches");
+                } else {
+                    socket->queue(
+                        [tenant, prefix = std::move(prefix), data = db.data()]() {
+                            return tenant_packet(*tenant, prefix.length(), prefix, data);
+                        });
+                }
             }
         });
 }
