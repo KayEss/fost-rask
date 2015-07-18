@@ -8,6 +8,7 @@
 
 #include "peer.hpp"
 #include "tree.hpp"
+#include <rask/base32.hpp>
 #include <rask/connection.hpp>
 #include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
@@ -30,6 +31,36 @@ rask::connection::out rask::tenant_packet(
 }
 
 
+rask::connection::out rask::tenant_packet(
+    rask::tenant &tenant, std::size_t layer, const rask::name_hash_type &prefix,
+    const fostlib::json &data
+) {
+    if ( !partitioned(data) ) {
+        throw fostlib::exceptions::not_implemented(
+            "Error handling when asked to send a tenant_packet of leaf inodes");
+    }
+    connection::out packet(0x82);
+    packet << tenant.name();
+    packet << prefix.substr(0, layer);
+    for ( auto iter(data["inodes"].begin()); iter != data["inodes"].end(); ++iter ) {
+        static const fostlib::jcursor hashloc("hash", "inode");
+        if ( iter->has_key(hashloc) ) {
+            auto key = fostlib::coerce<fostlib::string>(iter.key());
+            if ( key.length() != 1 ) {
+                throw fostlib::exceptions::not_implemented(
+                    "Error handling where the inode hash suffix is corrupt");
+            }
+            packet << from_base32_ascii_digit(key[0]);
+            auto hash64 = fostlib::base64_string(
+                fostlib::coerce<fostlib::string>((*iter)[hashloc]).c_str());
+            auto hash = fostlib::coerce<std::vector<unsigned char>>(hash64);
+            packet << hash;
+        }
+    }
+    return std::move(packet);
+}
+
+
 namespace {
     void send_tenant_content(
         std::shared_ptr<rask::tenant> tenant,
@@ -39,8 +70,10 @@ namespace {
         auto dbp = tenant->subscription->inodes().layer_dbp(layer, prefix);
         fostlib::jsondb::local db(*dbp);
         if ( rask::partitioned(db) ) {
-            throw fostlib::exceptions::not_implemented(
-                "Sending a partitioned part of the tenant tree");
+            socket->queue(
+                [tenant, layer, prefix, data = db.data()]() {
+                    return tenant_packet(*tenant, layer, prefix, data);
+                });
         } else {
             auto inodes = db["inodes"];
             for ( auto iter(inodes.begin()); iter != inodes.end(); ++iter ) {
@@ -99,5 +132,35 @@ void rask::tenant_packet(connection::in &packet) {
                 }
             });
     }
+}
+
+
+void rask::tenant_hash_packet(connection::in &packet) {
+    auto logger(fostlib::log::info(c_fost_rask));
+    logger
+        ("", "Tenant hash packet")
+        ("connection", packet.socket_id());
+    auto name(packet.read<fostlib::string>());
+    logger("name", name);
+    auto prefix(packet.read<fostlib::string>());
+    logger("prefix", prefix);
+    std::array<std::vector<unsigned char>, 32> hashes;
+    while ( !packet.empty() ) {
+        auto suffix = packet.read<uint8_t>() & 31;
+        hashes[suffix] = packet.read(32);
+        logger("hash", fostlib::string(1, to_base32_ascii_digit(suffix)),
+            fostlib::coerce<fostlib::base64_string>(hashes[suffix]));
+    }
+    packet.socket->workers.high_latency.get_io_service().post(
+        [
+            socket = packet.socket, name = std::move(name),
+            prefix = std::move(prefix), hashes = std::move(hashes)
+        ]() {
+            auto tenant = known_tenant(socket->workers, name);
+            if ( tenant->subscription ) {
+                throw fostlib::exceptions::not_implemented(
+                    "Sending tenant data in response to hashes");
+            }
+        });
 }
 

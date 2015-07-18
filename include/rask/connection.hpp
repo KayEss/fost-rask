@@ -32,6 +32,10 @@ namespace rask {
     struct workers;
 
 
+    /// The name hash
+    using name_hash_type = fostlib::string;
+
+
     /// The highest version of the wire protocol this code knows
     const char known_version = 0x01;
 
@@ -255,8 +259,13 @@ namespace rask {
     /// Build a tenant instruction
     connection::out tenant_packet(const fostlib::string &name,
             const fostlib::json &meta);
+    /// Build a packet of a set of hashes in the tenant hash tree
+    connection::out tenant_packet(tenant &,
+            std::size_t layer, const name_hash_type &, const fostlib::json &);
     /// React to a tenant that has come in
     void tenant_packet(connection::in &packet);
+    /// React to a tenant hash that has come in
+    void tenant_hash_packet(connection::in &packet);
 
     /// Send a create directory instruction
     connection::out create_directory_out(
