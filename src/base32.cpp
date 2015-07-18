@@ -61,6 +61,11 @@ rask::base32_string fostlib::coercer<
 }
 
 
+fostlib::utf32 rask::to_base32_ascii_digit(uint8_t d) {
+    return base32_string_tag::characters[d & 31];
+}
+
+
 int8_t rask::from_base32_ascii_digit(fostlib::utf32 c) {
     if ( c < '0' || c > 'z' ) {
         throw fostlib::exceptions::out_of_range<utf32>(

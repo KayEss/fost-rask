@@ -28,6 +28,8 @@ namespace rask {
 
     /// Return the number that is represented by the single base32 digit
     int8_t from_base32_ascii_digit(fostlib::utf32);
+    /// Return the digit represents the single number
+    fostlib::utf32 to_base32_ascii_digit(uint8_t);
 
 
 }
