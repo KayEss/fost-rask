@@ -141,7 +141,10 @@ void rask::tenant_hash_packet(connection::in &packet) {
     auto name(packet.read<fostlib::string>());
     logger("name", name);
     auto prefix(packet.read<fostlib::string>());
-    logger("prefix", prefix);
+    std::size_t layer(prefix.length());
+    logger
+        ("prefix", prefix)
+        ("layer", layer);
     std::array<std::vector<unsigned char>, 32> hashes;
     while ( !packet.empty() ) {
         auto suffix = packet.read<uint8_t>() & 31;
@@ -151,21 +154,20 @@ void rask::tenant_hash_packet(connection::in &packet) {
     }
     packet.socket->workers.high_latency.get_io_service().post(
         [
-            socket = packet.socket, name = std::move(name),
+            socket = packet.socket, name = std::move(name), layer,
             prefix = std::move(prefix), hashes = std::move(hashes)
         ]() {
             auto tenant = known_tenant(socket->workers, name);
             if ( tenant->subscription ) {
-                auto dbp = tenant->subscription->inodes().layer_dbp(
-                    prefix.length(), prefix);
+                auto dbp = tenant->subscription->inodes().layer_dbp(layer, prefix);
                 fostlib::jsondb::local db(*dbp);
                 if ( partitioned(db) ) {
                     throw fostlib::exceptions::not_implemented(
                         "Check parition matches");
                 } else {
                     socket->queue(
-                        [tenant, prefix = std::move(prefix), data = db.data()]() {
-                            return tenant_packet(*tenant, prefix.length(), prefix, data);
+                        [tenant, layer, prefix = std::move(prefix), data = db.data()]() {
+                            return tenant_packet(*tenant, layer, prefix, data);
                         });
                 }
             }
