@@ -145,12 +145,12 @@ void rask::tenant_hash_packet(connection::in &packet) {
     logger
         ("prefix", prefix)
         ("layer", layer);
-    std::array<std::vector<unsigned char>, 32> hashes;
+    std::array<fostlib::base64_string, 32> hashes;
     while ( !packet.empty() ) {
         auto suffix = packet.read<uint8_t>() & 31;
-        hashes[suffix] = packet.read(32);
-        logger("hash", fostlib::string(1, to_base32_ascii_digit(suffix)),
-            fostlib::coerce<fostlib::base64_string>(hashes[suffix]));
+        auto hash = packet.read(32);
+        hashes[suffix] = fostlib::coerce<fostlib::base64_string>(hash);
+        logger("hash", fostlib::string(1, to_base32_ascii_digit(suffix)), hashes[suffix]);
     }
     packet.socket->workers.high_latency.get_io_service().post(
         [
@@ -162,8 +162,21 @@ void rask::tenant_hash_packet(connection::in &packet) {
                 auto dbp = tenant->subscription->inodes().layer_dbp(layer, prefix);
                 fostlib::jsondb::local db(*dbp);
                 if ( partitioned(db) ) {
-                    throw fostlib::exceptions::not_implemented(
-                        "Check parition matches");
+                    auto subs = db["inodes"];
+                    for ( auto iter(subs.begin()); iter != subs.end(); ++iter ) {
+                        auto key = fostlib::coerce<fostlib::string>(iter.key());
+                        if ( key.length() != 1 ) {
+                            throw fostlib::exceptions::not_implemented(
+                                "Error handling where the key in a partition is not 1 character");
+                        }
+                        static const fostlib::jcursor hashloc("hash", "inode");
+                        if ( (*iter).has_key(hashloc) && !(*iter)[hashloc].isnull() &&
+                                hashes[from_base32_ascii_digit(key[0])].underlying().underlying().c_str() !=
+                                    (*iter)[hashloc].get<fostlib::string>().value() ) {
+                            auto next = prefix + key;
+                            send_tenant_content(tenant, socket, layer + 1, next);
+                        }
+                    }
                 } else {
                     socket->queue(
                         [tenant, layer, prefix = std::move(prefix), data = db.data()]() {
