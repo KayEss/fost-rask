@@ -25,6 +25,7 @@ namespace {
 
     fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
     fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
+    fostlib::performance p_spill(rask::c_fost_rask, "packets", "spills");
 }
 
 
@@ -128,7 +129,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 */
 
 
-const std::size_t buffer_capacity = 200;
+const std::size_t buffer_capacity = 1000;
 
 
 std::atomic<int64_t> rask::connection::g_id(0);
@@ -148,10 +149,14 @@ rask::connection::~connection() {
 
 
 void rask::connection::queue(std::function<out(void)> fn) {
-    const auto size = packets.emplace_back(
+    const auto size = packets.push_back(
         [fn]() {
             ++p_queued;
             return fn;
+        },
+        []() {
+            ++p_spill;
+            return false;
         });
     if ( size == buffer_capacity - 1 ) {
         auto self(shared_from_this());
