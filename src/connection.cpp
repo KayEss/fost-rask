@@ -26,6 +26,7 @@ namespace {
     fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
     fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
     fostlib::performance p_spill(rask::c_fost_rask, "packets", "spills");
+    fostlib::performance p_processed(rask::c_fost_rask, "packets", "processed");
 }
 
 
@@ -263,6 +264,7 @@ void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf 
 
 rask::connection::in::~in() {
      while ( remaining-- ) socket->input_buffer.sbumpc();
+     ++p_processed;
 }
 
 
