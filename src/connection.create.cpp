@@ -9,6 +9,13 @@
 #include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
+#include <fost/counter>
+
+
+namespace {
+    fostlib::performance p_received(rask::c_fost_rask, "create_directory", "received");
+}
+
 
 rask::connection::out rask::create_directory_out(
     rask::tenant &tenant, const rask::tick &priority,
@@ -21,6 +28,7 @@ rask::connection::out rask::create_directory_out(
 
 
 void rask::create_directory(rask::connection::in &packet) {
+    ++p_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger("", "Create directory");
     auto priority(packet.read<tick>());
@@ -31,7 +39,7 @@ void rask::create_directory(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
-    if ( tenant->subscription) {
+    if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority]() {
                 auto location = tenant->subscription->local_path() /

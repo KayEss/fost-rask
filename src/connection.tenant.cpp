@@ -16,6 +16,16 @@
 
 #include <beanbag/beanbag>
 
+#include <fost/counter>
+
+
+namespace {
+    fostlib::performance p_tenant_packet_received(
+        rask::c_fost_rask, "tenant_packet", "received");
+    fostlib::performance p_tenant_hash_packet_received(
+        rask::c_fost_rask, "tenant_hash_packet", "received");
+}
+
 
 rask::connection::out rask::tenant_packet(
     const fostlib::string &name, const fostlib::json &meta
@@ -107,6 +117,7 @@ namespace {
 
 
 void rask::tenant_packet(connection::in &packet) {
+    ++p_tenant_packet_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Tenant packet")
@@ -134,6 +145,7 @@ void rask::tenant_packet(connection::in &packet) {
 
 
 void rask::tenant_hash_packet(connection::in &packet) {
+    ++p_tenant_hash_packet_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Tenant hash packet")

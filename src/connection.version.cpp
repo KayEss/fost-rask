@@ -14,7 +14,13 @@
 
 #include <beanbag/beanbag>
 
+#include <fost/counter>
 #include <fost/log>
+
+
+namespace {
+    fostlib::performance p_received(rask::c_fost_rask, "version", "received");
+}
 
 
 void rask::send_version(std::shared_ptr<connection> socket) {
@@ -43,6 +49,7 @@ void rask::send_version(std::shared_ptr<connection> socket) {
 
 
 void rask::receive_version(connection::in &packet) {
+    ++p_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Version block")
