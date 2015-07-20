@@ -100,7 +100,7 @@ void rask::subscriber::local_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.get_io_service().post(
+                w.hashes.get_io_service().post(
                     [&w, dbconf](){
                         rehash_inodes(w, dbconf);
                     });
@@ -140,7 +140,7 @@ void rask::subscriber::remote_change(
                 fostlib::insert(node, "hash", "inode",
                     fostlib::coerce<fostlib::base64_string>(hash.digest()));
                 dbpath.replace(data, node);
-                w.high_latency.get_io_service().post(
+                w.hashes.get_io_service().post(
                     [&w, dbconf](){
                         rehash_inodes(w, dbconf);
                     });

@@ -66,7 +66,7 @@ void rask::receive_version(connection::in &packet) {
             if ( !myhash.second.isnull() &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
                 logger("conversation", "sending tenants");
-                packet.socket->workers.high_latency.get_io_service().post(
+                packet.socket->workers.responses.get_io_service().post(
                     [socket = packet.socket]() {
                         auto tdbconf = c_tenant_db.value();
                         if ( !tdbconf.isnull() ) {

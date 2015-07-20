@@ -82,7 +82,7 @@ namespace {
                         /// rehashing. Therefore we'll allow this commit to complete
                         /// and recurse down in a new job so we aren't holding the lock
                         /// for any longer than we need to.
-                        workers.high_latency.get_io_service().post(
+                        workers.files.get_io_service().post(
                             [&workers, &tree, manipulator, dbpath, layer, hash]() {
                                 beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
                                 add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
@@ -133,7 +133,7 @@ namespace {
                     }
                     for ( auto dbp : children ) {
                         if ( dbp ) {
-                            workers.high_latency.get_io_service().post(
+                            workers.hashes.get_io_service().post(
                                 [&workers, dbp]() {
                                     rask::rehash_inodes(workers, dbp);
                                 });

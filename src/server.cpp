@@ -83,7 +83,7 @@ void rask::listen(workers &w, const fostlib::json &config) {
         h.address(), fostlib::coerce<uint16_t>(config["port"])};
     std::shared_ptr<state> port{new state{
         config,
-        {w.low_latency.get_io_service(), endpoint}}};
+        {w.io.get_io_service(), endpoint}}};
     accept(w, port);
     fostlib::log::info(c_fost_rask, "Rask now listening for peer connections", config);
 }

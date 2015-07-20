@@ -34,7 +34,7 @@ void rask::move_out(rask::connection::in &packet) {
         ("tenant", tenant->name())
         ("name", name);
     if ( tenant->subscription ) {
-        packet.socket->workers.high_latency.get_io_service().post(
+        packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority]() {
                 auto location = tenant->subscription->local_path() /
                     fostlib::coerce<boost::filesystem::path>(name);

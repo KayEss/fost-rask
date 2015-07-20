@@ -19,7 +19,7 @@
 void rask::start_sweep(workers &w, std::shared_ptr<tenant> tenant) {
     if ( tenant->subscription ) {
         fostlib::log::info(c_fost_rask, "Starting sweep for", tenant->name(), tenant->configuration());
-        w.high_latency.get_io_service().post(
+        w.files.get_io_service().post(
             [&w, tenant]() {
                 sweep_inodes(w, tenant, tenant->subscription->local_path());
                 start_sweep(w, tenant, tenant->subscription->local_path());

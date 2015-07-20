@@ -124,7 +124,7 @@ void rask::rehash_inodes(workers &w, const fostlib::json &dbconfig) {
 void rask::rehash_inodes(workers &w, beanbag::jsondb_ptr pdb) {
     ++p_inodes;
     g_inodes.insert_if_not_found(pdb);
-    w.high_latency.get_io_service().post(
+    w.hashes.get_io_service().post(
         [&w]() {
             rehash(w);
         });

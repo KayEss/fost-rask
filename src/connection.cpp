@@ -136,9 +136,9 @@ std::atomic<int64_t> rask::connection::g_id(0);
 
 
 rask::connection::connection(rask::workers &w)
-: workers(w), id(++g_id), cnx(w.low_latency.get_io_service()),
-        sender(w.low_latency.get_io_service()),
-        heartbeat(w.low_latency.get_io_service()),
+: workers(w), id(++g_id), cnx(w.io.get_io_service()),
+        sender(w.io.get_io_service()),
+        heartbeat(w.io.get_io_service()),
         identity(0), packets(buffer_capacity) {
 }
 
@@ -160,7 +160,7 @@ void rask::connection::queue(std::function<out(void)> fn) {
         });
     if ( size == buffer_capacity - 1 ) {
         auto self(shared_from_this());
-        workers.low_latency.get_io_service().post(
+        workers.io.get_io_service().post(
             [self]() {
                 self->send_head();
             });
@@ -195,7 +195,7 @@ void rask::connection::send_head() {
 
 
 rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &conf)
-: configuration(conf), watchdog(w.low_latency.get_io_service()) {
+: configuration(conf), watchdog(w.io.get_io_service()) {
 }
 
 

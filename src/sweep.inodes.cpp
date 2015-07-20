@@ -69,7 +69,7 @@ void rask::sweep_inodes(
             "Called sweep_inodes with a tenant that has no subscription");
     }
     auto c = std::make_shared<closure>(t, std::move(f));
-    w.high_latency.get_io_service().post(
+    w.files.get_io_service().post(
         [&w, c]() {
             check_block(w, c);
         });

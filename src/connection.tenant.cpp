@@ -117,7 +117,7 @@ void rask::tenant_packet(connection::in &packet) {
     auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
     logger("hash",  hash64.underlying().underlying().c_str());
     if ( packet.socket->identity ) {
-        packet.socket->workers.high_latency.get_io_service().post(
+        packet.socket->workers.responses.get_io_service().post(
             [socket = packet.socket, name = std::move(name), hash = std::move(hash)]() {
                 auto tenant = known_tenant(socket->workers, name);
                 if ( tenant->subscription ) {
@@ -152,7 +152,7 @@ void rask::tenant_hash_packet(connection::in &packet) {
         hashes[suffix] = fostlib::coerce<fostlib::base64_string>(hash);
         logger("hash", fostlib::string(1, to_base32_ascii_digit(suffix)), hashes[suffix]);
     }
-    packet.socket->workers.high_latency.get_io_service().post(
+    packet.socket->workers.responses.get_io_service().post(
         [
             socket = packet.socket, name = std::move(name), layer,
             prefix = std::move(prefix), hashes = std::move(hashes)

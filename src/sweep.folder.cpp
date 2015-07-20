@@ -38,7 +38,7 @@ namespace {
         boost::asio::posix::stream_descriptor fd;
         uint64_t outstanding;
         limiter(rask::workers &w)
-        : fd(w.high_latency.get_io_service(), get_eventfd()), outstanding(0) {
+        : fd(w.hashes.get_io_service(), get_eventfd()), outstanding(0) {
             ++p_starts;
         }
         ~limiter() {
@@ -54,7 +54,7 @@ namespace {
             throw fostlib::exceptions::null(
                 "Trying to sweep a tenant that has no subscription");
         }
-        boost::asio::spawn(w.high_latency.get_io_service(),
+        boost::asio::spawn(w.hashes.get_io_service(),
             [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
                 limiter limit(w);
                 ++p_swept;
@@ -95,7 +95,7 @@ namespace {
                             rask::tenant::directory_inode, rask::create_directory_out);
                         w.notify.watch(tenant, directory);
 //                         ++limit.outstanding;
-//                         w.high_latency.get_io_service().post(
+//                         w.hashes.get_io_service().post(
 //                             [&w, filename = inode->path(), tenant, &limit]() {
 //                                 uint64_t count = 1;
 //                                 boost::asio::async_write(limit.fd,
