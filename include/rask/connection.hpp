@@ -172,9 +172,7 @@ namespace rask {
         class in {
             friend void read_and_process(std::shared_ptr<connection>);
             /// Construct
-            in(std::shared_ptr<connection> socket, std::size_t s)
-            : socket(socket), remaining(s) {
-            }
+            in(std::shared_ptr<connection> socket, std::size_t s);
             /// Throw an EOF exception if there isn't enough data
             void check(std::size_t) const;
         public:
