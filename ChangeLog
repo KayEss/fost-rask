@@ -1,3 +1,6 @@
+2015-07-21  Kirit Saelensminde  <kirit@felspar.com>
+ The communication for a given tenant now uses the hash tree to work out which directories actually need to be sent to another server.
+
 2015-07-09  Kirit Saelensminde  <kirit@felspar.com>
  Rehash all stages of the tenant database as the inodes are being scanned at start up. Also use recursive directory iterator for scanning a directory.
 
