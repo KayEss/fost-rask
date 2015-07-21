@@ -157,7 +157,7 @@ void rask::connection::queue(std::function<out(void)> fn) {
             ++p_queued;
             return fn;
         },
-        []() {
+        [](auto &) {
             ++p_spill;
             return false;
         });
