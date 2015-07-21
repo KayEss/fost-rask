@@ -131,7 +131,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 */
 
 
-const std::size_t buffer_capacity = 1000;
+const std::size_t buffer_capacity = 50;
 
 
 std::atomic<int64_t> rask::connection::g_id(0);
