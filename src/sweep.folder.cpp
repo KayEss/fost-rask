@@ -8,7 +8,7 @@
 
 #include "sweep.folder.hpp"
 #include <rask/configuration.hpp>
-#include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/counter>
@@ -38,7 +38,7 @@ namespace {
         boost::asio::posix::stream_descriptor fd;
         uint64_t outstanding;
         limiter(rask::workers &w)
-        : fd(w.high_latency.get_io_service(), get_eventfd()), outstanding(0) {
+        : fd(w.hashes.get_io_service(), get_eventfd()), outstanding(0) {
             ++p_starts;
         }
         ~limiter() {
@@ -50,8 +50,12 @@ namespace {
         rask::workers &w, std::shared_ptr<rask::tenant> tenant,
         boost::filesystem::path folder
     ) {
-        boost::asio::spawn(w.high_latency.get_io_service(),
-            [&w, tenant, folder](boost::asio::yield_context yield) {
+        if ( !tenant->subscription ) {
+            throw fostlib::exceptions::null(
+                "Trying to sweep a tenant that has no subscription");
+        }
+        boost::asio::spawn(w.hashes.get_io_service(),
+            [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
                 limiter limit(w);
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
@@ -60,7 +64,7 @@ namespace {
                         fostlib::coerce<fostlib::string>(folder));
                 }
                 fostlib::log::debug(rask::c_fost_rask, "Sweep recursing into folder", folder);
-                tenant->local_change(
+                tenant->subscription->local_change(
                     folder, rask::tenant::directory_inode, rask::create_directory_out);
                 w.notify.watch(tenant, folder);
                 auto wait_for_outstanding =
@@ -86,11 +90,12 @@ namespace {
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
                         ++directories;
-                        tenant->local_change(inode->path(),
+                        auto directory = inode->path();
+                        tenant->subscription->local_change(directory,
                             rask::tenant::directory_inode, rask::create_directory_out);
-                        w.notify.watch(tenant, inode->path());
+                        w.notify.watch(tenant, directory);
 //                         ++limit.outstanding;
-//                         w.high_latency.get_io_service().post(
+//                         w.hashes.get_io_service().post(
 //                             [&w, filename = inode->path(), tenant, &limit]() {
 //                                 uint64_t count = 1;
 //                                 boost::asio::async_write(limit.fd,

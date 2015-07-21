@@ -34,38 +34,4 @@ namespace rask {
     void reset_watchdog(workers &w, std::shared_ptr<connection::reconnect>);
 
 
-    /// Store information we've heard about a peer
-    class peer {
-    public:
-        /// Return the peer corresponding to the identifier given
-        static std::shared_ptr<rask::peer> server(uint32_t);
-
-        /// Store information about the server on the other end
-        std::atomic<std::array<unsigned char, 32>> hash;
-
-        /// The view of a tenant that the other server has
-        class tenant;
-
-        /// The tenants
-        f5::tsmap<fostlib::string, std::shared_ptr<tenant>> tenants;
-    };
-
-
 }
-
-
-class rask::peer::tenant {
-public:
-    /// The other server's hash for this tenant
-    std::atomic<std::array<unsigned char, 32>> hash;
-
-    class inode;
-
-    /// The inodes under discussion
-    f5::tsmap<fostlib::string, inode> inodes;
-};
-
-
-class rask::peer::tenant::inode {
-};
-

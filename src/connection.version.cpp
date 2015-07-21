@@ -6,14 +6,21 @@
 */
 
 
-#include "connection.conversation.hpp"
 #include "peer.hpp"
 #include <rask/clock.hpp>
 #include <rask/tenant.hpp>
 #include <rask/server.hpp>
 #include <rask/workers.hpp>
 
+#include <beanbag/beanbag>
+
+#include <fost/counter>
 #include <fost/log>
+
+
+namespace {
+    fostlib::performance p_received(rask::c_fost_rask, "version", "received");
+}
 
 
 void rask::send_version(std::shared_ptr<connection> socket) {
@@ -42,6 +49,7 @@ void rask::send_version(std::shared_ptr<connection> socket) {
 
 
 void rask::receive_version(connection::in &packet) {
+    ++p_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger
         ("", "Version block")
@@ -51,7 +59,6 @@ void rask::receive_version(connection::in &packet) {
     if ( !packet.empty() ) {
         auto identity(packet.read<uint32_t>());
         packet.socket->identity = identity;
-        std::shared_ptr<peer> server(peer::server(identity));
         logger("peer", identity);
         auto time(packet.read<tick>());
         tick::overheard(time.time, time.server);
@@ -61,33 +68,25 @@ void rask::receive_version(connection::in &packet) {
             auto hash(packet.read(32));
             auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
             logger("hash",  hash64.underlying().underlying().c_str());
-            // Store it
-            std::array<unsigned char, 32> hash_array;
-            std::copy(hash.begin(), hash.end(), hash_array.begin());
-            server->hash = hash_array;
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
             if ( !myhash.second.isnull() &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
                 logger("conversation", "sending tenants");
-                packet.socket->workers.high_latency.get_io_service().post(
+                packet.socket->workers.responses.get_io_service().post(
                     [socket = packet.socket]() {
                         auto tdbconf = c_tenant_db.value();
                         if ( !tdbconf.isnull() ) {
                             auto tenants_dbp = beanbag::database(tdbconf);
                             fostlib::jsondb::local tenants(*tenants_dbp);
-                            fostlib::jcursor pos("known");
+                            static const fostlib::jcursor pos("known");
                             for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
                                 auto name = fostlib::coerce<fostlib::string>(iter.key());
-                                auto partner = peer::server(socket->identity);
-                                auto ptenant = partner->tenants.find(name);
-                                std::shared_ptr<tenant> mytenant(known_tenant(name));
-                                if ( !ptenant || mytenant->hash.load() != ptenant->hash.load() ) {
-                                    socket->queue(
-                                        [name = std::move(name), data = *iter]() {
-                                            return tenant_packet(name, data);
-                                        });
-                                }
+                                auto mytenant(known_tenant(socket->workers, name));
+                                socket->queue(
+                                    [name = std::move(name), data = *iter]() {
+                                        return tenant_packet(name, data);
+                                    });
                             }
                         }
                     });

@@ -36,7 +36,7 @@ namespace {
         rask::workers &w;
 
         callback(rask::workers &w)
-        : reader(w.low_latency.get_io_service()), w(w) {
+        : reader(w.io.get_io_service()), w(w) {
         }
 
         void process(const inotify_event &event) {
@@ -61,14 +61,14 @@ namespace {
             if ( event.mask & IN_CREATE ) {
                 ++p_in_create;
                 if ( is_directory(filename) ) {
-                    w.high_latency.get_io_service().post(
+                    w.files.get_io_service().post(
                         [this, filename, tenant]() {
                             rask::start_sweep(w, tenant, filename);
                         });
                 }
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
-                w.high_latency.get_io_service().post(
+                w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
                         rask::rm_directory(w, tenant, filename);
                     });
@@ -99,7 +99,9 @@ void rask::notification::operator () () {
 }
 
 
-bool rask::notification::watch(std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder) {
+bool rask::notification::watch(
+    std::shared_ptr<tenant> tenant, const boost::filesystem::path &folder
+) {
     bool watched = false;
     pimpl->notifications.watch(folder.c_str(),
         [this, &watched, tenant, &folder](int wd) {

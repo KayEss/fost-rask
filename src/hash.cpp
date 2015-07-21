@@ -10,6 +10,7 @@
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <f5/threading/set.hpp>
@@ -72,8 +73,11 @@ namespace {
         if ( tdb.has_key("layer") ) {
             try {
                 const auto tenant_name = fostlib::coerce<fostlib::string>(tdb["tenant"]);
-                auto tenant = rask::known_tenant(tenant_name);
-                auto pdbp = tenant->inodes().layer_dbp(
+                auto tenant = rask::known_tenant(w, tenant_name);
+                if ( !tenant->subscription ) {
+                    throw fostlib::exceptions::null("Rehash of tenant with no subscription");
+                }
+                auto pdbp = tenant->subscription->inodes().layer_dbp(
                     fostlib::coerce<std::size_t>(tdb["layer"]["index"]) - 1,
                     fostlib::coerce<fostlib::string>(tdb["layer"]["hash"]));
                 fostlib::jsondb::local parent(*pdbp);
@@ -94,7 +98,7 @@ namespace {
             }
         } else {
             std::shared_ptr<rask::tenant> tenantp(
-                rask::known_tenant(fostlib::coerce<fostlib::string>(tdb["tenant"])));
+                rask::known_tenant(w, fostlib::coerce<fostlib::string>(tdb["tenant"])));
             beanbag::jsondb_ptr dbp(beanbag::database(rask::c_tenant_db.value()));
             fostlib::jsondb::local tenants(*dbp);
             tenants
@@ -120,7 +124,7 @@ void rask::rehash_inodes(workers &w, const fostlib::json &dbconfig) {
 void rask::rehash_inodes(workers &w, beanbag::jsondb_ptr pdb) {
     ++p_inodes;
     g_inodes.insert_if_not_found(pdb);
-    w.high_latency.get_io_service().post(
+    w.hashes.get_io_service().post(
         [&w]() {
             rehash(w);
         });

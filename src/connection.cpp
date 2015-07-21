@@ -8,8 +8,10 @@
 
 #include "peer.hpp"
 #include <rask/clock.hpp>
+#include <rask/configuration.hpp>
 #include <rask/workers.hpp>
 
+#include <fost/counter>
 #include <fost/log>
 
 #include <boost/asio/spawn.hpp>
@@ -20,6 +22,12 @@
 namespace {
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
+
+    fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
+    fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
+    fostlib::performance p_spill(rask::c_fost_rask, "packets", "spills");
+    fostlib::performance p_received(rask::c_fost_rask, "packets", "received");
+    fostlib::performance p_processed(rask::c_fost_rask, "packets", "processed");
 }
 
 
@@ -55,26 +63,43 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
             try {
+                fostlib::json size_bytes = fostlib::json::array_t();
                 boost::asio::async_read(socket->cnx, socket->input_buffer,
                     boost::asio::transfer_exactly(2), yield);
                 std::size_t packet_size = socket->input_buffer.sbumpc();
-                if ( packet_size < 0x80 ) {
-                    fostlib::log::debug(c_fost_rask)
-                        ("", "Got packet of size")
-                        ("connection", socket->id)
-                        ("size", packet_size);
-                } else {
+                fostlib::push_back(size_bytes, int64_t(packet_size));
+                if ( packet_size > 0xf8 ) {
+                    const int bytes = packet_size - 0xf8;
+                    boost::asio::async_read(socket->cnx, socket->input_buffer,
+                        boost::asio::transfer_exactly(bytes), yield);
+                    packet_size = 0u;
+                    for ( auto i = 0; i != bytes; ++i ) {
+                        unsigned char byte = socket->input_buffer.sbumpc();
+                        fostlib::push_back(size_bytes, int64_t(byte));
+                        packet_size = (packet_size << 8) + byte;
+                    }
+                } else if ( packet_size >= 0x80 ) {
+                    socket->cnx.close();
                     throw fostlib::exceptions::not_implemented(
-                        "Large packets are not implemented");
+                        "Invalid packet size control byte",
+                        fostlib::coerce<fostlib::string>(packet_size));
                 }
                 unsigned char control = socket->input_buffer.sbumpc();
                 boost::asio::async_read(socket->cnx, socket->input_buffer,
                     boost::asio::transfer_exactly(packet_size), yield);
+                fostlib::log::debug(c_fost_rask)
+                    ("", "Got packet")
+                    ("connection", socket->id)
+                    ("bytes", size_bytes)
+                    ("control", control)
+                    ("size", packet_size);
                 connection::in packet(socket, packet_size);
                 if ( control == 0x80 ) {
                     receive_version(packet);
                 } else if ( control == 0x81 ) {
                     tenant_packet(packet);
+                } else if ( control == 0x82 ) {
+                    tenant_hash_packet(packet);
                 } else if ( control == 0x91 ) {
                     create_directory(packet);
                 } else if ( control == 0x93 ) {
@@ -106,17 +131,18 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 */
 
 
-const std::size_t buffer_capacity = 200;
+const std::size_t buffer_capacity = 50;
 
 
 std::atomic<int64_t> rask::connection::g_id(0);
 
 
 rask::connection::connection(rask::workers &w)
-: workers(w), id(++g_id), cnx(w.low_latency.get_io_service()),
-        sender(w.low_latency.get_io_service()),
-        heartbeat(w.low_latency.get_io_service()),
+: workers(w), id(++g_id), cnx(w.io.get_io_service()),
+        sender(w.io.get_io_service()),
+        heartbeat(w.io.get_io_service()),
         identity(0), packets(buffer_capacity) {
+    input_buffer.prepare(8 * 1024);
 }
 
 
@@ -126,12 +152,21 @@ rask::connection::~connection() {
 
 
 void rask::connection::queue(std::function<out(void)> fn) {
-    const auto size = packets.emplace_back(
+    const auto size = packets.push_back(
         [fn]() {
+            ++p_queued;
             return fn;
+        },
+        [](auto &) {
+            ++p_spill;
+            return false;
         });
     if ( size == buffer_capacity - 1 ) {
-        std::shared_ptr<connection> self(shared_from_this());
+        auto self(shared_from_this());
+        workers.io.get_io_service().post(
+            [self]() {
+                self->send_head();
+            });
         fostlib::log::info(c_fost_rask)
             ("", "Queueing packet")
             ("buffer", "length", size);
@@ -143,13 +178,27 @@ void rask::connection::queue(std::function<out(void)> fn) {
 }
 
 
+void rask::connection::send_head() {
+    auto self(shared_from_this());
+    auto fn = packets.pop_front(
+        fostlib::nullable<std::function<out(void)>>());
+    if ( !fn.isnull() ) {
+        ++p_sends;
+        fn.value()()(self,
+            [self]() {
+                self->send_head();
+            });
+    }
+}
+
+
 /*
     rask::connection::reconnect
 */
 
 
 rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &conf)
-: configuration(conf), watchdog(w.low_latency.get_io_service()) {
+: configuration(conf), watchdog(w.io.get_io_service()) {
 }
 
 
@@ -196,6 +245,13 @@ rask::connection::out &rask::connection::out::operator << (
 void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf &b) {
     if ( s < 0x80 ) {
         b.sputc(s);
+    } else if ( s < 0x100 ) {
+        b.sputc(0xf9);
+        b.sputc(s);
+    } else if ( s < 0x10000 ) {
+        b.sputc(0xfa);
+        b.sputc(s >> 8);
+        b.sputc(s & 0xff);
     } else {
         throw fostlib::exceptions::not_implemented(
             "Large packet sizes", fostlib::coerce<fostlib::string>(s));
@@ -208,8 +264,15 @@ void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf 
 */
 
 
+rask::connection::in::in(std::shared_ptr<connection> socket, std::size_t s)
+: socket(socket), remaining(s) {
+    ++p_received;
+}
+
+
 rask::connection::in::~in() {
      while ( remaining-- ) socket->input_buffer.sbumpc();
+     ++p_processed;
 }
 
 
@@ -222,11 +285,10 @@ void rask::connection::in::check(std::size_t b) const {
 
 std::size_t rask::connection::in::size_control() {
     auto header(read<uint8_t>());
-    if ( header < 0x80 )
+    if ( header < 0x80 ) {
         return header;
-    else
-        throw fostlib::exceptions::not_implemented(
-            "Large data blocks embedded in a packet");
+    } else
+        throw fostlib::exceptions::not_implemented("Large data size");
 }
 
 

@@ -46,6 +46,6 @@ namespace {
 
 
 rask::workers::workers()
-: low_latency(eh(), 4), high_latency(eh(), 4), notify(*this) {
+: io(eh(), 4), responses(eh(), 8), files(eh(), 8), hashes(eh(), 8), notify(*this) {
 }
 

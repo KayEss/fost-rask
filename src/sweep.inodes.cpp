@@ -8,6 +8,7 @@
 
 #include "sweep.inodes.hpp"
 #include "tree.hpp"
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/counter>
@@ -28,7 +29,7 @@ namespace {
 
         closure(std::shared_ptr<rask::tenant> t, boost::filesystem::path f)
         : tenant(t), folder(std::move(f)),
-                position(t->inodes().begin()), end(t->inodes().end()) {
+                position(t->subscription->inodes().begin()), end(t->subscription->inodes().end()) {
             leaf_dbp = position.leaf_dbp();
         }
     };
@@ -63,8 +64,12 @@ namespace {
 void rask::sweep_inodes(
     workers &w, std::shared_ptr<tenant> t, boost::filesystem::path f
 ) {
+    if ( !t->subscription ) {
+        throw fostlib::exceptions::null(
+            "Called sweep_inodes with a tenant that has no subscription");
+    }
     auto c = std::make_shared<closure>(t, std::move(f));
-    w.high_latency.get_io_service().post(
+    w.files.get_io_service().post(
         [&w, c]() {
             check_block(w, c);
         });

@@ -12,18 +12,19 @@
 #include <rask/connection.hpp>
 #include <rask/workers.hpp>
 
-#include <beanbag/beanbag>
-
 
 namespace rask {
 
 
+    class subscriber;
     class tree;
     struct workers;
 
 
     /// Check the configuration for changes in tenants
-    void tenants(workers &, const fostlib::json &dbconfig);
+    void tenants(workers &,
+        const fostlib::json &tenant_config,
+        const fostlib::json &subscribers_config);
 
     /// The type of the current tenants
     typedef std::vector<fostlib::string> tenants_type;
@@ -31,16 +32,12 @@ namespace rask {
     /// Return all of the current tenants
     tenants_type all_tenants();
 
-    /// The type of a function used to build inode packets
-    typedef std::function<
-        connection::out(tenant &, const rask::tick &, const fostlib::string &)> packet_builder;
-
     /// Tenant working data
     class tenant {
-        /// Used for internal caclulations
-        const fostlib::string root;
     public:
-        /// Construct a tenant representation
+        /// Construct a tenant representation that can't have a subscription
+        tenant(workers &, const fostlib::string &name);
+        /// Construct a tenant representation with optional subscription
         tenant(workers &, const fostlib::string &name, const fostlib::json &configuration);
         /// Explicit desctructor
         ~tenant();
@@ -52,43 +49,17 @@ namespace rask {
 
         /// The tenant's name
         const fostlib::accessors<fostlib::string> name;
-        /// The tenant's configuration
+        /// The tenant's subscription configuration
         const fostlib::accessors<fostlib::json> configuration;
-        /// The tenant beanbag
-        beanbag::jsondb_ptr beanbag() const;
-        /// The local filesystem path
-        const fostlib::accessors<boost::filesystem::path> local_path;
+        /// The subscription (if present)
+        const std::shared_ptr<subscriber> subscription;
 
         /// The current hash
         std::atomic<std::array<unsigned char, 32>> hash;
-
-        /// Write details about something observed on this file system. After
-        /// recording in the database it will build a packet and broadcast it to
-        /// the other connected nodes
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            packet_builder);
-        /// Record a change that has come from another server
-        void remote_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            const tick &priority);
-
-        /// The inodes
-        const tree &inodes() const {
-            return *inodes_p;
-        }
-        tree &inodes() {
-            return *inodes_p;
-        }
-
-    private:
-        std::unique_ptr<tree> inodes_p;
     };
 
-    /// Return in-memory description of tenant -- empty if unknown
-    std::shared_ptr<tenant> known_tenant(const fostlib::string &);
+    /// Return in-memory description of tenant
+    std::shared_ptr<tenant> known_tenant(workers &,  const fostlib::string &);
 
 
 }

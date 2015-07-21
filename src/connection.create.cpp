@@ -6,7 +6,15 @@
 */
 
 
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
+
+#include <fost/counter>
+
+
+namespace {
+    fostlib::performance p_received(rask::c_fost_rask, "create_directory", "received");
+}
 
 
 rask::connection::out rask::create_directory_out(
@@ -20,24 +28,28 @@ rask::connection::out rask::create_directory_out(
 
 
 void rask::create_directory(rask::connection::in &packet) {
+    ++p_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger("", "Create directory");
     auto priority(packet.read<tick>());
     logger("priority", priority);
-    auto tenant(known_tenant(packet.read<fostlib::string>()));
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
     auto name(packet.read<fostlib::string>());
     logger
         ("tenant", tenant->name())
         ("name", name);
-    packet.socket->workers.high_latency.get_io_service().post(
-        [tenant, name = std::move(name), priority]() {
-            auto location = tenant->local_path() /
-                fostlib::coerce<boost::filesystem::path>(name);
-            tenant->remote_change(location, tenant::directory_inode, priority);
-            // TODO: Really we should only do this if we have actually updated
-            // the tenant data. If it is older than what we have then we should send
-            // ours to the remote end
-            boost::filesystem::create_directories(location);
-        });
+    if ( tenant->subscription ) {
+        packet.socket->workers.files.get_io_service().post(
+            [tenant, name = std::move(name), priority]() {
+                auto location = tenant->subscription->local_path() /
+                    fostlib::coerce<boost::filesystem::path>(name);
+                tenant->subscription->remote_change(location, tenant::directory_inode, priority);
+                // TODO: Really we should only do this if we have actually updated
+                // the tenant data. If it is older than what we have then we should send
+                // ours to the remote end
+                boost::filesystem::create_directories(location);
+            });
+    }
 }
 
