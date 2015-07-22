@@ -19,7 +19,8 @@
 
 
 namespace {
-    fostlib::performance p_received(rask::c_fost_rask, "version", "received");
+    fostlib::performance p_received(rask::c_fost_rask,
+        "packets", "version", "received");
 }
 
 

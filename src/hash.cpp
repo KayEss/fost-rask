@@ -23,9 +23,12 @@
 
 
 namespace {
-    fostlib::performance p_inodes(rask::c_fost_rask, "hash", "inodes");
-    fostlib::performance p_inodes_empty(rask::c_fost_rask, "hash", "inodes-empty");
-    fostlib::performance p_inodes_exec(rask::c_fost_rask, "hash", "inodes-executed");
+    fostlib::performance p_inodes(rask::c_fost_rask,
+        "hash", "inodes", "ordered");
+    fostlib::performance p_inodes_empty(rask::c_fost_rask,
+        "hash", "inodes", "empty");
+    fostlib::performance p_inodes_exec(rask::c_fost_rask,
+        "hash", "inodes", "executed");
     fostlib::performance p_tenants(rask::c_fost_rask, "hash", "tenants");
 }
 

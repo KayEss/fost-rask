@@ -21,9 +21,9 @@
 
 namespace {
     fostlib::performance p_tenant_packet_received(
-        rask::c_fost_rask, "tenant_packet", "received");
+        rask::c_fost_rask, "packets", "tenant_packet", "received");
     fostlib::performance p_tenant_hash_packet_received(
-        rask::c_fost_rask, "tenant_hash_packet", "received");
+        rask::c_fost_rask, "packets", "tenant_hash_packet", "received");
 }
 
 

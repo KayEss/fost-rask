@@ -13,7 +13,8 @@
 
 
 namespace {
-    fostlib::performance p_received(rask::c_fost_rask, "create_directory", "received");
+    fostlib::performance p_received(rask::c_fost_rask,
+        "packets", "create_directory", "received");
 }
 
 
