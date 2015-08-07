@@ -271,6 +271,10 @@ namespace rask {
     /// React to a directory create request
     void create_directory(connection::in &);
 
+    /// Send a file exists instruction
+    connection::out file_exists_out(
+        tenant &, const rask::tick &, const fostlib::string &);
+
     /// Create a move an inode out packet
     connection::out move_out_packet(
         tenant &, const rask::tick &, const fostlib::string &name);
