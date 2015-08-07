@@ -44,6 +44,8 @@ namespace rask {
 
         /// A directory inode
         static const fostlib::json directory_inode;
+        /// A normal file inode
+        static const fostlib::json file_inode;
         /// An inode removal
         static const fostlib::json move_inode_out;
 

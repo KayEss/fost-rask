@@ -76,6 +76,7 @@ std::shared_ptr<rask::tenant> rask::known_tenant(
 
 
 const fostlib::json rask::tenant::directory_inode("directory");
+const fostlib::json rask::tenant::file_inode("file");
 const fostlib::json rask::tenant::move_inode_out("move-out");
 
 
