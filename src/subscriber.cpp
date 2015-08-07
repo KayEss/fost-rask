@@ -104,9 +104,10 @@ void rask::subscriber::local_change(
                     [&w, dbconf](){
                         rehash_inodes(w, dbconf);
                     });
+                auto sent = broadcast(builder(self->tenant, priority, path));
                 fostlib::log::info(c_fost_rask)
                     ("", inode_type)
-                    ("broadcast", "to", broadcast(builder(self->tenant, priority, path)))
+                    ("broadcast", "to", sent)
                     ("tenant", self->tenant.name())
                     ("path", "relative", path)
                     ("node", node);
