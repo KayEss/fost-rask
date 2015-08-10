@@ -27,6 +27,9 @@ namespace rask {
     /// The type of a function used to build inode packets
     typedef std::function<
         connection::out(tenant &, const rask::tick &, const fostlib::string &)> packet_builder;
+    /// The type of the function used to build a hash of a file inode
+    typedef std::function<
+        fostlib::base64_string(const rask::tick &)> hasher_function;
 
 
     /// The part of the tenant that is a subscriber
@@ -52,6 +55,14 @@ namespace rask {
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
             packet_builder);
+        /// Write details about something observed on this file system. This version
+        /// allows for custom hashing of the item if its added to the database
+        void local_change(
+            const boost::filesystem::path &location,
+            const fostlib::json &inode_type,
+            packet_builder, hasher_function);
+
+
         /// Record a change that has come from another server
         void remote_change(
             const boost::filesystem::path &location,

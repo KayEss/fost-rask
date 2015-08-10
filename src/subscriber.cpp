@@ -76,29 +76,27 @@ namespace {
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
-    packet_builder builder
+    packet_builder builder, hasher_function hasher
 ) {
     auto path = relative_path(root, location);
     auto path_hash = name_hash(path);
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, builder, dbpath,
+            self = this, inode_type, builder, hasher, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
         ) {
             if ( data[dbpath]["filetype"] != inode_type ) {
                 auto priority = tick::next();
-                fostlib::digester hash(fostlib::sha256);
-                hash << priority;
+                auto content_hash = hasher(priority);
                 fostlib::json node;
                 fostlib::insert(node, "filetype", inode_type);
                 fostlib::insert(node, "name", path);
                 fostlib::insert(node, "priority", priority);
                 fostlib::insert(node, "hash", "name", path_hash);
-                fostlib::insert(node, "hash", "inode",
-                    fostlib::coerce<fostlib::base64_string>(hash.digest()));
+                fostlib::insert(node, "hash", "inode", content_hash);
                 dbpath.replace(data, node);
                 w.hashes.get_io_service().post(
                     [&w, dbconf](){
@@ -112,6 +110,18 @@ void rask::subscriber::local_change(
                     ("path", "relative", path)
                     ("node", node);
             }
+        });
+}
+void rask::subscriber::local_change(
+    const boost::filesystem::path &location,
+    const fostlib::json &inode_type,
+    packet_builder builder
+) {
+    local_change(location, inode_type, builder,
+        [](const rask::tick &priority) {
+                fostlib::digester hash(fostlib::sha256);
+                hash << priority;
+                return fostlib::coerce<fostlib::base64_string>(hash.digest());
         });
 }
 void rask::subscriber::remote_change(
