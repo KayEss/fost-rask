@@ -17,6 +17,7 @@
 namespace rask {
 
 
+    class subscriber;
     class tenant;
     struct workers;
 
@@ -29,6 +30,10 @@ namespace rask {
 
     /// Return the hash for a name
     name_hash_type name_hash(const fostlib::string &);
+
+    /// Re-hash the pointed to file
+    void rehash_file(workers &w, subscriber &,
+        const boost::filesystem::path &);
 
     /// Re-hash starting at specified database
     void rehash_inodes(workers&, beanbag::jsondb_ptr);

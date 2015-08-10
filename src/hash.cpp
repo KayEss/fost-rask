@@ -23,6 +23,8 @@
 
 
 namespace {
+    fostlib::performance p_files(rask::c_fost_rask,
+        "hash", "file", "ordered");
     fostlib::performance p_inodes(rask::c_fost_rask,
         "hash", "inodes", "ordered");
     fostlib::performance p_inodes_empty(rask::c_fost_rask,
@@ -115,6 +117,11 @@ namespace {
             tenantp->hash = hash_array;
         }
     }
+}
+
+
+void rask::rehash_file(workers &w, subscriber &, const boost::filesystem::path &) {
+    ++p_files;
 }
 
 
