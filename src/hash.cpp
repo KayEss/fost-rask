@@ -61,7 +61,7 @@ namespace {
     }
 
     f5::tsset<beanbag::jsondb_ptr> g_inodes;
-    f5::tsset<beanbag::jsondb_ptr> g_tenants;
+    // f5::tsset<beanbag::jsondb_ptr> g_tenants;
 
     void rehash(rask::workers &w) {
         static const fostlib::jcursor inode_hash_path("hash", "inode");
