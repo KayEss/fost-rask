@@ -43,6 +43,13 @@ rask::name_hash_type rask::name_hash(const fostlib::string &s) {
 }
 
 
+void rask::rehash_file(
+    workers &w, subscriber &, const boost::filesystem::path &filename
+) {
+    ++p_files;
+}
+
+
 namespace {
     auto digest(const fostlib::jcursor &p, const fostlib::json &o) {
         fostlib::digester hasher(fostlib::sha256);
@@ -117,11 +124,6 @@ namespace {
             tenantp->hash = hash_array;
         }
     }
-}
-
-
-void rask::rehash_file(workers &w, subscriber &, const boost::filesystem::path &) {
-    ++p_files;
 }
 
 
