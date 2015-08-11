@@ -29,7 +29,7 @@ namespace rask {
         connection::out(tenant &, const rask::tick &, const fostlib::string &)> packet_builder;
     /// The type of the function used to build a hash of a file inode
     typedef std::function<
-        fostlib::base64_string(const rask::tick &)> hasher_function;
+        fostlib::nullable<fostlib::base64_string>(const rask::tick &)> hasher_function;
 
 
     /// The part of the tenant that is a subscriber

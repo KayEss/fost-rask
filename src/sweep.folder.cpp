@@ -6,6 +6,7 @@
 */
 
 
+#include "hash.hpp"
 #include "sweep.folder.hpp"
 #include <rask/configuration.hpp>
 #include <rask/subscriber.hpp>
@@ -94,7 +95,17 @@ namespace {
                         tenant->subscription->local_change(directory,
                             rask::tenant::directory_inode, rask::create_directory_out);
                         w.notify.watch(tenant, directory);
-//                         ++limit.outstanding;
+                    } else if ( inode->status().type() == boost::filesystem::regular_file ) {
+                        ++files;
+                        auto filename = inode->path();
+                        tenant->subscription->local_change(filename,
+                            rask::tenant::file_inode, rask::file_exists_out,
+                            [&w, &subscriber = *tenant->subscription, filename, &limit](const rask::tick &) {
+                                ++limit.outstanding;
+                                rask::rehash_file(w, subscriber, filename);
+                                return fostlib::null;
+                            });
+                        // Check file hash
 //                         w.hashes.get_io_service().post(
 //                             [&w, filename = inode->path(), tenant, &limit]() {
 //                                 uint64_t count = 1;

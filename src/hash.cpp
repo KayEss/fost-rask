@@ -48,7 +48,7 @@ namespace {
         fostlib::digester hasher(fostlib::sha256);
         for ( auto n : o ) {
             try {
-                if ( n.has_key(p) )
+                if ( n.has_key(p) && !n[p].isnull() )
                     hasher << fostlib::coerce<fostlib::string>(n[p]);
             } catch ( fostlib::exceptions::exception &e ) {
                 fostlib::insert(e.data(), "for", o);
