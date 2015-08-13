@@ -15,7 +15,7 @@
 using namespace fostlib;
 
 
-struct rask::const_file_block_iterator::impl {
+struct rask::const_file_block_hash_iterator::impl {
     boost::iostreams::mapped_file_source file;
     std::size_t size, offset;
 
@@ -28,19 +28,19 @@ struct rask::const_file_block_iterator::impl {
 };
 
 
-rask::const_file_block_iterator::const_file_block_iterator() {
+rask::const_file_block_hash_iterator::const_file_block_hash_iterator() {
 }
 
-rask::const_file_block_iterator::const_file_block_iterator(
+rask::const_file_block_hash_iterator::const_file_block_hash_iterator(
     const boost::filesystem::path &filename)
 : pimpl(new impl(filename)) {
 }
 
-rask::const_file_block_iterator::~const_file_block_iterator() {
+rask::const_file_block_hash_iterator::~const_file_block_hash_iterator() {
 }
 
 
-void rask::const_file_block_iterator::operator ++ () {
+void rask::const_file_block_hash_iterator::operator ++ () {
     pimpl->offset += file_hash_block_size;
     if ( pimpl->offset >= pimpl->size ) {
         pimpl.reset();
@@ -48,12 +48,14 @@ void rask::const_file_block_iterator::operator ++ () {
 }
 
 
-bool rask::const_file_block_iterator::operator == (const const_file_block_iterator &r) const {
+bool rask::const_file_block_hash_iterator::operator == (
+    const const_file_block_hash_iterator &r
+) const {
     return pimpl == r.pimpl;
 }
 
 
-std::vector<unsigned char> rask::const_file_block_iterator::operator * () const {
+std::vector<unsigned char> rask::const_file_block_hash_iterator::operator * () const {
     digester hasher(sha256);
     if ( pimpl->size ) {
         const unsigned char *begin = reinterpret_cast< const unsigned char * >(
