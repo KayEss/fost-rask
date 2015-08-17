@@ -9,9 +9,13 @@
 #pragma once
 
 
+#include <rask/clock.hpp>
+
 #include <beanbag/beanbag>
 
 #include <fost/crypto>
+
+#include <boost/iostreams/device/mapped_file.hpp>
 
 #include <atomic>
 
@@ -36,6 +40,12 @@ namespace rask {
     /// Classes that implement the file hashing protocol
     namespace file {
 
+
+        /// The block record in the file hash files
+        struct block_hash {
+            tick priority;
+            unsigned char hash[32];
+        };
 
         /// An upper level in the hashing hierarchy.
         class level {
