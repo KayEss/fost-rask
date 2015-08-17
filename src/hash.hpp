@@ -11,6 +11,8 @@
 
 #include <beanbag/beanbag>
 
+#include <fost/crypto>
+
 #include <atomic>
 
 
@@ -31,9 +33,42 @@ namespace rask {
     /// Return the hash for a name
     name_hash_type name_hash(const fostlib::string &);
 
+    /// Classes that implement the file hashing protocol
+    namespace file {
+
+
+        /// An upper level in the hashing hierarchy.
+        class level {
+            fostlib::digester hasher;
+        public:
+            /// Construct the level
+            level(std::size_t number);
+        };
+
+        /// The hash structure
+        class hashdb : boost::noncopyable {
+            std::size_t blocks_hashed, blocks_total;
+            std::vector<level> levels;
+
+        public:
+            /// Construct a hashdb for a file of the given size
+            hashdb(std::size_t bytes);
+
+            /// Add the next hash value to the database
+            void operator () (const std::vector<unsigned char> &h);
+
+            /// Fetch the single hash value for the file
+            std::vector<unsigned char> operator () ();
+        };
+
+
+    }
+
+    /// Callback for the file (re-)hasher
+    using file_hash_callback = std::function<void(const file::hashdb &)>;
     /// Re-hash the pointed to file
     void rehash_file(workers &w, subscriber &,
-        const boost::filesystem::path &);
+        const boost::filesystem::path &, file_hash_callback);
 
     /// Re-hash starting at specified database
     void rehash_inodes(workers&, beanbag::jsondb_ptr);

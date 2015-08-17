@@ -100,27 +100,29 @@ namespace {
                         auto filename = inode->path();
                         tenant->subscription->local_change(filename,
                             rask::tenant::file_inode, rask::file_exists_out,
-                            [&w, &subscriber = *tenant->subscription, filename, &limit](const rask::tick &) {
+                            [&w, &subscriber = *tenant->subscription, filename, tenant, &limit](
+                                const rask::tick &
+                            ) {
                                 ++limit.outstanding;
-                                rask::rehash_file(w, subscriber, filename);
+                                rask::rehash_file(w, subscriber, filename,
+                                    [&w, filename, tenant, &limit](const auto&) {
+                                        w.hashes.get_io_service().post(
+                                            [&w, filename, tenant, &limit]() {
+                                                uint64_t count = 1;
+                                                boost::asio::async_write(limit.fd,
+                                                    boost::asio::buffer(&count, sizeof(count)),
+                                                    [](const boost::system::error_code &error, std::size_t bytes) {
+                                                        if ( error || bytes != sizeof(count) ) {
+                                                            fostlib::log::error(rask::c_fost_rask)
+                                                                ("", "Whilst notifying parent task that this one has completed.")
+                                                                ("error", error.message().c_str())
+                                                                ("bytes", bytes);
+                                                        }
+                                                    });
+                                            });
+                                    });
                                 return fostlib::null;
                             });
-                        // Check file hash
-//                         w.hashes.get_io_service().post(
-//                             [&w, filename = inode->path(), tenant, &limit]() {
-//                                 uint64_t count = 1;
-//                                 boost::asio::async_write(limit.fd,
-//                                     boost::asio::buffer(&count, sizeof(count)),
-//                                     [](const boost::system::error_code &error, std::size_t bytes) {
-//                                         if ( error || bytes != sizeof(count) ) {
-//                                             fostlib::log::error(rask::c_fost_rask)
-//                                                 ("", "Whilst notifying parent task that this one has started.")
-//                                                 ("error", error.message().c_str())
-//                                                 ("bytes", bytes);
-//                                         }
-//                                     });
-//                                 sweep(w, tenant, filename);
-//                             });
                     } else {
                         ++ignored;
                     }
