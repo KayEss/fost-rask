@@ -42,6 +42,17 @@ rask::name_hash_type rask::name_hash(const fostlib::string &s) {
         fostlib::coerce<rask::base32_string>(d.digest()));
 }
 
+rask::name_hash_type rask::name_hash(const boost::filesystem::path &f) {
+    throw fostlib::exceptions::not_implemented(
+        "rask::name_hash(const boost::filesystem::path&)");
+}
+
+
+fostlib::string rask::name_hash_path(const fostlib::string &s) {
+    throw fostlib::exceptions::not_implemented(
+        "rask::name_hash_path(const fostlib::string&)");
+}
+
 
 namespace {
     auto digest(const fostlib::jcursor &p, const fostlib::json &o) {

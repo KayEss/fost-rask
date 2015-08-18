@@ -36,6 +36,7 @@ namespace rask {
 
     /// Return the hash for a name
     name_hash_type name_hash(const fostlib::string &);
+    name_hash_type name_hash(const boost::filesystem::path &);
 
     /// Classes that implement the file hashing protocol
     namespace file {
@@ -49,20 +50,20 @@ namespace rask {
 
         /// An upper level in the hashing hierarchy.
         class level {
-            fostlib::digester hasher;
         public:
             /// Construct the level
-            level(std::size_t number);
+            level(std::size_t number, const boost::filesystem::path &db);
         };
 
         /// The hash structure
         class hashdb : boost::noncopyable {
+            boost::filesystem::path base_db_file;
             std::size_t blocks_hashed, blocks_total;
             std::vector<level> levels;
 
         public:
             /// Construct a hashdb for a file of the given size
-            hashdb(std::size_t bytes);
+            hashdb(std::size_t bytes, boost::filesystem::path dbfile);
 
             /// Add the next hash value to the database
             void operator () (const std::vector<unsigned char> &h);
@@ -86,6 +87,11 @@ namespace rask {
 
     /// Re-hash starting at the tenants level
     void rehash_tenants(beanbag::jsondb_ptr);
+
+
+    /// Convert a name hash to a file path with directory structure. No
+    /// extension is added.
+    name_hash_type name_hash_path(const name_hash_type &);
 
 
 }

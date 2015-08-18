@@ -17,3 +17,15 @@ FSL_TEST_FUNCTION(size) {
     FSL_CHECK_EQ(sizeof(rask::file::block_hash), 48u);
 }
 
+
+FSL_TEST_FUNCTION(name_hash) {
+    fostlib::string fs(L"ab\u2014xx");
+    boost::filesystem::path bfp("ab\xE2\x80\x94xx");
+    FSL_CHECK_EQ(rask::name_hash(fs), rask::name_hash(bfp));
+}
+
+
+FSL_TEST_FUNCTION(filepath) {
+    FSL_CHECK_EQ(rask::name_hash_path("ab"), "ab");
+}
+

@@ -27,7 +27,8 @@ void rask::rehash_file(
     file_hash_callback callback
 ) {
     ++p_files;
-    file::hashdb hash(1234);
+    auto path_hash = name_hash_path(name_hash(filename));
+    file::hashdb hash(1234, fostlib::coerce<boost::filesystem::path>(path_hash));
     const_file_block_hash_iterator end;
     for ( const_file_block_hash_iterator block(filename); block != end; ++block ) {
         ++p_blocks;
@@ -42,8 +43,7 @@ void rask::rehash_file(
 */
 
 
-rask::file::level::level(std::size_t number)
-: hasher(fostlib::sha256) {
+rask::file::level::level(std::size_t number, const boost::filesystem::path &db) {
 }
 
 
@@ -52,8 +52,8 @@ rask::file::level::level(std::size_t number)
 */
 
 
-rask::file::hashdb::hashdb(std::size_t bytes)
-: blocks_hashed(0),
+rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
+: base_db_file(std::move(dbf)), blocks_hashed(0),
     blocks_total((bytes + file_hash_block_size - 1) / file_hash_block_size)
 {
 }
