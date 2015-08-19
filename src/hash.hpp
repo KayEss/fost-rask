@@ -44,7 +44,6 @@ namespace rask {
 
         /// The block record in the file hash files
         struct block_hash {
-            tick priority;
             unsigned char hash[32];
         };
 

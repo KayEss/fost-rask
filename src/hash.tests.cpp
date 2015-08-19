@@ -14,7 +14,7 @@ FSL_TEST_SUITE(hash);
 
 
 FSL_TEST_FUNCTION(size) {
-    FSL_CHECK_EQ(sizeof(rask::file::block_hash), 48u);
+    FSL_CHECK_EQ(sizeof(rask::file::block_hash), 32u);
 }
 
 
