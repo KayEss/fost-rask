@@ -27,5 +27,10 @@ FSL_TEST_FUNCTION(name_hash) {
 
 FSL_TEST_FUNCTION(filepath) {
     FSL_CHECK_EQ(rask::name_hash_path("ab"), "ab");
+    FSL_CHECK_EQ(rask::name_hash_path("abc"), "ab/c");
+    FSL_CHECK_EQ(rask::name_hash_path("abcdef"), "ab/cd/ef");
+    FSL_CHECK_EQ(
+        rask::name_hash_path("abcdefghijklmnopqrstuvw"),
+        "ab/cd/efg/hijk/lmnop/qrstuv/w");
 }
 

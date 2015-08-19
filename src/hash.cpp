@@ -49,8 +49,18 @@ rask::name_hash_type rask::name_hash(const boost::filesystem::path &f) {
 
 
 fostlib::string rask::name_hash_path(const fostlib::string &s) {
-    throw fostlib::exceptions::not_implemented(
-        "rask::name_hash_path(const fostlib::string&)");
+    fostlib::string ret;
+    std::size_t counter = 0, skipper = 2, adder = 2;
+    for ( auto c : s ) {
+        ++counter;
+        if ( counter > skipper ) {
+            ret += '/';
+            skipper += adder;
+            ++adder;
+        }
+        ret += c;
+    }
+    return ret;
 }
 
 
