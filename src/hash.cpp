@@ -43,8 +43,7 @@ rask::name_hash_type rask::name_hash(const fostlib::string &s) {
 }
 
 rask::name_hash_type rask::name_hash(const boost::filesystem::path &f) {
-    throw fostlib::exceptions::not_implemented(
-        "rask::name_hash(const boost::filesystem::path&)");
+    return name_hash(fostlib::coerce<fostlib::string>(f));
 }
 
 

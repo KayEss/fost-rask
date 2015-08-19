@@ -21,6 +21,7 @@ FSL_TEST_FUNCTION(size) {
 FSL_TEST_FUNCTION(name_hash) {
     fostlib::string fs(L"ab\u2014xx");
     boost::filesystem::path bfp("ab\xE2\x80\x94xx");
+    FSL_CHECK_EQ(rask::name_hash(fs), "25paxrth735bymjay86cd900ye");
     FSL_CHECK_EQ(rask::name_hash(fs), rask::name_hash(bfp));
 }
 
