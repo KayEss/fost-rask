@@ -34,11 +34,12 @@ namespace rask {
 
     /// The part of the tenant that is a subscriber
     class subscriber {
-        /// The tenant that this subscription is part of
-        rask::tenant &tenant;
         /// Used for internal caclulations
         const fostlib::string root;
     public:
+        /// The tenant that this subscription is part of
+        rask::tenant &tenant;
+
         /// Constructs a subscriber by providing a local path and the tenant
         subscriber(workers &, rask::tenant &, fostlib::string local);
 
@@ -61,7 +62,6 @@ namespace rask {
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
             packet_builder, hasher_function);
-
 
         /// Record a change that has come from another server
         void remote_change(

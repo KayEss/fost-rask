@@ -21,7 +21,7 @@ namespace {
     }
 }
 rask::subscriber::subscriber(workers &w, rask::tenant &t, fostlib::string path)
-: tenant(t), root(slash(path)),
+: root(slash(path)), tenant(t),
         local_path(fostlib::coerce<boost::filesystem::path>(root))
 {
      // Tests will use this without a tenant configured, so make sure to check
