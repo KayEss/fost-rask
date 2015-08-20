@@ -30,7 +30,9 @@ namespace {
 
         closure(std::shared_ptr<rask::tenant> t, boost::filesystem::path f)
         : tenant(t), folder(std::move(f)),
-                position(t->subscription->inodes().begin()), end(t->subscription->inodes().end()) {
+            position(t->subscription->inodes().begin()),
+            end(t->subscription->inodes().end())
+        {
             leaf_dbp = position.leaf_dbp();
         }
     };
@@ -44,6 +46,9 @@ namespace {
                 w.notify.watch(c->tenant, filename);
             } else if ( filetype == rask::tenant::file_inode ) {
                 ++p_file;
+                rask::rehash_file(w, *c->tenant->subscription, filename, inode,
+                    [](const auto &) {
+                    });
             } else if ( filetype == rask::tenant::move_inode_out ) {
                 ++p_move_out;
             } else {
