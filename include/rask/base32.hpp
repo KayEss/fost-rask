@@ -43,6 +43,20 @@ namespace fostlib {
         rask::base32_string coerce(const std::vector<unsigned char>&);
     };
 
+    /// Allow integers to be converted to a padded base32 string
+    template<typename I>
+    struct coercer<rask::base32_string, I> {
+        /// Perform the coercion
+        rask::base32_string coerce(I number) {
+            std::string s;
+            for ( std::size_t bits{}; bits < sizeof(I) * 8; bits += 5 ) {
+                s.insert(0, 1, rask::to_base32_ascii_digit(number & 31));
+                number /= 32;
+            }
+            return fostlib::ascii_string(s);
+        }
+    };
+
     /// Allow coerceon to a string
     template<>
     struct coercer< string, rask::base32_string > {
