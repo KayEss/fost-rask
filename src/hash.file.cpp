@@ -11,6 +11,7 @@
 #include <rask/configuration.hpp>
 #include <rask/subscriber.hpp>
 #include <rask/sweep.hpp>
+#include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/counter>
@@ -37,19 +38,23 @@ namespace {
 
 void rask::rehash_file(
     workers &w, subscriber &sub, const boost::filesystem::path &filename,
-    file_hash_callback callback
+    const fostlib::json &inode, file_hash_callback callback
 ) {
     ++p_files;
-    const auto tdbpath = sub.inodes().dbpath(
+    auto tdbpath = sub.inodes().dbpath(
         fostlib::coerce<boost::filesystem::path>(
-            name_hash_path(name_hash(filename)) + ".hashes"));
-    file::hashdb hash(boost::filesystem::file_size(filename), tdbpath);
+            name_hash_path(inode["hash"]["name"].get<fostlib::string>().value())));
+    file::hashdb hash(boost::filesystem::file_size(filename), std::move(tdbpath));
     const_file_block_hash_iterator end;
     for ( const_file_block_hash_iterator block(filename); block != end; ++block ) {
         ++p_blocks;
         hash(*block);
     }
     callback(hash);
+    fostlib::log::info(c_fost_rask)
+        ("", "Hashing of file completed")
+        ("tenant", sub.tenant.name())
+        ("filename", filename);
 }
 
 
@@ -71,12 +76,13 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
 : base_db_file(std::move(dbf)), blocks_hashed(0),
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
 {
-    boost::filesystem::create_directories(dbf.parent_path());
+    base_db_file += ".hashes";
+    boost::filesystem::create_directories(base_db_file.parent_path());
     int opened = syscall([&]() {
             const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
             // user read/write, group read/write, world read
             const int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-            return open(dbf.c_str(), flags, mode);
+            return open(base_db_file.c_str(), flags, mode);
         });
     if ( opened >= 0 ) {
         const int alloc = syscall([&]() {

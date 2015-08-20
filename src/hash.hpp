@@ -78,7 +78,8 @@ namespace rask {
     using file_hash_callback = std::function<void(const file::hashdb &)>;
     /// Re-hash the pointed to file
     void rehash_file(workers &w, subscriber &,
-        const boost::filesystem::path &, file_hash_callback);
+        const boost::filesystem::path &, const fostlib::json &inode,
+        file_hash_callback);
 
     /// Re-hash starting at specified database
     void rehash_inodes(workers&, beanbag::jsondb_ptr);

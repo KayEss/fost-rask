@@ -90,13 +90,12 @@ void rask::subscriber::local_change(
         ) {
             if ( data[dbpath]["filetype"] != inode_type ) {
                 auto priority = tick::next();
-                auto content_hash = hasher(priority);
                 fostlib::json node;
                 fostlib::insert(node, "filetype", inode_type);
                 fostlib::insert(node, "name", path);
                 fostlib::insert(node, "priority", priority);
                 fostlib::insert(node, "hash", "name", path_hash);
-                fostlib::insert(node, "hash", "inode", content_hash);
+                fostlib::insert(node, "hash", "inode", hasher(priority, node));
                 dbpath.replace(data, node);
                 w.hashes.get_io_service().post(
                     [&w, dbconf](){
@@ -118,10 +117,10 @@ void rask::subscriber::local_change(
     packet_builder builder
 ) {
     local_change(location, inode_type, builder,
-        [](const rask::tick &priority) {
-                fostlib::digester hash(fostlib::sha256);
-                hash << priority;
-                return fostlib::coerce<fostlib::base64_string>(hash.digest());
+        [](const rask::tick &priority, const fostlib::json &) {
+            fostlib::digester hash(fostlib::sha256);
+            hash << priority;
+            return fostlib::coerce<fostlib::base64_string>(hash.digest());
         });
 }
 void rask::subscriber::remote_change(

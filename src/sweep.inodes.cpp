@@ -18,6 +18,7 @@
 namespace {
     fostlib::performance p_directory(rask::c_fost_rask, "inode", "directory");
     fostlib::performance p_file(rask::c_fost_rask, "inode", "file");
+    fostlib::performance p_move_out(rask::c_fost_rask, "inode", "move-out");
     fostlib::performance p_unknown(rask::c_fost_rask, "inode", "unknown");
 
     struct closure {
@@ -41,8 +42,10 @@ namespace {
             if ( filetype == rask::tenant::directory_inode ) {
                 ++p_directory;
                 w.notify.watch(c->tenant, filename);
-            } else if ( filetype == rask::tenant::move_inode_out ) {
+            } else if ( filetype == rask::tenant::file_inode ) {
                 ++p_file;
+            } else if ( filetype == rask::tenant::move_inode_out ) {
+                ++p_move_out;
             } else {
                 ++p_unknown;
                 fostlib::log::error(rask::c_fost_rask)

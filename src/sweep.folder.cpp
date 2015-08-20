@@ -101,10 +101,10 @@ namespace {
                         tenant->subscription->local_change(filename,
                             rask::tenant::file_inode, rask::file_exists_out,
                             [&w, &subscriber = *tenant->subscription, filename, tenant, &limit](
-                                const rask::tick &
+                                const rask::tick &, const fostlib::json &node
                             ) {
                                 ++limit.outstanding;
-                                rask::rehash_file(w, subscriber, filename,
+                                rask::rehash_file(w, subscriber, filename, node,
                                     [&w, filename, tenant, &limit](const auto&) {
                                         w.hashes.get_io_service().post(
                                             [&w, filename, tenant, &limit]() {
