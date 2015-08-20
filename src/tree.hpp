@@ -68,6 +68,9 @@ namespace rask {
             return beanbag::database(layer_db_config(layer, hash));
         }
 
+        /// Build a database name based on the tenant DB filepath
+        boost::filesystem::path dbpath(const boost::filesystem::path &) const;
+
         /// Stores the blocks and the hashes. For now store the JSON for the
         /// inode at the leaf positions.
         root_block hash;
