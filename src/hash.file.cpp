@@ -7,11 +7,15 @@
 
 
 #include "hash.hpp"
+#include "tree.hpp"
 #include <rask/configuration.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/sweep.hpp>
 #include <rask/workers.hpp>
 
 #include <fost/counter>
+
+#include <fcntl.h>
 
 
 namespace {
@@ -19,6 +23,15 @@ namespace {
         "hash", "file", "ordered");
     fostlib::performance p_blocks(rask::c_fost_rask,
         "hash", "file", "blocks");
+
+    template<typename F> inline
+    int syscall(F f) {
+        int result{};
+        do {
+            result = f();
+        } while ( result == -1 && errno == EINTR );
+        return result;
+    }
 }
 
 
@@ -27,8 +40,10 @@ void rask::rehash_file(
     file_hash_callback callback
 ) {
     ++p_files;
-    auto path_hash = name_hash_path(name_hash(filename));
-    file::hashdb hash(1234, fostlib::coerce<boost::filesystem::path>(path_hash));
+    const auto tdbpath = sub.inodes().dbpath(
+        fostlib::coerce<boost::filesystem::path>(
+            name_hash_path(name_hash(filename)) + ".hashes"));
+    file::hashdb hash(boost::filesystem::file_size(filename), tdbpath);
     const_file_block_hash_iterator end;
     for ( const_file_block_hash_iterator block(filename); block != end; ++block ) {
         ++p_blocks;
@@ -54,8 +69,37 @@ rask::file::level::level(std::size_t number, const boost::filesystem::path &db) 
 
 rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
 : base_db_file(std::move(dbf)), blocks_hashed(0),
-    blocks_total((bytes + file_hash_block_size - 1) / file_hash_block_size)
+    blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
 {
+    boost::filesystem::create_directories(dbf.parent_path());
+    int opened = syscall([&]() {
+            const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
+            // user read/write, group read/write, world read
+            const int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
+            return open(dbf.c_str(), flags, mode);
+        });
+    if ( opened >= 0 ) {
+        const int alloc = syscall([&]() {
+                const int mode = 0u;
+                const off_t offset = 0u;
+                const auto bytes = blocks_total * sizeof(file::block_hash);
+                return fallocate(opened, mode, offset, bytes);
+            });
+        const auto alloc_err = errno;
+        syscall([&]() { return close(opened); });
+        if ( alloc == -1 ) {
+            std::error_code error(alloc_err, std::system_category());
+            fostlib::log::error(c_fost_rask,"fallocate",  error.message().c_str());
+            throw fostlib::exceptions::not_implemented(
+                "Could not change allocate size of the hash database file",
+                error.message().c_str());
+        }
+    } else {
+        std::error_code error(errno, std::system_category());
+        fostlib::log::error(c_fost_rask, "open", error.message().c_str());
+        throw fostlib::exceptions::not_implemented(
+            "Bad file descriptor for hash database file", error.message().c_str());
+    }
 }
 
 
