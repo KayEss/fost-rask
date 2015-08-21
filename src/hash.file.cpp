@@ -130,5 +130,8 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
 void rask::file::hashdb::operator () (
     std::size_t block, const std::vector<unsigned char> &hash
 ) {
+    if ( std::memcmp(file.data() + block * 32, hash.data(), 32) != 0 ) {
+        std::memcpy(file.data() + block * 32, hash.data(), 32);
+    }
 }
 
