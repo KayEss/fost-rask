@@ -121,7 +121,8 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
         throw fostlib::exceptions::not_implemented(
             "Bad file descriptor for hash database file", error.message().c_str());
     }
-
+    file.open(base_db_file, boost::iostreams::mapped_file_base::readwrite,
+        blocks_total * sizeof(file::block_hash));
 }
 
 

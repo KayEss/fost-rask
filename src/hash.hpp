@@ -51,6 +51,7 @@ namespace rask {
         class hashdb : boost::noncopyable {
             boost::filesystem::path base_db_file;
             std::size_t blocks_total;
+            boost::iostreams::mapped_file file;
 
         public:
             /// Construct a hashdb for a file of the given size
