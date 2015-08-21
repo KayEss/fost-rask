@@ -43,10 +43,11 @@ namespace {
             ("", "Hashing one layer for a file")
             ("filename", filename);
         std::size_t blocks{};
-        rask::const_file_block_hash_iterator end;
-        for ( rask::const_file_block_hash_iterator block(filename); block != end; ++block ) {
-            ++p_blocks; ++blocks;
-            db(*block);
+        using biter = rask::const_file_block_hash_iterator;
+        const biter end;
+        for ( biter block(filename); block != end; ++block, ++blocks ) {
+            ++p_blocks;
+            db(blocks, *block);
         }
         return blocks;
     }
@@ -126,6 +127,8 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
 }
 
 
-void rask::file::hashdb::operator () (const std::vector<unsigned char> &hash) {
+void rask::file::hashdb::operator () (
+    std::size_t block, const std::vector<unsigned char> &hash
+) {
 }
 

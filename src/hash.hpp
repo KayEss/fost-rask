@@ -57,8 +57,9 @@ namespace rask {
             /// Construct a hashdb for a file of the given size
             hashdb(std::size_t bytes, boost::filesystem::path dbfile);
 
-            /// Add the next hash value to the database
-            void operator () (const std::vector<unsigned char> &h);
+            /// Add the next hash value to the database. Give it the block
+            /// number and the block's hash
+            void operator () (std::size_t, const std::vector<unsigned char> &h);
         };
 
 
