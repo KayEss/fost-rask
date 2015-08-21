@@ -93,37 +93,40 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
 {
     boost::filesystem::create_directories(base_db_file.parent_path());
-    // Resize the file, probably overkill on the complexity front
-    int opened = syscall([&]() {
-            const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
-            // user read/write, group read/write, world read
-            const int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
-            return open(base_db_file.c_str(), flags, mode);
-        });
-    if ( opened >= 0 ) {
-        const int alloc = syscall([&]() {
-                const int mode = 0u;
-                const off_t offset = 0u;
-                const auto bytes = blocks_total * sizeof(file::block_hash);
-                return fallocate(opened, mode, offset, bytes);
+    const std::size_t size = blocks_total * 32;
+    if ( not boost::filesystem::exists(base_db_file) ) {
+        // Resize the file, probably overkill on the complexity front
+        int opened = syscall([&]() {
+                const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
+                // user read/write, group read/write, world read
+                const int mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH;
+                return open(base_db_file.c_str(), flags, mode);
             });
-        const auto alloc_err = errno;
-        syscall([&]() { return close(opened); });
-        if ( alloc == -1 ) {
-            std::error_code error(alloc_err, std::system_category());
-            fostlib::log::error(c_fost_rask,"fallocate",  error.message().c_str());
+        if ( opened >= 0 ) {
+            const int alloc = syscall([&]() {
+                    const int mode = 0u;
+                    const off_t offset = 0u;
+                    return fallocate(opened, mode, offset, size);
+                });
+            const auto alloc_err = errno;
+            syscall([&]() { return close(opened); });
+            if ( alloc == -1 ) {
+                std::error_code error(alloc_err, std::system_category());
+                fostlib::log::error(c_fost_rask,"fallocate",  error.message().c_str());
+                throw fostlib::exceptions::not_implemented(
+                    "Could not change allocate size of the hash database file",
+                    error.message().c_str());
+            }
+        } else {
+            std::error_code error(errno, std::system_category());
+            fostlib::log::error(c_fost_rask, "open", error.message().c_str());
             throw fostlib::exceptions::not_implemented(
-                "Could not change allocate size of the hash database file",
-                error.message().c_str());
+                "Bad file descriptor for hash database file", error.message().c_str());
         }
     } else {
-        std::error_code error(errno, std::system_category());
-        fostlib::log::error(c_fost_rask, "open", error.message().c_str());
-        throw fostlib::exceptions::not_implemented(
-            "Bad file descriptor for hash database file", error.message().c_str());
+        boost::filesystem::resize_file(base_db_file, size);
     }
-    file.open(base_db_file, boost::iostreams::mapped_file_base::readwrite,
-        blocks_total * sizeof(file::block_hash));
+    file.open(base_db_file, boost::iostreams::mapped_file_base::readwrite, size);
 }
 
 
