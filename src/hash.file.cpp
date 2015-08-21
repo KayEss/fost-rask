@@ -83,24 +83,16 @@ void rask::rehash_file(
 
 
 /*
-    rask::file::level
-*/
-
-
-rask::file::level::level(std::size_t number, const boost::filesystem::path &db) {
-}
-
-
-/*
     rask:file::hashdb
 */
 
 
 rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
-: base_db_file(std::move(dbf)), blocks_hashed(0),
+: base_db_file(std::move(dbf)),
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
 {
     boost::filesystem::create_directories(base_db_file.parent_path());
+    // Resize the file, probably overkill on the complexity front
     int opened = syscall([&]() {
             const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
             // user read/write, group read/write, world read
@@ -129,6 +121,7 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
         throw fostlib::exceptions::not_implemented(
             "Bad file descriptor for hash database file", error.message().c_str());
     }
+
 }
 
 

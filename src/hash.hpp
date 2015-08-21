@@ -47,18 +47,10 @@ namespace rask {
             unsigned char hash[32];
         };
 
-        /// An upper level in the hashing hierarchy.
-        class level {
-        public:
-            /// Construct the level
-            level(std::size_t number, const boost::filesystem::path &db);
-        };
-
-        /// The hash structure
+        /// The hash structure for one level in the file hash
         class hashdb : boost::noncopyable {
             boost::filesystem::path base_db_file;
-            std::size_t blocks_hashed, blocks_total;
-            std::vector<level> levels;
+            std::size_t blocks_total;
 
         public:
             /// Construct a hashdb for a file of the given size
@@ -66,9 +58,6 @@ namespace rask {
 
             /// Add the next hash value to the database
             void operator () (const std::vector<unsigned char> &h);
-
-            /// Fetch the single hash value for the file
-            std::vector<unsigned char> operator () ();
         };
 
 
