@@ -8,6 +8,7 @@
 
 #include "hash.hpp"
 #include "tree.hpp"
+#include <rask/base32.hpp>
 #include <rask/configuration.hpp>
 #include <rask/subscriber.hpp>
 #include <rask/sweep.hpp>
@@ -33,6 +34,22 @@ namespace {
         } while ( result == -1 && errno == EINTR );
         return result;
     }
+
+    std::size_t hash_layer(
+        const boost::filesystem::path &filename,
+        rask::file::hashdb &db
+    ) {
+        fostlib::log::debug(rask::c_fost_rask)
+            ("", "Hashing one layer for a file")
+            ("filename", filename);
+        std::size_t blocks{};
+        rask::const_file_block_hash_iterator end;
+        for ( rask::const_file_block_hash_iterator block(filename); block != end; ++block ) {
+            ++p_blocks; ++blocks;
+            db(*block);
+        }
+        return blocks;
+    }
 }
 
 
@@ -44,17 +61,24 @@ void rask::rehash_file(
     auto tdbpath = sub.inodes().dbpath(
         fostlib::coerce<boost::filesystem::path>(
             name_hash_path(inode["hash"]["name"].get<fostlib::string>().value())));
-    file::hashdb hash(boost::filesystem::file_size(filename), std::move(tdbpath));
-    const_file_block_hash_iterator end;
-    for ( const_file_block_hash_iterator block(filename); block != end; ++block ) {
-        ++p_blocks;
-        hash(*block);
+    auto current = filename;
+    for ( uint8_t level{}; true;  ++level ) {
+        auto dbpath = tdbpath;
+        dbpath += "-" +
+            fostlib::coerce<rask::base32_string>(level).underlying().underlying()
+                + ".hashes";
+        file::hashdb hash(boost::filesystem::file_size(current), dbpath);
+        if ( hash_layer(current, hash) <= 1 ) {
+            callback(hash);
+            fostlib::log::info(c_fost_rask)
+                ("", "Hashing of file completed")
+                ("tenant", sub.tenant.name())
+                ("filename", filename)
+                ("levels", level + 1);
+            return;
+        }
+        current = dbpath;
     }
-    callback(hash);
-    fostlib::log::info(c_fost_rask)
-        ("", "Hashing of file completed")
-        ("tenant", sub.tenant.name())
-        ("filename", filename);
 }
 
 
@@ -76,7 +100,6 @@ rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
 : base_db_file(std::move(dbf)), blocks_hashed(0),
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
 {
-    base_db_file += ".hashes";
     boost::filesystem::create_directories(base_db_file.parent_path());
     int opened = syscall([&]() {
             const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
