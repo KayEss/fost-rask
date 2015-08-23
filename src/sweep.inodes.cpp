@@ -50,18 +50,15 @@ namespace {
                 w.notify.watch(c->tenant, filename);
             } else if ( filetype == rask::tenant::file_inode ) {
                 ++p_file;
-                w.hashes.get_io_service().post(
-                    [&w, c, filename, inode, &limit]() {
-                        auto task(++limit);
-                        rask::rehash_file(w, *c->tenant->subscription, filename, inode,
-                            [&task](const auto &) {
-                                task.done(
-                                    [](const auto &error, auto bytes) {
-                                        fostlib::log::error(rask::c_fost_rask)
-                                            ("", "Whilst notifying parent task that this one has completed.")
-                                            ("error", error.message().c_str())
-                                            ("bytes", bytes);
-                                    });
+                auto task(++limit);
+                rask::rehash_file(w, *c->tenant->subscription, filename, inode,
+                    [task] (const auto &) {
+                        task->done(
+                            [](const auto &error, auto bytes) {
+                                fostlib::log::error(rask::c_fost_rask)
+                                    ("", "Whilst notifying parent task that this one has completed.")
+                                    ("error", error.message().c_str())
+                                    ("bytes", bytes);
                             });
                     });
             } else if ( filetype == rask::tenant::move_inode_out ) {
@@ -78,12 +75,8 @@ namespace {
                 rehash_inodes(w, c->leaf_dbp);
                 c->leaf_dbp = cpdb;
             }
-            while ( limit.outstanding() > limit.limit() )
-                limit.wait(yield);
         }
         rehash_inodes(w, c->leaf_dbp);
-        while ( limit.outstanding() )
-            limit.wait(yield);
     }
 }
 
@@ -100,7 +93,7 @@ void rask::sweep_inodes(
         [&w, c]() {
             boost::asio::spawn(w.files.get_io_service(),
                 [&w, c](boost::asio::yield_context yield) {
-                    f5::eventfd::limiter limit(w.files.get_io_service(), 2);
+                    f5::eventfd::limiter limit(w.files.get_io_service(), yield, 2);
                     check_block(w, c, limit, yield);
                 });
         });

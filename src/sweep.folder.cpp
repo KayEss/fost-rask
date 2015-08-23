@@ -33,7 +33,7 @@ namespace {
         }
         boost::asio::spawn(w.hashes.get_io_service(),
             [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
-                f5::eventfd::limiter limit(w.hashes.get_io_service(), 2);
+                f5::eventfd::limiter limit(w.hashes.get_io_service(), yield, 2);
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
                     throw fostlib::exceptions::not_implemented(
@@ -63,8 +63,8 @@ namespace {
                             ) {
                                 auto task(++limit);
                                 rask::rehash_file(w, subscriber, filename, node,
-                                    [&task](const auto&) {
-                                        task.done(
+                                    [task] (const auto&) {
+                                        task->done(
                                             [](const auto &error, auto bytes) {
                                                 fostlib::log::error(rask::c_fost_rask)
                                                     ("", "Whilst notifying parent task "
@@ -78,11 +78,7 @@ namespace {
                     } else {
                         ++ignored;
                     }
-                    while ( limit.outstanding() > limit.limit() )
-                        limit.wait(yield);
                 }
-                while ( limit.outstanding() )
-                    limit.wait(yield);
                 fostlib::log::info(rask::c_fost_rask)
                     ("", "Swept folder")
                     ("folder", folder)

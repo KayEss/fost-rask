@@ -22,6 +22,10 @@
 namespace {
     fostlib::performance p_files(rask::c_fost_rask,
         "hash", "file", "ordered");
+    fostlib::performance p_started(rask::c_fost_rask,
+        "hash", "file", "started");
+    fostlib::performance p_completed(rask::c_fost_rask,
+        "hash", "file", "completed");
     fostlib::performance p_blocks(rask::c_fost_rask,
         "hash", "file", "blocks");
 
@@ -41,6 +45,36 @@ namespace {
         }
         return blocks;
     }
+
+    void do_hashing(
+        rask::subscriber &sub,
+        const boost::filesystem::path &filename,
+        const fostlib::json &inode, rask::file_hash_callback callback
+    ) {
+        ++p_started;
+        auto tdbpath = sub.inodes().dbpath(
+            fostlib::coerce<boost::filesystem::path>(
+                rask::name_hash_path(inode["hash"]["name"].get<fostlib::string>().value())));
+        auto current = filename;
+        for ( uint8_t level{}; true;  ++level ) {
+            auto dbpath = tdbpath;
+            dbpath += "-" +
+                fostlib::coerce<rask::base32_string>(level).underlying().underlying()
+                    + ".hashes";
+            rask::file::hashdb hash(boost::filesystem::file_size(current), dbpath);
+            if ( hash_layer(current, hash) <= 1 ) {
+                callback(hash);
+                fostlib::log::info(rask::c_fost_rask)
+                    ("", "Hashing of file completed")
+                    ("tenant", sub.tenant.name())
+                    ("filename", filename)
+                    ("levels", level + 1);
+                ++p_completed;
+                return;
+            }
+            current = dbpath;
+        }
+    }
 }
 
 
@@ -49,27 +83,10 @@ void rask::rehash_file(
     const fostlib::json &inode, file_hash_callback callback
 ) {
     ++p_files;
-    auto tdbpath = sub.inodes().dbpath(
-        fostlib::coerce<boost::filesystem::path>(
-            name_hash_path(inode["hash"]["name"].get<fostlib::string>().value())));
-    auto current = filename;
-    for ( uint8_t level{}; true;  ++level ) {
-        auto dbpath = tdbpath;
-        dbpath += "-" +
-            fostlib::coerce<rask::base32_string>(level).underlying().underlying()
-                + ".hashes";
-        file::hashdb hash(boost::filesystem::file_size(current), dbpath);
-        if ( hash_layer(current, hash) <= 1 ) {
-            callback(hash);
-            fostlib::log::info(c_fost_rask)
-                ("", "Hashing of file completed")
-                ("tenant", sub.tenant.name())
-                ("filename", filename)
-                ("levels", level + 1);
-            return;
-        }
-        current = dbpath;
-    }
+    w.hashes.get_io_service().post(
+        [&sub, filename, inode, callback]() {
+            do_hashing(sub, filename, inode, callback);
+        });
 }
 
 
