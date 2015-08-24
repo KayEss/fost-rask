@@ -59,10 +59,10 @@ namespace {
                         tenant->subscription->local_change(filename,
                             rask::tenant::file_inode, rask::file_exists_out,
                             [&w, &subscriber = *tenant->subscription, filename, tenant, &limit](
-                                const rask::tick &, const fostlib::json &node
+                                const rask::tick &, fostlib::json inode
                             ) {
                                 auto task(++limit);
-                                rask::rehash_file(w, subscriber, filename, node,
+                                rask::rehash_file(w, subscriber, filename, inode,
                                     [task] (const auto&) {
                                         task->done(
                                             [](const auto &error, auto bytes) {
@@ -73,7 +73,7 @@ namespace {
                                                     ("bytes", bytes);
                                             });
                                     });
-                                return fostlib::null;
+                                return inode;
                             });
                     } else {
                         ++ignored;

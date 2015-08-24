@@ -76,14 +76,14 @@ namespace {
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
-    packet_builder builder, hasher_function hasher
+    packet_builder builder, inode_function inoder
 ) {
     auto path = relative_path(root, location);
     auto path_hash = name_hash(path);
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, builder, hasher, dbpath,
+            self = this, inode_type, builder, inoder, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
@@ -95,8 +95,7 @@ void rask::subscriber::local_change(
                 fostlib::insert(node, "name", path);
                 fostlib::insert(node, "priority", priority);
                 fostlib::insert(node, "hash", "name", path_hash);
-                fostlib::insert(node, "hash", "inode", hasher(priority, node));
-                dbpath.replace(data, node);
+                dbpath.replace(data, inoder(priority, node));
                 w.hashes.get_io_service().post(
                     [&w, dbconf](){
                         rehash_inodes(w, dbconf);
@@ -117,10 +116,12 @@ void rask::subscriber::local_change(
     packet_builder builder
 ) {
     local_change(location, inode_type, builder,
-        [](const rask::tick &priority, const fostlib::json &) {
+        [](const rask::tick &priority, fostlib::json inode) {
             fostlib::digester hash(fostlib::sha256);
             hash << priority;
-            return fostlib::coerce<fostlib::base64_string>(hash.digest());
+            fostlib::insert(inode, "hash", "inode",
+                fostlib::coerce<fostlib::base64_string>(hash.digest()));
+            return inode;
         });
 }
 void rask::subscriber::remote_change(
