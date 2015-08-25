@@ -29,6 +29,10 @@ namespace rask {
 
         int64_t size;
         fostlib::timestamp modified;
+
+        bool operator == (const stat &s) const {
+            return size == s.size && modified == s.modified;
+        }
     };
 
     /// Return the stat information about a file. This allows size and
