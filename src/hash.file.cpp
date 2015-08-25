@@ -46,10 +46,11 @@ namespace {
         return blocks;
     }
 
+    template<typename C>
     void do_hashing(
         rask::subscriber &sub,
         const boost::filesystem::path &filename,
-        const fostlib::json &inode, rask::file_hash_callback callback
+        const fostlib::json &inode, C callback
     ) {
         ++p_started;
         auto tdbpath = sub.inodes().dbpath(
@@ -84,8 +85,30 @@ void rask::rehash_file(
 ) {
     ++p_files;
     w.hashes.get_io_service().post(
-        [&sub, filename, inode, callback]() {
-            do_hashing(sub, filename, inode, callback);
+        [&w, &sub, filename, inode, callback]() {
+            auto before_status = file_stat(filename);
+            do_hashing(sub, filename, inode,
+                [&w, &sub, filename, inode, callback, before_status](auto &hash) {
+                    auto after_status = file_stat(filename);
+                    if ( before_status == after_status ) {
+                        fostlib::log::info(c_fost_rask)
+                            ("", "Got stable file hash for a file")
+                            ("tenant", sub.tenant.name())
+                            ("filename", filename)
+                            ("inode", inode)
+                            ("stat", after_status);
+                        callback(hash);
+                    } else {
+                        fostlib::log::warning(c_fost_rask)
+                            ("", "File stat changed during hashing, going again")
+                            ("tenant", sub.tenant.name())
+                            ("filename", filename)
+                            ("inode", inode)
+                            ("stat", "before", before_status)
+                            ("stat", "now", after_status);
+                        rehash_file(w, sub, filename, inode, callback);
+                    }
+                });
         });
 }
 
