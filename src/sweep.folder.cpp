@@ -73,6 +73,14 @@ namespace {
                                                     ("bytes", bytes);
                                             });
                                     });
+                                /// There might be some worry that there is
+                                /// a race here between this code and the
+                                /// above call to `rehash_file`. This callback
+                                /// is executed inside the transaction that
+                                /// updates the beanbag which means that
+                                /// it is guaranteed to finish executing
+                                /// before the rehash gets its own shot at
+                                /// updating the database hash.
                                 return inode;
                             });
                     } else {
