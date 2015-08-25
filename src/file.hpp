@@ -42,3 +42,16 @@ namespace rask {
 
 }
 
+
+namespace fostlib {
+
+
+    /// Allow coercion of the file stats
+    template<>
+    struct coercer<json, rask::stat> {
+        json coerce(const rask::stat &);
+    };
+
+
+}
+

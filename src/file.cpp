@@ -73,13 +73,25 @@ void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
 
 /*
     rask::stat
-    rask::file_stat
 */
 
 
 rask::stat::stat(int64_t s, fostlib::timestamp ts)
 : size(s), modified(ts) {
 }
+
+
+fostlib::json fostlib::coercer<fostlib::json, rask::stat>::coerce(const rask::stat &s) {
+    fostlib::json j;
+    fostlib::insert(j, "size", "bytes", s.size);
+    fostlib::insert(j, "modified", s.modified);
+    return j;
+}
+
+
+/*
+    rask::file_stat
+*/
 
 
 rask::stat rask::file_stat(const boost::filesystem::path &filename) {
