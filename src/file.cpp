@@ -16,6 +16,7 @@
 #include <system_error>
 
 #include <fcntl.h>
+#include <sys/stat.h>
 
 
 namespace {
@@ -66,6 +67,33 @@ void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
         }
     } else {
         boost::filesystem::resize_file(fn, size);
+    }
+}
+
+
+/*
+    rask::stat
+    rask::file_stat
+*/
+
+
+rask::stat::stat(int64_t s, fostlib::timestamp ts)
+: size(s), modified(ts) {
+}
+
+
+rask::stat rask::file_stat(const boost::filesystem::path &filename) {
+    struct ::stat status;
+    if ( ::stat(filename.c_str(), &status) == 0 ) {
+        return rask::stat{
+            status.st_size,
+            fostlib::timestamp(
+                    boost::posix_time::from_time_t(status.st_mtim.tv_sec)) +
+                boost::posix_time::milliseconds(status.st_mtim.tv_nsec / 1000)
+        };
+    } else {
+        throw fostlib::exceptions::not_implemented(
+            "Error when fetching stat for file");
     }
 }
 
