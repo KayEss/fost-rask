@@ -26,6 +26,7 @@ namespace rask {
     struct stat {
         stat(const stat &) = default;
         stat(int64_t, fostlib::timestamp);
+        stat(const fostlib::json &);
 
         int64_t size;
         fostlib::timestamp modified;
@@ -50,6 +51,15 @@ namespace fostlib {
     template<>
     struct coercer<json, rask::stat> {
         json coerce(const rask::stat &);
+    };
+
+
+    /// Allow coercion from JSON to rask::stat
+    template<>
+    struct coercer<rask::stat, json> {
+        rask::stat coerce(const json &j) {
+            return rask::stat(j);
+        }
     };
 
 

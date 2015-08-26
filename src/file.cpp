@@ -81,6 +81,12 @@ rask::stat::stat(int64_t s, fostlib::timestamp ts)
 }
 
 
+rask::stat::stat(const fostlib::json &j)
+: size(fostlib::coerce<int64_t>(j["size"]["bytes"])),
+    modified(fostlib::coerce<fostlib::timestamp>(j["modified"]))
+{}
+
+
 fostlib::json fostlib::coercer<fostlib::json, rask::stat>::coerce(const rask::stat &s) {
     fostlib::json j;
     fostlib::insert(j, "size", "bytes", s.size);
