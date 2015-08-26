@@ -76,26 +76,27 @@ namespace {
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
-    packet_builder builder, inode_function inoder
+    condition_function pred, packet_builder builder, inode_function inoder
 ) {
     auto path = relative_path(root, location);
     auto path_hash = name_hash(path);
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, builder, inoder, dbpath,
+            self = this, inode_type, pred, builder, inoder, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
         ) {
-            if ( data[dbpath]["filetype"] != inode_type ) {
+            if ( pred(data) ) {
                 auto priority = tick::next();
                 fostlib::json node;
                 fostlib::insert(node, "filetype", inode_type);
                 fostlib::insert(node, "name", path);
                 fostlib::insert(node, "priority", priority);
                 fostlib::insert(node, "hash", "name", path_hash);
-                dbpath.replace(data, inoder(priority, node));
+                auto inode(inoder(priority, node));
+                dbpath.replace(data, inode);
                 rehash_inodes(w, dbconf);
                 auto sent = broadcast(builder(self->tenant, priority, path));
                 fostlib::log::info(c_fost_rask)
@@ -103,9 +104,19 @@ void rask::subscriber::local_change(
                     ("broadcast", "to", sent)
                     ("tenant", self->tenant.name())
                     ("path", "relative", path)
-                    ("node", node);
+                    ("node", inode);
             }
         });
+}
+void rask::subscriber::local_change(
+    const boost::filesystem::path &location,
+    const fostlib::json &inode_type,
+    packet_builder builder, inode_function inoder
+) {
+    local_change(location, inode_type,
+        [&inode_type](const fostlib::json &inode) {
+            return inode["filetype"] != inode_type;
+        }, builder, inoder);
 }
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
@@ -121,6 +132,7 @@ void rask::subscriber::local_change(
             return inode;
         });
 }
+
 void rask::subscriber::remote_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,

@@ -27,6 +27,9 @@ namespace rask {
     /// The type of a function used to build inode packets
     using packet_builder = std::function<
         connection::out(tenant &, const rask::tick &, const fostlib::string &)>;
+    /// The type of the function that tells the subscription whether it needs to
+    /// update or not
+    using condition_function = std::function<bool(const fostlib::json &inode)>;
     /// The type of the function used to re-write the inode before it is saved
     using inode_function = std::function<
         fostlib::json(const rask::tick &, fostlib::json)>;
@@ -57,11 +60,18 @@ namespace rask {
             const fostlib::json &inode_type,
             packet_builder);
         /// Write details about something observed on this file system. This version
-        /// allows for custom hashing of the item if its added to the database
+        /// allows for custom hashing of the item if it's added to the database
         void local_change(
             const boost::filesystem::path &location,
             const fostlib::json &inode_type,
             packet_builder, inode_function);
+        /// Write details about something observed on this file system. This version
+        /// allows for custom hashing and also a custom predicate to determine if
+        /// the inode data entry needs to be updated
+        void local_change(
+            const boost::filesystem::path &location,
+            const fostlib::json &inode_type,
+            condition_function, packet_builder, inode_function);
 
         /// Record a change that has come from another server
         void remote_change(
