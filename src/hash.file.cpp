@@ -86,12 +86,24 @@ void rask::rehash_file(
                 [&w, &sub, filename, inode, callback, before_status](auto &hash) {
                     auto after_status = file_stat(filename);
                     if ( before_status == after_status ) {
+                        auto hash_value = fostlib::coerce<fostlib::string>(
+                            fostlib::coerce<fostlib::base64_string>(hash(0)));
+                        sub.local_change(filename, tenant::file_inode,
+                            [](const fostlib::json &inode) {
+                                return inode["filetype"] != tenant::file_inode ||
+                                    inode["hash"]["inode"].isnull();
+                            }, rask::file_exists_out,
+                            [&hash_value, &after_status](const rask::tick &, fostlib::json inode) {
+                                fostlib::insert(inode, "hash", "inode", hash_value);
+                                fostlib::insert(inode, "stat", after_status);
+                                return inode;
+                            });
                         fostlib::log::info(c_fost_rask)
                             ("", "Got stable file hash")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
-                            ("hash", fostlib::coerce<fostlib::base64_string>(hash(0)))
-                            ("inode", inode)
+                            ("hash", hash_value)
+                            ("inode", "old", inode)
                             ("levels", hash.level() + 1)
                             ("stat", after_status);
                         callback(hash);
@@ -100,7 +112,7 @@ void rask::rehash_file(
                             ("", "File stat changed during hashing, going again")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
-                            ("inode", inode)
+                            ("inode", "old", inode)
                             ("levels", hash.level() + 1)
                             ("stat", "before", before_status)
                             ("stat", "now", after_status);
