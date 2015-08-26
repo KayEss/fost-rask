@@ -117,14 +117,14 @@ void rask::rehash_file(
 
 rask::file::hashdb::hashdb(
     std::size_t bytes, boost::filesystem::path dbf, std::size_t level
-) : base_db_file(std::move(dbf)),
+) : db_file(std::move(dbf)),
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size)),
     m_level(level)
 {
-    boost::filesystem::create_directories(base_db_file.parent_path());
+    boost::filesystem::create_directories(db_file.parent_path());
     const std::size_t size = blocks_total * 32;
-    allocate_file(base_db_file, size);
-    file.open(base_db_file, boost::iostreams::mapped_file_base::readwrite, size);
+    allocate_file(db_file, size);
+    file.open(db_file, boost::iostreams::mapped_file_base::readwrite, size);
 }
 
 

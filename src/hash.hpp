@@ -49,7 +49,7 @@ namespace rask {
 
         /// The hash structure for one level in the file hash
         class hashdb : boost::noncopyable {
-            boost::filesystem::path base_db_file;
+            boost::filesystem::path db_file;
             std::size_t blocks_total;
             boost::iostreams::mapped_file file;
             std::size_t m_level; // 0 is the base level
