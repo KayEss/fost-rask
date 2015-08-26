@@ -64,6 +64,9 @@ namespace rask {
             /// Add the next hash value to the database. Give it the block
             /// number and the block's hash
             void operator () (std::size_t, const std::vector<unsigned char> &h);
+
+            /// Return the specified hash value
+            std::vector<unsigned char> operator () (std::size_t) const;
         };
 
 

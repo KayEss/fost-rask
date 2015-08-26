@@ -90,6 +90,7 @@ void rask::rehash_file(
                             ("", "Got stable file hash")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
+                            ("hash", fostlib::coerce<fostlib::base64_string>(hash(0)))
                             ("inode", inode)
                             ("levels", hash.level() + 1)
                             ("stat", after_status);
@@ -134,5 +135,14 @@ void rask::file::hashdb::operator () (
     if ( std::memcmp(file.data() + block * 32, hash.data(), 32) != 0 ) {
         std::memcpy(file.data() + block * 32, hash.data(), 32);
     }
+}
+
+
+std::vector<unsigned char> rask::file::hashdb::operator () (std::size_t b) const {
+    if ( b >= blocks_total )
+        throw fostlib::exceptions::out_of_range<std::size_t>(
+            "Block requested beyond the end of the hash database",
+            b, 0, blocks_total);
+    return std::vector<unsigned char>(file.data() + b * 32, file.data() + (b+1) * 32);
 }
 
