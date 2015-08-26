@@ -52,10 +52,14 @@ namespace rask {
             boost::filesystem::path base_db_file;
             std::size_t blocks_total;
             boost::iostreams::mapped_file file;
+            std::size_t m_level; // 0 is the base level
 
         public:
             /// Construct a hashdb for a file of the given size
-            hashdb(std::size_t bytes, boost::filesystem::path dbfile);
+            hashdb(std::size_t bytes, boost::filesystem::path dbfile, std::size_t level);
+
+            /// The level for this hash db
+            std::size_t level() const { return m_level; }
 
             /// Add the next hash value to the database. Give it the block
             /// number and the block's hash

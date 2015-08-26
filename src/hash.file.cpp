@@ -62,14 +62,9 @@ namespace {
             dbpath += "-" +
                 fostlib::coerce<rask::base32_string>(level).underlying().underlying()
                     + ".hashes";
-            rask::file::hashdb hash(boost::filesystem::file_size(current), dbpath);
+            rask::file::hashdb hash(boost::filesystem::file_size(current), dbpath, level);
             if ( hash_layer(current, hash) <= 1 ) {
                 callback(hash);
-                fostlib::log::info(rask::c_fost_rask)
-                    ("", "Hashing of file completed")
-                    ("tenant", sub.tenant.name())
-                    ("filename", filename)
-                    ("levels", level + 1);
                 ++p_completed;
                 return;
             }
@@ -92,10 +87,11 @@ void rask::rehash_file(
                     auto after_status = file_stat(filename);
                     if ( before_status == after_status ) {
                         fostlib::log::info(c_fost_rask)
-                            ("", "Got stable file hash for a file")
+                            ("", "Got stable file hash")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
                             ("inode", inode)
+                            ("levels", hash.level() + 1)
                             ("stat", after_status);
                         callback(hash);
                     } else {
@@ -104,6 +100,7 @@ void rask::rehash_file(
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
                             ("inode", inode)
+                            ("levels", hash.level() + 1)
                             ("stat", "before", before_status)
                             ("stat", "now", after_status);
                         rehash_file(w, sub, filename, inode, callback);
@@ -118,9 +115,11 @@ void rask::rehash_file(
 */
 
 
-rask::file::hashdb::hashdb(std::size_t bytes, boost::filesystem::path dbf)
-: base_db_file(std::move(dbf)),
-    blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size))
+rask::file::hashdb::hashdb(
+    std::size_t bytes, boost::filesystem::path dbf, std::size_t level
+) : base_db_file(std::move(dbf)),
+    blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size)),
+    m_level(level)
 {
     boost::filesystem::create_directories(base_db_file.parent_path());
     const std::size_t size = blocks_total * 32;
