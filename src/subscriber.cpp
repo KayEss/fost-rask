@@ -88,7 +88,7 @@ void rask::subscriber::local_change(
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
         ) {
-            if ( pred(data) ) {
+            if ( pred(data[dbpath]) ) {
                 auto priority = tick::next();
                 fostlib::json node;
                 fostlib::insert(node, "filetype", inode_type);
