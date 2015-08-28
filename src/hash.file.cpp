@@ -22,6 +22,8 @@
 namespace {
     fostlib::performance p_files(rask::c_fost_rask,
         "hash", "file", "ordered");
+    fostlib::performance p_skipped_nc(rask::c_fost_rask,
+        "hash", "file", "skipped", "no-change");
     fostlib::performance p_started(rask::c_fost_rask,
         "hash", "file", "started");
     fostlib::performance p_completed(rask::c_fost_rask,
@@ -78,14 +80,30 @@ void rask::rehash_file(
     workers &w, subscriber &sub, const boost::filesystem::path &filename,
     const fostlib::json &inode, file_hash_callback callback
 ) {
+    auto before_status = file_stat(filename);
+    if ( !inode["stat"].isnull() && stat(inode["stat"]) == before_status ) {
+        ++p_skipped_nc;
+        callback();
+        fostlib::log::debug(c_fost_rask)
+            ("", "Not hashing as old and new file stats match")
+            ("stat", "now", before_status)
+            ("inode", inode);
+        return;
+    }
+    fostlib::log::warning(c_fost_rask)
+        ("", "Going to start hashing a file as the stats don't match")
+        ("stat", "now", before_status)
+        ("stat", "inode", inode["stat"].isnull() ? fostlib::json() :
+            fostlib::coerce<fostlib::json>(stat(inode["stat"])))
+        ("inode", inode);
     ++p_files;
     w.hashes.get_io_service().post(
-        [&w, &sub, filename, inode, callback]() {
-            auto before_status = file_stat(filename);
+        [&w, &sub, filename, inode, callback, before_status]() {
             do_hashing(sub, filename, inode,
                 [&w, &sub, filename, inode, callback, before_status](auto &hash) {
                     auto after_status = file_stat(filename);
                     if ( before_status == after_status ) {
+                        fostlib::json new_inode;
                         auto hash_value = fostlib::coerce<fostlib::string>(
                             fostlib::coerce<fostlib::base64_string>(hash(0)));
                         sub.local_change(filename, tenant::file_inode,
@@ -93,22 +111,26 @@ void rask::rehash_file(
                                 return inode["filetype"] != tenant::file_inode ||
                                     inode["hash"]["inode"].isnull();
                             }, rask::file_exists_out,
-                            [&hash_value, &after_status](const rask::tick &, fostlib::json inode) {
+                            [&hash_value, &after_status, &new_inode](
+                                const rask::tick &, fostlib::json inode
+                            ) {
                                 fostlib::insert(inode, "hash", "inode", hash_value);
                                 fostlib::insert(inode, "stat", after_status);
+                                new_inode = inode;
                                 return inode;
                             });
-                        fostlib::log::info(c_fost_rask)
+                        fostlib::log::debug(c_fost_rask)
                             ("", "Got stable file hash")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
                             ("hash", hash_value)
                             ("inode", "old", inode)
+                            ("inode", "new", new_inode)
                             ("levels", hash.level() + 1)
                             ("stat", after_status);
                         callback();
                     } else {
-                        fostlib::log::warning(c_fost_rask)
+                        fostlib::log::debug(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
