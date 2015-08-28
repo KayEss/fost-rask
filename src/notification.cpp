@@ -27,10 +27,18 @@ namespace {
         std::pair<std::shared_ptr<rask::tenant>, boost::filesystem::path>>
             g_watches;
 
-    fostlib::performance p_watches(rask::c_fost_rask, "inotify", "watches");
-    fostlib::performance p_watches_failed(rask::c_fost_rask, "inotify", "watches-failed");
-    fostlib::performance p_in_create(rask::c_fost_rask, "inotify", "IN_CREATE");
-    fostlib::performance p_in_delete_self(rask::c_fost_rask, "inotify", "IN_DELETE_SELF");
+    fostlib::performance p_watches(rask::c_fost_rask,
+        "inotify", "watches");
+    fostlib::performance p_watches_failed(rask::c_fost_rask,
+        "inotify", "watches-failed");
+    fostlib::performance p_in_create_dir(rask::c_fost_rask,
+        "inotify", "IN_CREATE", "directory");
+    fostlib::performance p_in_create_file(rask::c_fost_rask,
+        "inotify", "IN_CREATE", "file");
+    fostlib::performance p_in_create_other(rask::c_fost_rask,
+        "inotify", "IN_CREATE", "other");
+    fostlib::performance p_in_delete_self(rask::c_fost_rask,
+        "inotify", "IN_DELETE_SELF");
 
     struct callback : public f5::fsnotify::boost_asio::reader {
         rask::workers &w;
@@ -59,12 +67,16 @@ namespace {
                 ("cookie", event.cookie);
 
             if ( event.mask & IN_CREATE ) {
-                ++p_in_create;
                 if ( is_directory(filename) ) {
+                    ++p_in_create_dir;
                     w.files.get_io_service().post(
                         [this, filename, tenant]() {
                             rask::start_sweep(w, tenant, filename);
                         });
+                } else if ( is_regular_file(filename) ) {
+                    ++p_in_create_file;
+                } else {
+                    ++p_in_create_other;
                 }
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
