@@ -35,6 +35,8 @@ namespace {
                 fostlib::absorb_exception();
                 if ( rask::c_terminate_on_exception.value() ) {
                     fostlib::log::flush();
+                    std::cerr << "Reactor pool is terminating "
+                        "due to uncaught exception" << std::endl;
                     std::terminate();
                 }
                 return true;
