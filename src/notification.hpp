@@ -15,12 +15,14 @@
 namespace rask {
 
 
+    class subscriber;
     class tenant;
     struct workers;
 
 
-    void rm_directory(workers &, std::shared_ptr<tenant>,
-        const boost::filesystem::path &);
+    /// Record a locally observed removal of an inode
+    void rm_inode(workers &, tenant &, const boost::filesystem::path &);
+    void rm_inode(workers &, subscriber &, const boost::filesystem::path &);
 
 
 }

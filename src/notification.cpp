@@ -82,7 +82,7 @@ namespace {
                 ++p_in_delete_self;
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
-                        rask::rm_directory(w, tenant, filename);
+                        rask::rm_inode(w, *tenant, filename);
                     });
             }
         }

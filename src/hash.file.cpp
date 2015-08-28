@@ -8,6 +8,7 @@
 
 #include "file.hpp"
 #include "hash.hpp"
+#include "notification.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
@@ -24,6 +25,10 @@ namespace {
         "hash", "file", "ordered");
     fostlib::performance p_skipped_nc(rask::c_fost_rask,
         "hash", "file", "skipped", "no-change");
+    fostlib::performance p_skipped_gone(rask::c_fost_rask,
+        "hash", "file", "skipped", "gone");
+    fostlib::performance p_skipped_other(rask::c_fost_rask,
+        "hash", "file", "skipped", "other");
     fostlib::performance p_started(rask::c_fost_rask,
         "hash", "file", "started");
     fostlib::performance p_completed(rask::c_fost_rask,
@@ -80,12 +85,35 @@ void rask::rehash_file(
     workers &w, subscriber &sub, const boost::filesystem::path &filename,
     const fostlib::json &inode, file_hash_callback callback
 ) {
+    if ( !boost::filesystem::exists(filename) ) {
+        ++p_skipped_gone;
+        // TODO: Adding a move-out inode to the database is probably
+        // the wrong thing to do in many circumstances
+        fostlib::log::warning(c_fost_rask)
+            ("", "Not hashing as the file is gone from the file system -- "
+                "this could well be the wrong thing to do")
+            ("tenant", sub.tenant.name())
+            ("inode", inode);
+        rm_inode(w, sub.tenant, filename);
+        callback();
+        return;
+    } else if ( !boost::filesystem::is_regular_file(filename) ) {
+        ++p_skipped_other;
+        rm_inode(w, sub.tenant, filename);
+        callback();
+        fostlib::log::debug(c_fost_rask)
+            ("", "Not hashing as the file is not a regular file")
+            ("tenant", sub.tenant.name())
+            ("inode", inode);
+        return;
+    }
     auto before_status = file_stat(filename);
     if ( !inode["stat"].isnull() && stat(inode["stat"]) == before_status ) {
         ++p_skipped_nc;
         callback();
         fostlib::log::debug(c_fost_rask)
             ("", "Not hashing as old and new file stats match")
+            ("tenant", sub.tenant.name())
             ("stat", "now", before_status)
             ("inode", inode);
         return;

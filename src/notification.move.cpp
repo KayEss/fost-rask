@@ -11,9 +11,22 @@
 #include <rask/tenant.hpp>
 
 
-void rask::rm_directory(
-    workers &w, std::shared_ptr<tenant> tenant, const boost::filesystem::path &path
+void rask::rm_inode(
+    workers &w, tenant &tenant, const boost::filesystem::path &path
 ) {
-    tenant->subscription->local_change(path, tenant::move_inode_out, move_out_packet);
+    if ( !tenant.subscription ) {
+        throw fostlib::exceptions::null(
+            "Calling rm_inode on a tenant without a subscription",
+            tenant.name());
+    }
+    rm_inode(w, *tenant.subscription, path);
+}
+
+
+void rask::rm_inode(
+    workers &w, subscriber &sub, const boost::filesystem::path &path
+) {
+    sub.local_change(path, tenant::move_inode_out,
+        move_out_packet);
 }
 
