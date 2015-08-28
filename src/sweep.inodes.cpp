@@ -45,6 +45,7 @@ namespace {
             auto inode = *c->position;
             auto filetype = inode["filetype"];
             auto filename = fostlib::coerce<boost::filesystem::path>(c->position.key());
+            fostlib::log::debug(rask::c_fost_rask, "Inode sweep", inode);
             if ( filetype == rask::tenant::directory_inode ) {
                 ++p_directory;
                 w.notify.watch(c->tenant, filename);
@@ -52,7 +53,7 @@ namespace {
                 ++p_file;
                 auto task(++limit);
                 rask::rehash_file(w, *c->tenant->subscription, filename, inode,
-                    [task] (const auto &) {
+                    [task] () {
                         task->done(
                             [](const auto &error, auto bytes) {
                                 fostlib::log::error(rask::c_fost_rask)

@@ -73,7 +73,7 @@ namespace rask {
     }
 
     /// Callback for the file (re-)hasher
-    using file_hash_callback = std::function<void(const file::hashdb &)>;
+    using file_hash_callback = std::function<void(void)>;
     /// Re-hash the pointed to file
     void rehash_file(workers &w, subscriber &,
         const boost::filesystem::path &, const fostlib::json &inode,

@@ -47,6 +47,7 @@ namespace {
                 std::size_t files = 0, directories = 0, ignored = 0;
                 using d_iter = boost::filesystem::recursive_directory_iterator;
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
+                    fostlib::log::debug(rask::c_fost_rask, "Directory sweep", inode->path());
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
                         ++directories;
                         auto directory = inode->path();
@@ -63,7 +64,7 @@ namespace {
                             ) {
                                 auto task(++limit);
                                 rask::rehash_file(w, subscriber, filename, inode,
-                                    [task] (const auto&) {
+                                    [task] () {
                                         task->done(
                                             [](const auto &error, auto bytes) {
                                                 fostlib::log::error(rask::c_fost_rask)

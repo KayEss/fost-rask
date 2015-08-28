@@ -106,7 +106,7 @@ void rask::rehash_file(
                             ("inode", "old", inode)
                             ("levels", hash.level() + 1)
                             ("stat", after_status);
-                        callback(hash);
+                        callback();
                     } else {
                         fostlib::log::warning(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
