@@ -6,6 +6,7 @@
 */
 
 
+#include "hash.hpp"
 #include "notification.hpp"
 #include "sweep.folder.hpp"
 #include <rask/tenant.hpp>
@@ -32,13 +33,15 @@ namespace {
     fostlib::performance p_watches_failed(rask::c_fost_rask,
         "inotify", "watches-failed");
     fostlib::performance p_in_create_dir(rask::c_fost_rask,
-        "inotify", "IN_CREATE", "directory");
+        "inotify", "event", "IN_CREATE", "directory");
     fostlib::performance p_in_create_file(rask::c_fost_rask,
-        "inotify", "IN_CREATE", "file");
+        "inotify", "event", "IN_CREATE", "file");
     fostlib::performance p_in_create_other(rask::c_fost_rask,
-        "inotify", "IN_CREATE", "other");
+        "inotify", "event", "IN_CREATE", "other");
+    fostlib::performance p_in_modify(rask::c_fost_rask,
+        "inotify", "event", "IN_MODIFY");
     fostlib::performance p_in_delete_self(rask::c_fost_rask,
-        "inotify", "IN_DELETE_SELF");
+        "inotify", "event", "IN_DELETE_SELF");
 
     struct callback : public f5::fsnotify::boost_asio::reader {
         rask::workers &w;
@@ -66,6 +69,13 @@ namespace {
                 ("mask", f5::mask_json(event))
                 ("cookie", event.cookie);
 
+            /// TODO: Eventually this needs to take care of all of the
+            /// relevant events. We probably don't care about:
+            /// * IN_ACCESS
+            /// * IN_ATTRIB
+            /// * IN_CLOSE_NOWRITE
+            /// * IN_OPEN
+            /// See: http://man7.org/linux/man-pages/man7/inotify.7.html
             if ( event.mask & IN_CREATE ) {
                 if ( is_directory(filename) ) {
                     ++p_in_create_dir;
@@ -78,6 +88,12 @@ namespace {
                 } else {
                     ++p_in_create_other;
                 }
+            } else if ( event.mask & IN_MODIFY ) {
+                ++p_in_modify;
+                w.files.get_io_service().post(
+                    [this, filename = std::move(filename), tenant]() {
+                        rask::rehash_file(w, *tenant, filename);
+                    });
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
                 w.files.get_io_service().post(

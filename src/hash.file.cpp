@@ -173,6 +173,18 @@ void rask::rehash_file(
 }
 
 
+void rask::rehash_file(
+    workers &w, rask::tenant &tenant, const boost::filesystem::path &filename
+) {
+    if ( !tenant.subscription )
+        throw fostlib::exceptions::null(
+            "Trying to hash a file in a tenant that isn't subscribed",
+            tenant.name());
+    inode_exists(w, *tenant.subscription, filename);
+//     rehash_file(w, *tenant.subscription, filename, inode, []() {});
+}
+
+
 /*
     rask:file::hashdb
 */

@@ -24,5 +24,8 @@ namespace rask {
     void rm_inode(workers &, tenant &, const boost::filesystem::path &);
     void rm_inode(workers &, subscriber &, const boost::filesystem::path &);
 
+    /// Record that a locally observed file actually exists
+    void inode_exists(workers &, subscriber &, const boost::filesystem::path &);
+
 
 }
