@@ -48,6 +48,7 @@ namespace {
             fostlib::log::debug(rask::c_fost_rask, "Inode sweep", inode);
             if ( filetype == rask::tenant::directory_inode ) {
                 ++p_directory;
+                /// TODO: Make sure that we still have a directory at this location
                 w.notify.watch(c->tenant, filename);
             } else if ( filetype == rask::tenant::file_inode ) {
                 ++p_file;
@@ -64,11 +65,11 @@ namespace {
                     });
             } else if ( filetype == rask::tenant::move_inode_out ) {
                 ++p_move_out;
+                /// TODO: Make sure that the file really is still gone
             } else {
                 ++p_unknown;
                 fostlib::log::error(rask::c_fost_rask)
                     ("", "Sweeping inodes -- unknown filetype")
-                    ("filetype", filetype)
                     ("inode", inode);
             }
             auto cpdb = c->position.leaf_dbp();
