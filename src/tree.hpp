@@ -78,8 +78,8 @@ namespace rask {
         /// The type of the manipulator that runs inside the node database
         using manipulator_fn =
             std::function<void(rask::workers &, fostlib::json &, const fostlib::json &)>;
-        /// Return a local transaction that covers the database where we
-        /// want to add a node
+        /// Run the manipulator inside a transaction for the database that
+        /// contains the path requested
         void add(const fostlib::jcursor &dbpath,
             const fostlib::string &path, const name_hash_type &hash,
             manipulator_fn);
