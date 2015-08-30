@@ -17,6 +17,7 @@
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 
+#include <f5/threading/set.hpp>
 #include <fost/counter>
 
 
@@ -25,6 +26,8 @@ namespace {
         "hash", "file", "ordered");
     fostlib::performance p_skipped_nc(rask::c_fost_rask,
         "hash", "file", "skipped", "no-change");
+    fostlib::performance p_skipped_hashing(rask::c_fost_rask,
+        "hash", "file", "skipped", "currently-hashing");
     fostlib::performance p_skipped_gone(rask::c_fost_rask,
         "hash", "file", "skipped", "gone");
     fostlib::performance p_skipped_other(rask::c_fost_rask,
@@ -78,6 +81,8 @@ namespace {
             current = dbpath;
         }
     }
+
+    f5::tsset<boost::filesystem::path> g_hashing;
 }
 
 
@@ -85,6 +90,15 @@ void rask::rehash_file(
     workers &w, subscriber &sub, const boost::filesystem::path &filename,
     const fostlib::json &inode, file_hash_callback callback
 ) {
+    if ( !g_hashing.insert_if_not_found(filename) ) {
+        ++p_skipped_hashing;
+        fostlib::log::warning(c_fost_rask)
+            ("", "Not hashing as the file is already being hashed")
+            ("tenant", sub.tenant.name())
+            ("inode", inode);
+        callback();
+        return;
+    }
     if ( !boost::filesystem::exists(filename) ) {
         ++p_skipped_gone;
         // TODO: Adding a move-out inode to the database is probably
@@ -157,9 +171,10 @@ void rask::rehash_file(
                                     ("inode", "new", new_inode)
                                     ("levels", level)
                                     ("stat", after_status);
-                                callback();
                                 return new_inode;
                             });
+                        g_hashing.remove(filename);
+                        callback();
                     } else {
                         fostlib::log::debug(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
@@ -169,6 +184,7 @@ void rask::rehash_file(
                             ("levels", hash.level() + 1)
                             ("stat", "before", before_status)
                             ("stat", "now", after_status);
+                        g_hashing.remove(filename);
                         rehash_file(w, sub, filename, inode, callback);
                     }
                 });
