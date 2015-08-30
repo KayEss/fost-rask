@@ -131,7 +131,6 @@ void rask::rehash_file(
                 [&w, &sub, filename, inode, callback, before_status](auto &hash) {
                     auto after_status = file_stat(filename);
                     if ( before_status == after_status ) {
-                        fostlib::json new_inode;
                         auto hash_value = fostlib::coerce<fostlib::string>(
                             fostlib::coerce<fostlib::base64_string>(hash(0)));
                         sub.local_change(filename, tenant::file_inode,
@@ -139,24 +138,27 @@ void rask::rehash_file(
                                 return inode["filetype"] != tenant::file_inode ||
                                     inode["hash"]["inode"].isnull();
                             }, rask::file_exists_out,
-                            [&hash_value, &after_status, &new_inode](
-                                const rask::tick &, fostlib::json inode
+                            [
+                                &sub, filename, callback, hash_value, after_status,
+                                level = hash.level() + 1
+                            ](
+                                const rask::tick &, fostlib::json old_inode
                             ) {
-                                fostlib::insert(inode, "hash", "inode", hash_value);
-                                fostlib::insert(inode, "stat", after_status);
-                                new_inode = inode;
-                                return inode;
+                                fostlib::json new_inode = old_inode;
+                                fostlib::insert(new_inode, "hash", "inode", hash_value);
+                                fostlib::insert(new_inode, "stat", after_status);
+                                fostlib::log::debug(c_fost_rask)
+                                    ("", "Recording stable file hash")
+                                    ("tenant", sub.tenant.name())
+                                    ("filename", filename)
+                                    ("hash", hash_value)
+                                    ("inode", "old", old_inode)
+                                    ("inode", "new", new_inode)
+                                    ("levels", level)
+                                    ("stat", after_status);
+                                callback();
+                                return new_inode;
                             });
-                        fostlib::log::debug(c_fost_rask)
-                            ("", "Got stable file hash")
-                            ("tenant", sub.tenant.name())
-                            ("filename", filename)
-                            ("hash", hash_value)
-                            ("inode", "old", inode)
-                            ("inode", "new", new_inode)
-                            ("levels", hash.level() + 1)
-                            ("stat", after_status);
-                        callback();
                     } else {
                         fostlib::log::debug(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
