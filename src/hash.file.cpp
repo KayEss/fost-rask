@@ -32,6 +32,8 @@ namespace {
         "hash", "file", "skipped", "gone");
     fostlib::performance p_skipped_other(rask::c_fost_rask,
         "hash", "file", "skipped", "other");
+    fostlib::performance p_restarted(rask::c_fost_rask,
+        "hash", "file", "re-started");
     fostlib::performance p_started(rask::c_fost_rask,
         "hash", "file", "started");
     fostlib::performance p_completed(rask::c_fost_rask,
@@ -186,6 +188,7 @@ void rask::rehash_file(
                         g_hashing.remove(filename);
                         callback();
                     } else {
+                        ++p_restarted;
                         fostlib::log::debug(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
                             ("tenant", sub.tenant.name())
