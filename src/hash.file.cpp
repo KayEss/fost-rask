@@ -92,15 +92,6 @@ void rask::rehash_file(
     workers &w, subscriber &sub, const boost::filesystem::path &filename,
     const fostlib::json &inode, file_hash_callback callback
 ) {
-    if ( !g_hashing.insert_if_not_found(filename) ) {
-        ++p_skipped_hashing;
-        fostlib::log::warning(c_fost_rask)
-            ("", "Not hashing as the file is already being hashed")
-            ("tenant", sub.tenant.name())
-            ("inode", inode);
-        callback();
-        return;
-    }
     if ( !boost::filesystem::exists(filename) ) {
         ++p_skipped_gone;
         // TODO: Adding a move-out inode to the database is probably
@@ -132,6 +123,15 @@ void rask::rehash_file(
             ("tenant", sub.tenant.name())
             ("stat", "now", before_status)
             ("inode", inode);
+        return;
+    }
+    if ( !g_hashing.insert_if_not_found(filename) ) {
+        ++p_skipped_hashing;
+        fostlib::log::warning(c_fost_rask)
+            ("", "Not hashing as the file is already being hashed")
+            ("tenant", sub.tenant.name())
+            ("inode", inode);
+        callback();
         return;
     }
     fostlib::log::warning(c_fost_rask)
