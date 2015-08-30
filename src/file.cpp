@@ -35,6 +35,23 @@ namespace {
 }
 
 
+fostlib::string rask::relative_path(
+    const fostlib::string &root, const boost::filesystem::path &location
+) {
+    auto path = fostlib::coerce<fostlib::string>(location);
+    if ( path.startswith(root) ) {
+        path = path.substr(root.length());
+    } else {
+        fostlib::exceptions::not_implemented error(
+            "Directory is not in tenant root");
+        fostlib::insert(error.data(), "root", root);
+        fostlib::insert(error.data(), "location", location);
+        throw error;
+    }
+    return path;
+}
+
+
 void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
     if ( not boost::filesystem::exists(fn) ) {
         // Resize the file, probably overkill on the complexity front

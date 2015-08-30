@@ -40,9 +40,9 @@ namespace rask {
 
     /// The part of the tenant that is a subscriber
     class subscriber {
+    public:
         /// Used for internal caclulations
         const fostlib::string root;
-    public:
         /// The tenant that this subscription is part of
         rask::tenant &tenant;
 

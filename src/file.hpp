@@ -41,6 +41,11 @@ namespace rask {
     rask::stat file_stat(const boost::filesystem::path &);
 
 
+    /// Calculate a relative path
+    fostlib::string relative_path(
+        const fostlib::string &root, const boost::filesystem::path &location);
+
+
 }
 
 

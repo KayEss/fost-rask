@@ -6,6 +6,7 @@
 */
 
 
+#include "file.hpp"
 #include "tree.hpp"
 #include <rask/configuration.hpp>
 #include <rask/connection.hpp>
@@ -57,22 +58,6 @@ beanbag::jsondb_ptr rask::subscriber::beanbag() const {
 }
 
 
-namespace {
-    fostlib::string relative_path(
-        const fostlib::string &root, const boost::filesystem::path &location
-    ) {
-        auto path = fostlib::coerce<fostlib::string>(location);
-        if ( path.startswith(root) ) {
-            path = path.substr(root.length());
-        } else {
-            fostlib::exceptions::not_implemented error("Directory is not in tenant root");
-            fostlib::insert(error.data(), "root", root);
-            fostlib::insert(error.data(), "location", location);
-            throw error;
-        }
-        return path;
-    }
-}
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
@@ -99,12 +84,11 @@ void rask::subscriber::local_change(
                 auto inode(inoder(priority, node));
                 dbpath.replace(data, inode);
                 rehash_inodes(w, dbconf);
-                auto sent = broadcast(builder(self->tenant, priority, path));
+                const auto sent = broadcast(builder(self->tenant, priority, path));
                 fostlib::log::info(c_fost_rask)
                     ("", inode_type)
                     ("broadcast", "to", sent)
                     ("tenant", self->tenant.name())
-                    ("path", "relative", path)
                     ("node", inode);
             } else {
                 const auto node = data[dbpath];
