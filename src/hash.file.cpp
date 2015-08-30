@@ -189,7 +189,7 @@ void rask::rehash_file(
                         callback();
                     } else {
                         ++p_restarted;
-                        fostlib::log::debug(c_fost_rask)
+                        fostlib::log::info(c_fost_rask)
                             ("", "File stat changed during hashing, going again")
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
