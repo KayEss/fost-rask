@@ -134,9 +134,10 @@ void rask::rehash_file(
                         auto hash_value = fostlib::coerce<fostlib::string>(
                             fostlib::coerce<fostlib::base64_string>(hash(0)));
                         sub.local_change(filename, tenant::file_inode,
-                            [](const fostlib::json &inode) {
+                            [hash_value](const fostlib::json &inode) {
                                 return inode["filetype"] != tenant::file_inode ||
-                                    inode["hash"]["inode"].isnull();
+                                    inode["hash"].isnull() ||
+                                    inode["hash"]["inode"] != fostlib::json(hash_value);
                             }, rask::file_exists_out,
                             [
                                 &sub, filename, callback, hash_value, after_status,
@@ -182,8 +183,7 @@ void rask::rehash_file(
         throw fostlib::exceptions::null(
             "Trying to hash a file in a tenant that isn't subscribed",
             tenant.name());
-    inode_exists(w, *tenant.subscription, filename);
-//     rehash_file(w, *tenant.subscription, filename, inode, []() {});
+    rehash_file(w, *tenant.subscription, filename, fostlib::json::object_t(), []() {});
 }
 
 
