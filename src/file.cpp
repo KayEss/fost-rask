@@ -107,7 +107,7 @@ rask::stat rask::file_stat(const boost::filesystem::path &filename) {
             status.st_size,
             fostlib::timestamp(
                     boost::posix_time::from_time_t(status.st_mtim.tv_sec)) +
-                boost::posix_time::milliseconds(status.st_mtim.tv_nsec / 1000)
+                boost::posix_time::microseconds(status.st_mtim.tv_nsec / 1'000)
         };
     } else {
         throw fostlib::exceptions::not_implemented(
