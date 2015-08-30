@@ -76,14 +76,15 @@ namespace {
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
-    condition_function pred, packet_builder builder, inode_function inoder
+    condition_function pred, packet_builder builder, inode_function inoder,
+    otherwise_function otherwise
 ) {
     auto path = relative_path(root, location);
     auto path_hash = name_hash(path);
     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
     inodes().add(dbpath, path, path_hash,
         [
-            self = this, inode_type, pred, builder, inoder, dbpath,
+            self = this, inode_type, pred, builder, inoder, otherwise, dbpath,
             path = std::move(path), path_hash = std::move(path_hash)
         ](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
@@ -105,8 +106,27 @@ void rask::subscriber::local_change(
                     ("tenant", self->tenant.name())
                     ("path", "relative", path)
                     ("node", inode);
+            } else {
+                const auto node = data[dbpath];
+                auto inode(otherwise(node));
+                if ( inode != node ) {
+                    dbpath.replace(data, inode);
+                    fostlib::log::info(c_fost_rask)
+                        ("", inode_type)
+                        ("tenant", self->tenant.name())
+                        ("node", "old", node)
+                        ("node", "new", inode);
+                }
             }
         });
+}
+void rask::subscriber::local_change(
+    const boost::filesystem::path &location,
+    const fostlib::json &inode_type,
+    condition_function pred, packet_builder builder, inode_function inoder
+) {
+    local_change(location, inode_type, pred, builder, inoder,
+        [](const auto &i) { return i; });
 }
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,

@@ -172,6 +172,16 @@ void rask::rehash_file(
                                     ("levels", level)
                                     ("stat", after_status);
                                 return new_inode;
+                            },
+                            [callback, after_status](fostlib::json node) {
+                                static fostlib::jcursor stat("stat");
+                                const auto status =
+                                    fostlib::coerce<fostlib::json>(after_status);
+                                if ( node.has_key(stat) )
+                                    stat.replace(node, status);
+                                else
+                                    stat.insert(node, status);
+                                return node;
                             });
                         g_hashing.remove(filename);
                         callback();
