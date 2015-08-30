@@ -102,7 +102,11 @@ fostlib::json fostlib::coercer<fostlib::json, rask::stat>::coerce(const rask::st
 
 rask::stat rask::file_stat(const boost::filesystem::path &filename) {
     struct ::stat status;
-    if ( ::stat(filename.c_str(), &status) == 0 ) {
+    const auto stat_call = syscall(
+        [&filename, &status]() {
+            return ::stat(filename.c_str(), &status);
+        });
+    if ( stat_call == 0 ) {
         return rask::stat{
             status.st_size,
             fostlib::timestamp(
