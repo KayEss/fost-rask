@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+import base64
+import hashlib
+import os
+import sys
+
+
+class HashMismatch(Exception):
+    pass
+
+
+def usage():
+    print("Usage: ")
+    print("    file-checker <file-to-check> <path-to-database>")
+
+def check(data, hashes):
+    """Work through hash values in the data file and check them against the
+    ones in the hashes stream."""
+    def checkhash(h):
+        r = hashes.read(32)
+        if h != r:
+            print(base64.b16encode(r), "Hashes don't match")
+            raise HashMismatch()
+    _iterateblocks(data, checkhash)
+
+def create(data, hashes):
+    """Work through the hash values in the data file and save them into the
+    hashes stream."""
+    _iterateblocks(data, lambda h: hashes.write(h))
+
+def hashblock(data):
+    """Read one chunk from the data stream and return the 32 byte SAH256
+    hash value for it."""
+    hasher = hashlib.sha256()
+    hasher.update(data)
+    return hasher.digest()
+
+def _readchunk(infile, chunk_size=32768):
+    chunk = infile.read(chunk_size)
+    while chunk:
+        yield chunk
+        chunk = infile.read(chunk_size)
+
+def _iterateblocks(data, sink):
+    """Iterate over the data and generate hashes for the blocks.
+    """
+    for h in _readchunk(data):
+        hash = hashblock(h)
+        print(base64.b16encode(hash), "Got a chunk of length", len(h))
+        sink(hash)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        usage()
+        exit(1)
+    filename = sys.argv[1]
+    database = sys.argv[2]
+    with open(filename, "rb") as data:
+        if os.path.exists(database):
+            try:
+                with open(database, "rb") as hashes:
+                    check(data, hashes)
+            except HashMismatch:
+                exit(2)
+        else:
+            with open(database, "wb") as hashes:
+                create(data, hashes)
+
