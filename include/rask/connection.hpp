@@ -274,6 +274,8 @@ namespace rask {
     /// Send a file exists instruction
     connection::out file_exists_out(
         tenant &, const rask::tick &, const fostlib::string &, const fostlib::json &);
+    /// React to a file exists instruction
+    void file_exists(connection::in &);
 
     /// Create a move an inode out packet
     connection::out move_out_packet(

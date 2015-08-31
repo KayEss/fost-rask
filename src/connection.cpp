@@ -100,6 +100,8 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     tenant_packet(packet);
                 } else if ( control == 0x82 ) {
                     tenant_hash_packet(packet);
+                } else if ( control == 0x90 ) {
+                    file_exists(packet);
                 } else if ( control == 0x91 ) {
                     create_directory(packet);
                 } else if ( control == 0x93 ) {

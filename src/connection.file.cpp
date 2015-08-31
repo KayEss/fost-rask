@@ -26,3 +26,19 @@ rask::connection::out rask::file_exists_out(
     return std::move(packet);
 }
 
+
+void rask::file_exists(rask::connection::in &packet) {
+    auto logger(fostlib::log::info(c_fost_rask));
+    logger("", "File exists");
+    auto priority(packet.read<tick>());
+    logger("priority", priority);
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
+    auto name(packet.read<fostlib::string>());
+    logger
+        ("tenant", tenant->name())
+        ("name", name);
+    if ( tenant->subscription ) {
+    }
+}
+
