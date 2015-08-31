@@ -19,7 +19,7 @@ namespace {
 
 
 rask::connection::out rask::file_exists_out(
-    tenant &t, const tick &p, const fostlib::string &n
+    tenant &t, const tick &p, const fostlib::string &n, const fostlib::json &
 ) {
     connection::out packet(0x90);
     packet << p << t.name() << n;

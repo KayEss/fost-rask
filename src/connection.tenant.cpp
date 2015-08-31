@@ -93,17 +93,22 @@ namespace {
                         ("inode", inode);
                     socket->queue(
                         [tenant, inode]() {
-                            return create_directory_out(*tenant, rask::tick(inode["priority"]),
-                                fostlib::coerce<fostlib::string>(inode["name"]));
+                            return create_directory_out(*tenant,
+                                rask::tick(inode["priority"]),
+                                fostlib::coerce<fostlib::string>(inode["name"]),
+                                inode);
                         });
+                } else if ( filetype == rask::tenant::file_inode ) {
                 } else if ( filetype == rask::tenant::move_inode_out ) {
                     fostlib::log::debug(rask::c_fost_rask)
                         ("", "sending move_out")
                         ("inode", inode);
                     socket->queue(
                         [tenant, inode]() {
-                            return move_out_packet(*tenant, rask::tick(inode["priority"]),
-                                fostlib::coerce<fostlib::string>(inode["name"]));
+                            return move_out_packet(*tenant,
+                                rask::tick(inode["priority"]),
+                                fostlib::coerce<fostlib::string>(inode["name"]),
+                                inode);
                         });
                 } else {
                     fostlib::log::error(rask::c_fost_rask)

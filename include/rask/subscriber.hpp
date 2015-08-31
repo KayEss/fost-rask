@@ -26,7 +26,8 @@ namespace rask {
 
     /// The type of a function used to build inode packets
     using packet_builder = std::function<
-        connection::out(tenant &, const rask::tick &, const fostlib::string &)>;
+        connection::out(tenant &, const rask::tick &, const fostlib::string &,
+            const fostlib::json &)>;
     /// The type of the function that tells the subscription whether it needs to
     /// update or not
     using condition_function = std::function<bool(const fostlib::json &inode)>;

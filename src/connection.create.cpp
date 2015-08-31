@@ -20,7 +20,7 @@ namespace {
 
 rask::connection::out rask::create_directory_out(
     rask::tenant &tenant, const rask::tick &priority,
-    const fostlib::string &name
+    const fostlib::string &name, const fostlib::json &
 ) {
     connection::out packet(0x91);
     packet << priority << tenant.name() << name;
