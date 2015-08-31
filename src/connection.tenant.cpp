@@ -99,6 +99,16 @@ namespace {
                                 inode);
                         });
                 } else if ( filetype == rask::tenant::file_inode ) {
+                    fostlib::log::debug(rask::c_fost_rask)
+                        ("", "sending file_exists")
+                        ("inode", inode);
+                    socket->queue(
+                        [tenant, inode]() {
+                            return file_exists_out(*tenant,
+                                rask::tick(inode["priority"]),
+                                fostlib::coerce<fostlib::string>(inode["name"]),
+                                inode);
+                        });
                 } else if ( filetype == rask::tenant::move_inode_out ) {
                     fostlib::log::debug(rask::c_fost_rask)
                         ("", "sending move_out")
