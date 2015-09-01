@@ -13,7 +13,7 @@
 
 
 namespace {
-    fostlib::performance p_tenant_packet_received(
+    fostlib::performance p_file_exists_received(
         rask::c_fost_rask, "packets", "file_exists", "received");
 }
 
@@ -28,6 +28,7 @@ rask::connection::out rask::file_exists_out(
 
 
 void rask::file_exists(rask::connection::in &packet) {
+    ++p_file_exists_received;
     auto logger(fostlib::log::info(c_fost_rask));
     logger("", "File exists");
     auto priority(packet.read<tick>());
