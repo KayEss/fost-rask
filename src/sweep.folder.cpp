@@ -57,13 +57,13 @@ namespace {
                     } else if ( inode->status().type() == boost::filesystem::regular_file ) {
                         ++files;
                         auto filename = inode->path();
+                        auto task(++limit);
                         tenant->subscription->local_change(filename,
                             rask::tenant::file_inode, rask::file_exists_out,
-                            [&w, &subscriber = *tenant->subscription, filename, tenant, &limit](
+                            [&w, filename, tenant, task](
                                 const rask::tick &, fostlib::json inode
                             ) {
-                                auto task(++limit);
-                                rask::rehash_file(w, subscriber, filename, inode,
+                                rask::rehash_file(w, *tenant->subscription, filename, inode,
                                     [task] () {
                                         task->done(
                                             [](const auto &error, auto bytes) {
