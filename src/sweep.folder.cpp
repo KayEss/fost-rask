@@ -31,7 +31,7 @@ namespace {
             throw fostlib::exceptions::null(
                 "Trying to sweep a tenant that has no subscription");
         }
-        boost::asio::spawn(w.hashes.get_io_service(),
+        boost::asio::spawn(w.files.get_io_service(),
             [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
                 f5::eventfd::limiter limit(w.hashes.get_io_service(), yield, 2);
                 ++p_swept;
@@ -102,6 +102,9 @@ namespace {
 void rask::start_sweep(
     workers &w, std::shared_ptr<tenant> tenant, boost::filesystem::path folder
 ) {
-    sweep(w, tenant, folder);
+    w.files.get_io_service().post(
+        [&w, tenant, folder = std::move(folder)]() {
+            sweep(w, tenant, folder);
+        });
 }
 
