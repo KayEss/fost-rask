@@ -65,6 +65,10 @@ namespace {
                     });
             } else if ( filetype == rask::tenant::move_inode_out ) {
                 ++p_move_out;
+                fostlib::log::warning(rask::c_fost_rask)
+                    ("", "Found a move-out inode -- "
+                        "Not checking yet that it is really gone")
+                    ("inode", inode);
                 /// TODO: Make sure that the file really is still gone
             } else {
                 ++p_unknown;
