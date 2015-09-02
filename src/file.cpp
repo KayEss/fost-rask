@@ -10,6 +10,7 @@
 #include <rask/configuration.hpp>
 
 #include <fost/log>
+#include <fost/exception/unexpected_eof.hpp>
 
 #include <boost/filesystem.hpp>
 
@@ -71,8 +72,12 @@ void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
             syscall([&]() { return close(opened); });
             if ( alloc == -1 ) {
                 std::error_code error(alloc_err, std::system_category());
-                fostlib::log::error(c_fost_rask,"fallocate",  error.message().c_str());
-                throw fostlib::exceptions::not_implemented(
+                fostlib::log::error(c_fost_rask)
+                    ("", "rask::allocate_file - fallocate")
+                    ("filename", fn)
+                    ("size", size)
+                    ("error",  error.message().c_str());
+                throw fostlib::exceptions::unexpected_eof(
                     "Could not change allocate size of the hash database file",
                     error.message().c_str());
             }
@@ -131,6 +136,9 @@ rask::stat rask::file_stat(const boost::filesystem::path &filename) {
                 boost::posix_time::microseconds(status.st_mtim.tv_nsec / 1'000)
         };
     } else {
+        fostlib::log::error(c_fost_rask)
+            ("", "file_stat")
+            ("filename", filename);
         throw fostlib::exceptions::not_implemented(
             "Error when fetching stat for file");
     }
