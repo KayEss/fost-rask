@@ -80,14 +80,18 @@ namespace rask {
             fostlib::accessors<const fostlib::json &> inode_target;
 
             /// Record the priority that we want to check the change
-            /// against.
+            /// against. This becomes the default update priority.
             change &compare_priority(const tick &);
-            /// Record no priority for the change
+            /// Record no priority for the change. If we wish to not
+            /// update the priroty value this must be set after the
+            /// `compare_prority`.
             change &record_priority(fostlib::t_null);
 
             /// A post commit hook is run after the database transaction
             /// has completed whether or not there was an update
             change &post_commit(std::function<void(change&)>);
+            /// This hook is executed only when the database was updated
+            change &post_update(std::function<void(change &)>);
 
             /// The final step is to execute the change once we have
             /// fully configured its behaviour.
@@ -100,6 +104,13 @@ namespace rask {
         change operator () (
             const boost::filesystem::path &location,
             const fostlib::json &target_inode_type);
+        /// Construct a change which takes a fostlib::string to the
+        /// tenant relative path. This is what we get when we pull a
+        /// filename off a network connection
+        change operator () (
+            const fostlib::string &relpath,
+            const fostlib::json &target_inode_type);
+
         /// Write details about something observed on this file system. After
         /// recording in the database it will build a packet and broadcast it to
         /// the other connected nodes
