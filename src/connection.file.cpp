@@ -16,6 +16,8 @@
 namespace {
     fostlib::performance p_file_exists_received(
         rask::c_fost_rask, "packets", "file_exists", "received");
+    fostlib::performance p_file_exists_written(
+        rask::c_fost_rask, "packets", "file_exists", "written");
 
     const fostlib::jcursor jc_priority("priority");
 }
@@ -24,6 +26,7 @@ namespace {
 rask::connection::out rask::file_exists_out(
     tenant &t, const tick &p, const fostlib::string &n, const fostlib::json &
 ) {
+    ++p_file_exists_written;
     connection::out packet(0x90);
     packet << p << t.name() << n;
     return std::move(packet);
