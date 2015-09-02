@@ -54,7 +54,16 @@ fostlib::string rask::relative_path(
 
 
 void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
-    if ( not boost::filesystem::exists(fn) ) {
+    if ( boost::filesystem::exists(fn) ) {
+        boost::filesystem::resize_file(fn, size);
+    } else {
+        boost::filesystem::create_directories(fn.parent_path());
+        if ( size == 0 ) {
+            /// We can't use the fallocate system call for a zero
+            /// byte file.
+            fostlib::utf::save_file(fn, fostlib::string());
+            return;
+        }
         // Resize the file, probably overkill on the complexity front
         int opened = syscall([&]() {
                 const int flags = O_RDWR | O_CREAT | O_CLOEXEC | O_NOFOLLOW;
@@ -87,8 +96,6 @@ void rask::allocate_file(const boost::filesystem::path &fn, std::size_t size) {
             throw fostlib::exceptions::not_implemented(
                 "Bad file descriptor for hash database file", error.message().c_str());
         }
-    } else {
-        boost::filesystem::resize_file(fn, size);
     }
 }
 
