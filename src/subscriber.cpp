@@ -7,10 +7,10 @@
 
 
 #include "file.hpp"
+#include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/configuration.hpp>
 #include <rask/connection.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 

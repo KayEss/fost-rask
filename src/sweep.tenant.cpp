@@ -6,11 +6,11 @@
 */
 
 
+#include "subscriber.hpp"
 #include "sweep.folder.hpp"
 #include "sweep.inodes.hpp"
 #include "sweep.tenant.hpp"
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/log>

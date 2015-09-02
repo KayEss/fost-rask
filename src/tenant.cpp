@@ -6,13 +6,13 @@
 */
 
 
+#include "subscriber.hpp"
 #include "sweep.tenant.hpp"
 #include "hash.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/clock.hpp>
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <beanbag/beanbag>

@@ -7,10 +7,10 @@
 
 
 #include "hash.hpp"
+#include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <f5/threading/set.hpp>

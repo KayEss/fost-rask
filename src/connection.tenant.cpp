@@ -7,10 +7,10 @@
 
 
 #include "peer.hpp"
+#include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/connection.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 

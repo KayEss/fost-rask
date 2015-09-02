@@ -9,10 +9,10 @@
 #include "file.hpp"
 #include "hash.hpp"
 #include "notification.hpp"
+#include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/sweep.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>

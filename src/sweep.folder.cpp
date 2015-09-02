@@ -7,9 +7,9 @@
 
 
 #include "hash.hpp"
+#include "subscriber.hpp"
 #include "sweep.folder.hpp"
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <f5/threading/eventfd.hpp>

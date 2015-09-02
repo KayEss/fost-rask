@@ -6,9 +6,9 @@
 */
 
 
+#include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/configuration.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
 #include <fost/log>

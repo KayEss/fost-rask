@@ -7,8 +7,8 @@
 
 
 #include "file.hpp"
+#include "subscriber.hpp"
 #include <rask/connection.hpp>
-#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/counter>
