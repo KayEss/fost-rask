@@ -56,6 +56,50 @@ namespace rask {
         /// The tenant beanbag with file system information
         beanbag::jsondb_ptr beanbag() const;
 
+        /// Used to configure the behaviour of a change. Different sorts
+        /// of changes coming from different places can build an instance
+        /// of this that handles the differences from the base behaviour
+        class change {
+            friend class subscriber;
+            /// The subscription that this change deals with
+            subscriber &m_sub;
+            /// Construct the change
+            change(
+                subscriber &,
+                const boost::filesystem::path &,
+                const fostlib::json &);
+        public:
+            /// Allow access to the subscriber
+            subscriber &subscription() {
+                return m_sub;
+            }
+
+            /// The file path on this server
+            fostlib::accessors<const boost::filesystem::path> location;
+            /// The target inode type
+            fostlib::accessors<const fostlib::json &> inode_target;
+
+            /// Record the priority that we want to check the change
+            /// against.
+            change &compare_priority(const tick &);
+            /// Record no priority for the change
+            change &record_priority(fostlib::t_null);
+
+            /// A post commit hook is run after the database transaction
+            /// has completed whether or not there was an update
+            change &post_commit(std::function<void(change&)>);
+
+            /// The final step is to execute the change once we have
+            /// fully configured its behaviour.
+            void execute();
+        };
+        /// Construct an initial change which attempts to make sure that
+        /// the target inode type is met. The file location is relative to the
+        /// current path (i.e. it can be used at any time to as a path to
+        /// examine the actual disk content)
+        change operator () (
+            const boost::filesystem::path &location,
+            const fostlib::json &target_inode_type);
         /// Write details about something observed on this file system. After
         /// recording in the database it will build a packet and broadcast it to
         /// the other connected nodes

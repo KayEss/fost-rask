@@ -77,21 +77,17 @@ void rask::file_exists(rask::connection::in &packet) {
             [tenant, name = std::move(name), priority, size]() {
                 auto location = tenant->subscription->local_path() /
                     fostlib::coerce<boost::filesystem::path>(name);
-                tenant->subscription->remote_change(
-                    location,
-                    tenant::file_inode,
-                    priority,
-                    [](const rask::tick &, fostlib::json inode) {
-                        jc_priority.del_key(inode);
-                        return inode;
-                    });
-                /// TODO The timing is all wrong here. We need to do the file
-                /// allocation after we have recorded the change into the
-                /// database
-                if ( !size.isnull() ) {
-                    allocate_file(location,
-                        fostlib::coerce<std::size_t>(size.value()));
-                }
+                (*tenant->subscription)(location, tenant::file_inode)
+                    .compare_priority(priority)
+                    .record_priority(fostlib::null)
+                    .post_commit(
+                        [size](subscriber::change&c) {
+                            if ( !size.isnull() ) {
+                                allocate_file(c.location(),
+                                    fostlib::coerce<std::size_t>(size.value()));
+                            }
+                        })
+                    .execute();
             });
     }
 }
