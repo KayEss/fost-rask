@@ -6,6 +6,7 @@
 */
 
 
+#include "file.hpp"
 #include <rask/connection.hpp>
 #include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
@@ -84,6 +85,10 @@ void rask::file_exists(rask::connection::in &packet) {
                         jc_priority.del_key(inode);
                         return inode;
                     });
+                if ( !size.isnull() ) {
+                    allocate_file(location,
+                        fostlib::coerce<std::size_t>(size.value()));
+                }
             });
     }
 }
