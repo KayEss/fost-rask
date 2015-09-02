@@ -24,11 +24,25 @@ namespace {
 
 
 rask::connection::out rask::file_exists_out(
-    tenant &t, const tick &p, const fostlib::string &n, const fostlib::json &
+    tenant &t, const tick &p, const fostlib::string &n, const fostlib::json &inode
 ) {
     ++p_file_exists_written;
     connection::out packet(0x90);
     packet << p << t.name() << n;
+    if ( !inode["stat"].isnull() ) {
+        /// TODO: Make sure that there's a test that this will throw if we
+        /// overflow 63 bits of file size, although in pracitice we can
+        /// reduce the maximum file size we accept in the JSON further
+        /// as it'll likely be some years before we see files larger than
+        /// somewhere around the mid-40s of bits (the TB range).
+        packet << fostlib::coerce<uint64_t>(inode["stat"]["size"]["bytes"]);
+        if ( !inode["hash"].isnull() && !inode["hash"]["inode"].isnull() ) {
+            auto hash64 = fostlib::base64_string(
+                fostlib::coerce<fostlib::string>(inode["hash"]["inode"]).c_str());
+            auto hash = fostlib::coerce<std::vector<unsigned char>>(hash64);
+            packet << hash;
+        }
+    }
     return std::move(packet);
 }
 
@@ -45,9 +59,21 @@ void rask::file_exists(rask::connection::in &packet) {
     logger
         ("tenant", tenant->name())
         ("name", name);
+    fostlib::nullable<uint64_t> size;
+    std::vector<unsigned char> hash;
+    fostlib::base64_string hash64;
+    if ( !packet.empty() ) {
+        size = packet.read<uint64_t>() & 0x7FFF'FFFF'FFFF'FFFF;
+        logger("size", "bytes", size);
+        if ( !packet.empty() ) {
+            hash = packet.read(32);
+            hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+            logger("hash", hash64);
+        }
+    }
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
-            [tenant, name = std::move(name), priority]() {
+            [tenant, name = std::move(name), priority, size]() {
                 auto location = tenant->subscription->local_path() /
                     fostlib::coerce<boost::filesystem::path>(name);
                 tenant->subscription->remote_change(
