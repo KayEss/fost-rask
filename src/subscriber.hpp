@@ -96,6 +96,10 @@ namespace rask {
             change &post_commit(std::function<void(change&)>);
             /// This hook is executed only when the database was updated
             change &post_update(std::function<void(change &)>);
+            /// Broadcast a packet when the change has been recorded
+            change &broadcast(std::function<
+                connection::out(rask::tenant &, const rask::tick &,
+                        const fostlib::string &, const fostlib::json &)>);
 
             /// Mark the job as cancelled. This stops logging of an error
             /// and also causes any future call to `execute` to error

@@ -15,9 +15,13 @@ void rask::inode_exists(
     workers &w, subscriber &sub, const boost::filesystem::path &path
 ) {
     if ( boost::filesystem::is_directory(path) ) {
-        sub.local_change(path, tenant::directory_inode, create_directory_out);
+        sub(path, tenant::directory_inode)
+            .broadcast(create_directory_out)
+            .execute();
     } else if ( boost::filesystem::is_regular_file(path) ) {
-        sub.local_change(path, tenant::file_inode, file_exists_out);
+        sub(path, tenant::file_inode)
+            .broadcast(file_exists_out)
+            .execute();
     } else
         throw fostlib::exceptions::not_implemented(
             "Cannot set that an inode exists when it isn't a file or directory",
