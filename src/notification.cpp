@@ -88,7 +88,7 @@ namespace {
                 } else {
                     ++p_in_create_other;
                 }
-            } else if ( event.mask & IN_MODIFY ) {
+            } else if ( event.mask & (IN_MODIFY | IN_CLOSE_WRITE) ) {
                 ++p_in_modify;
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
