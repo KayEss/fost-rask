@@ -82,7 +82,7 @@ namespace {
                     ++p_in_create_dir;
                     w.files.get_io_service().post(
                         [this, filename, tenant]() {
-                            (*tenant->subscription)(filename, rask::tenant::directory_inode)
+                            tenant->subscription->directory(filename)
                                 .broadcast(rask::create_directory_out)
                                 .post_update(
                                     [this, tenant](auto &c) {
@@ -94,7 +94,7 @@ namespace {
                     ++p_in_create_file;
                     w.files.get_io_service().post(
                         [this, filename, tenant]() {
-                            (*tenant->subscription)(filename, rask::tenant::file_inode)
+                            tenant->subscription->file(filename)
                                 .broadcast(rask::file_exists_out)
                                 .post_update(
                                     [this](auto &c, auto inode) {

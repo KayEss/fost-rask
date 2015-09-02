@@ -43,7 +43,7 @@ void rask::create_directory(rask::connection::in &packet) {
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority]() {
-                (*tenant->subscription)(name, tenant::directory_inode)
+                tenant->subscription->directory(name)
                     .compare_priority(priority)
                     .post_update(
                         [](subscriber::change &c) {

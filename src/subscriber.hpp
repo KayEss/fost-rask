@@ -120,15 +120,15 @@ namespace rask {
         /// the target inode type is met. The file location is relative to the
         /// current path (i.e. it can be used at any time to as a path to
         /// examine the actual disk content)
-        change operator () (
-            const boost::filesystem::path &location,
-            const fostlib::json &target_inode_type);
+        change file(const boost::filesystem::path &location);
+        change directory(const boost::filesystem::path &location);
+        change move_out(const boost::filesystem::path &location);
         /// Construct a change which takes a fostlib::string to the
         /// tenant relative path. This is what we get when we pull a
         /// filename off a network connection
-        change operator () (
-            const fostlib::string &relpath,
-            const fostlib::json &target_inode_type);
+        change file(const fostlib::string &relpath);
+        change directory(const fostlib::string &relpath);
+        change move_out(const fostlib::string &relpath);
 
         /// Write details about something observed on this file system. After
         /// recording in the database it will build a packet and broadcast it to

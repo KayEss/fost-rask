@@ -36,7 +36,7 @@ void rask::move_out(rask::connection::in &packet) {
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority]() {
-                (*tenant->subscription)(name, tenant::move_inode_out)
+                tenant->subscription->move_out(name)
                     .compare_priority(priority)
                     .post_update(
                         [](auto &c) {

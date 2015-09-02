@@ -75,7 +75,7 @@ void rask::file_exists(rask::connection::in &packet) {
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority, size]() {
-                (*tenant->subscription)(name, tenant::file_inode)
+                tenant->subscription->file(name)
                     .compare_priority(priority)
                     .record_priority(fostlib::null)
                     .post_commit(

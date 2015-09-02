@@ -58,11 +58,12 @@ beanbag::jsondb_ptr rask::subscriber::beanbag() const {
 }
 
 
-rask::subscriber::change rask::subscriber::operator () (
-    const fostlib::string &relpath, const fostlib::json &target
+rask::subscriber::change rask::subscriber::directory(
+    const fostlib::string &relpath
 ) {
     return change(*this, local_path() /
-        fostlib::coerce<boost::filesystem::path>(relpath), target);
+        fostlib::coerce<boost::filesystem::path>(relpath),
+        tenant::directory_inode);
 }
 
 

@@ -15,11 +15,11 @@ void rask::inode_exists(
     workers &w, subscriber &sub, const boost::filesystem::path &path
 ) {
     if ( boost::filesystem::is_directory(path) ) {
-        sub(path, tenant::directory_inode)
+        sub.directory(path)
             .broadcast(create_directory_out)
             .execute();
     } else if ( boost::filesystem::is_regular_file(path) ) {
-        sub(path, tenant::file_inode)
+        sub.file(path)
             .broadcast(file_exists_out)
             .execute();
     } else
