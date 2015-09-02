@@ -48,7 +48,8 @@ void rask::create_directory(rask::connection::in &packet) {
                     .post_update(
                         [](subscriber::change &c) {
                             boost::filesystem::create_directories(c.location());
-                        });
+                        })
+                    .execute();
             });
     }
 }

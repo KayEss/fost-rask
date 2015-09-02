@@ -69,6 +69,10 @@ namespace rask {
                 const boost::filesystem::path &,
                 const fostlib::json &);
         public:
+            /// Show an error in the log stream if the change was neither
+            /// cancelled or executed
+            ~change();
+
             /// Allow access to the subscriber
             subscriber &subscription() {
                 return m_sub;
@@ -93,6 +97,10 @@ namespace rask {
             /// This hook is executed only when the database was updated
             change &post_update(std::function<void(change &)>);
 
+            /// Mark the job as cancelled. This stops logging of an error
+            /// and also causes any future call to `execute` to error
+            /// as well
+            void cancel();
             /// The final step is to execute the change once we have
             /// fully configured its behaviour.
             void execute();
