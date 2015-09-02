@@ -8,6 +8,7 @@
 
 #include "hash.hpp"
 #include "notification.hpp"
+#include "subscriber.hpp"
 #include "sweep.folder.hpp"
 #include <rask/tenant.hpp>
 #include <rask/workers.hpp>
@@ -80,23 +81,23 @@ namespace {
                 if ( is_directory(filename) ) {
                     ++p_in_create_dir;
                     w.files.get_io_service().post(
-                        [this, &w, filename, tenant]() {
-                            (*tenant->subscription)(filename, tenant::directory_node)
-                                .broadcast(create_directory_out)
+                        [this, filename, tenant]() {
+                            (*tenant->subscription)(filename, rask::tenant::directory_inode)
+                                .broadcast(rask::create_directory_out)
                                 .post_update(
-                                    [&w](auto &c) {
-                                        rask::start_sweep(w, tenant(), c.location());
+                                    [this, tenant](auto &c) {
+                                        rask::start_sweep(w, tenant, c.location());
                                     })
                                 .execute();
                         });
                 } else if ( is_regular_file(filename) ) {
                     ++p_in_create_file;
                     w.files.get_io_service().post(
-                        [this, &w, filename, tenant]() {
-                            (*tenant->subscription)(filename, tenant::file_inode)
-                                .broadcast(file_exists_out)
+                        [this, filename, tenant]() {
+                            (*tenant->subscription)(filename, rask::tenant::file_inode)
+                                .broadcast(rask::file_exists_out)
                                 .post_update(
-                                    [](auto &c, auto &inode) {
+                                    [this](auto &c, auto inode) {
                                         rask::rehash_file(w, c.subscription(), c.location(),
                                             inode, [](){});
                                     })
