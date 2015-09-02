@@ -248,7 +248,6 @@ rask::file::hashdb::hashdb(
     blocks_total(std::max(1ul, (bytes + file_hash_block_size - 1) / file_hash_block_size)),
     m_level(level)
 {
-    boost::filesystem::create_directories(db_file.parent_path());
     const std::size_t size = blocks_total * 32;
     allocate_file(db_file, size);
     file.open(db_file, boost::iostreams::mapped_file_base::readwrite, size);
