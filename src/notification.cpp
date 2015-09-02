@@ -7,7 +7,6 @@
 
 
 #include "hash.hpp"
-#include "notification.hpp"
 #include "subscriber.hpp"
 #include "sweep.folder.hpp"
 #include <rask/tenant.hpp>
@@ -110,13 +109,16 @@ namespace {
                 ++p_in_modify;
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
-                        rask::inode_changed(w, *tenant->subscription, filename);
+                        /// TODO: It's not yet clear what the proper thing to
+                        /// do here is in all circumstances
                     });
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
-                        rask::rm_inode(w, *tenant, filename);
+                        tenant->subscription->directory(filename)
+                            .broadcast(rask::move_out_packet)
+                            .execute();
                     });
             }
         }

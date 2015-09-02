@@ -8,7 +8,6 @@
 
 #include "file.hpp"
 #include "hash.hpp"
-#include "notification.hpp"
 #include "subscriber.hpp"
 #include "tree.hpp"
 #include <rask/base32.hpp>
@@ -107,13 +106,11 @@ void rask::rehash_file(
                     "this could well be the wrong thing to do")
                 ("tenant", sub.tenant.name())
                 ("inode", inode);
-            rm_inode(w, sub.tenant, filename);
         }
         callback();
         return;
     } else if ( !boost::filesystem::is_regular_file(filename) ) {
         ++p_skipped_other;
-        rm_inode(w, sub.tenant, filename);
         callback();
         fostlib::log::debug(c_fost_rask)
             ("", "Not hashing as the file is not a regular file")
