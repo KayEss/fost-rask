@@ -95,7 +95,14 @@ namespace rask {
             /// has completed whether or not there was an update
             change &post_commit(std::function<void(change&)>);
             /// This hook is executed only when the database was updated
-            change &post_update(std::function<void(change &)>);
+            change &post_update(std::function<void(change &)> f) {
+                return post_update(
+                    [f](auto &c, auto) {
+                        f(c);
+                    });
+            }
+            /// This hook is also provided with the new JSON for the inode
+            change &post_update(std::function<void(change &, fostlib::json)>);
             /// Broadcast a packet when the change has been recorded
             change &broadcast(std::function<
                 connection::out(rask::tenant &, const rask::tick &,
