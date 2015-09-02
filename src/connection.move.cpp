@@ -36,17 +36,20 @@ void rask::move_out(rask::connection::in &packet) {
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority]() {
-                auto location = tenant->subscription->local_path() /
-                    fostlib::coerce<boost::filesystem::path>(name);
-                tenant->subscription->remote_change(location, tenant::move_inode_out, priority);
-                auto removed = boost::filesystem::remove_all(location);
-                if ( removed ) {
-                    fostlib::log::warning(c_fost_rask)
-                        ("", "Deleting files")
-                        ("tenant", tenant->name())
-                        ("root", location)
-                        ("count", removed);
-                }
+                (*tenant->subscription)(name, tenant::move_inode_out)
+                    .compare_priority(priority)
+                    .post_update(
+                        [](auto &c) {
+                            auto removed = boost::filesystem::remove_all(c.location());
+                            if ( removed ) {
+                                fostlib::log::warning(c_fost_rask)
+                                    ("", "Deleting files")
+                                    ("tenant", c.subscription().tenant.name())
+                                    ("root", c.location())
+                                    ("count", removed);
+                            }
+                        })
+                    .execute();
             });
     }
 }
