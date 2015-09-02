@@ -58,6 +58,14 @@ beanbag::jsondb_ptr rask::subscriber::beanbag() const {
 }
 
 
+rask::subscriber::change rask::subscriber::operator () (
+    const fostlib::string &relpath, const fostlib::json &target
+) {
+    return change(*this, local_path() /
+        fostlib::coerce<boost::filesystem::path>(relpath), target);
+}
+
+
 void rask::subscriber::local_change(
     const boost::filesystem::path &location,
     const fostlib::json &inode_type,
@@ -187,3 +195,7 @@ void rask::subscriber::remote_change(
         });
 }
 
+
+/*
+    rask::subscriber::change
+*/

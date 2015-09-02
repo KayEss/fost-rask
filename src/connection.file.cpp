@@ -75,9 +75,7 @@ void rask::file_exists(rask::connection::in &packet) {
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
             [tenant, name = std::move(name), priority, size]() {
-                auto location = tenant->subscription->local_path() /
-                    fostlib::coerce<boost::filesystem::path>(name);
-                (*tenant->subscription)(location, tenant::file_inode)
+                (*tenant->subscription)(name, tenant::file_inode)
                     .compare_priority(priority)
                     .record_priority(fostlib::null)
                     .post_commit(
