@@ -24,3 +24,15 @@ void rask::inode_exists(
             fostlib::coerce<fostlib::string>(path));
 }
 
+
+void rask::inode_changed(
+    workers &w, subscriber &sub, const boost::filesystem::path &path
+) {
+    if ( boost::filesystem::is_regular_file(path) ) {
+        /// TODO We need to kick off a change into the database and
+        /// post process other things
+    } else
+        throw fostlib::exceptions::not_implemented(
+            "Cannot react to an inode change when it isn't a file",
+            fostlib::coerce<fostlib::string>(path));
+}

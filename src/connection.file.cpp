@@ -85,6 +85,9 @@ void rask::file_exists(rask::connection::in &packet) {
                         jc_priority.del_key(inode);
                         return inode;
                     });
+                /// TODO The timing is all wrong here. We need to do the file
+                /// allocation after we have recorded the change into the
+                /// database
                 if ( !size.isnull() ) {
                     allocate_file(location,
                         fostlib::coerce<std::size_t>(size.value()));

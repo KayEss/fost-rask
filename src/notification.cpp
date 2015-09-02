@@ -85,6 +85,10 @@ namespace {
                         });
                 } else if ( is_regular_file(filename) ) {
                     ++p_in_create_file;
+                    w.files.get_io_service().post(
+                        [this, filename, tenant]() {
+                            rask::inode_exists(w, *tenant->subscription, filename);
+                        });
                 } else {
                     ++p_in_create_other;
                 }
@@ -92,7 +96,7 @@ namespace {
                 ++p_in_modify;
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
-                        rask::rehash_file(w, *tenant, filename);
+                        rask::inode_changed(w, *tenant->subscription, filename);
                     });
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
