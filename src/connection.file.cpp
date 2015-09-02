@@ -7,6 +7,7 @@
 
 
 #include <rask/connection.hpp>
+#include <rask/subscriber.hpp>
 #include <rask/tenant.hpp>
 
 #include <fost/counter>
@@ -15,6 +16,8 @@
 namespace {
     fostlib::performance p_file_exists_received(
         rask::c_fost_rask, "packets", "file_exists", "received");
+
+    const fostlib::jcursor jc_priority("priority");
 }
 
 
@@ -40,6 +43,19 @@ void rask::file_exists(rask::connection::in &packet) {
         ("tenant", tenant->name())
         ("name", name);
     if ( tenant->subscription ) {
+        packet.socket->workers.files.get_io_service().post(
+            [tenant, name = std::move(name), priority]() {
+                auto location = tenant->subscription->local_path() /
+                    fostlib::coerce<boost::filesystem::path>(name);
+                tenant->subscription->remote_change(
+                    location,
+                    tenant::file_inode,
+                    priority,
+                    [](const rask::tick &, fostlib::json inode) {
+                        jc_priority.del_key(inode);
+                        return inode;
+                    });
+            });
     }
 }
 

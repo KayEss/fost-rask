@@ -94,14 +94,21 @@ void rask::rehash_file(
 ) {
     if ( !boost::filesystem::exists(filename) ) {
         ++p_skipped_gone;
-        // TODO: Adding a move-out inode to the database is probably
-        // the wrong thing to do in many circumstances
-        fostlib::log::warning(c_fost_rask)
-            ("", "Not hashing as the file is gone from the file system -- "
-                "this could well be the wrong thing to do")
-            ("tenant", sub.tenant.name())
-            ("inode", inode);
-        rm_inode(w, sub.tenant, filename);
+        if ( inode["priority"].isnull() ) {
+            fostlib::log::debug(c_fost_rask)
+                ("", "Not hashing as the file hasn't been recieved yet")
+                ("tenant", sub.tenant.name())
+                ("inode", inode);
+        } else {
+            // TODO: Adding a move-out inode to the database is probably
+            // the wrong thing to do in many circumstances
+            fostlib::log::warning(c_fost_rask)
+                ("", "Not hashing as the file is gone from the file system -- "
+                    "this could well be the wrong thing to do")
+                ("tenant", sub.tenant.name())
+                ("inode", inode);
+            rm_inode(w, sub.tenant, filename);
+        }
         callback();
         return;
     } else if ( !boost::filesystem::is_regular_file(filename) ) {

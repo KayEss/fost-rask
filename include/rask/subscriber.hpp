@@ -88,8 +88,11 @@ namespace rask {
         /// Record a change that has come from another server
         void remote_change(
             const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            const tick &priority);
+            const fostlib::json &inode_type, const tick &);
+        void remote_change(
+            const boost::filesystem::path &location,
+            const fostlib::json &inode_type, const tick &,
+            inode_function);
 
         /// The inodes
         const tree &inodes() const {
