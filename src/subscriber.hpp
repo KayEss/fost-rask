@@ -63,9 +63,14 @@ namespace rask {
             friend class subscriber;
             /// The subscription that this change deals with
             subscriber &m_sub;
+            /// The that determines if the db entry is up to date or not
+            std::function<bool(const fostlib::json &)> m_pred;
+            /// Add in the new priority for the new inode data
+            std::function<fostlib::json(fostlib::json, const fostlib::json&)> m_priority;
             /// Construct the change
             change(
                 subscriber &,
+                const fostlib::string &,
                 const boost::filesystem::path &,
                 const fostlib::json &);
         public:
@@ -78,13 +83,31 @@ namespace rask {
                 return m_sub;
             }
 
+            /// The tenant relative path
+            fostlib::accessors<const fostlib::string> relpath;
+            /// The hash for the file name
+            fostlib::accessors<const fostlib::string> nhash;
             /// The file path on this server
             fostlib::accessors<const boost::filesystem::path> location;
             /// The target inode type
             fostlib::accessors<const fostlib::json &> inode_target;
+            /// The path into the database that this inode data will live
+            /// at.
+            fostlib::accessors<const fostlib::jcursor> dbpath;
+
+            /// Set extra predicate conditions that must also be true
+            /// in order that we record a new node in the database.
+            /// Predicates are chained together through a logical `or` so
+            /// that the first one that returns `true` will cause the
+            /// database to be updated. The `inode_target` is always
+            /// checked and a mismatch there will always trigger a
+            /// database update no matter what other predicates are
+            /// also given.
+            change &predicate(std::function<bool(const fostlib::json &)>);
 
             /// Record the priority that we want to check the change
-            /// against. This becomes the default update priority.
+            /// against. This becomes the default update priority and is
+            /// registered as a predicate as above.
             change &compare_priority(const tick &);
             /// Record no priority for the change. If we wish to not
             /// update the priroty value this must be set after the

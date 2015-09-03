@@ -61,9 +61,37 @@ beanbag::jsondb_ptr rask::subscriber::beanbag() const {
 rask::subscriber::change rask::subscriber::directory(
     const fostlib::string &relpath
 ) {
-    return change(*this, local_path() /
-        fostlib::coerce<boost::filesystem::path>(relpath),
+    return change(*this, relpath,
+        local_path() / fostlib::coerce<boost::filesystem::path>(relpath),
         tenant::directory_inode);
+}
+rask::subscriber::change rask::subscriber::directory(
+    const boost::filesystem::path &path
+) {
+    return change(*this, relative_path(root, path), path, tenant::directory_inode);
+}
+
+
+rask::subscriber::change rask::subscriber::file(
+    const fostlib::string &relpath
+) {
+    return change(*this, relpath,
+        local_path() / fostlib::coerce<boost::filesystem::path>(relpath),
+        tenant::file_inode);
+}
+rask::subscriber::change rask::subscriber::file(
+    const boost::filesystem::path &path
+) {
+    return change(*this, relative_path(root, path), path, tenant::file_inode);
+}
+
+
+rask::subscriber::change rask::subscriber::move_out(
+    const fostlib::string &relpath
+) {
+    return change(*this, relpath,
+        local_path() / fostlib::coerce<boost::filesystem::path>(relpath),
+        tenant::move_inode_out);
 }
 
 
@@ -200,3 +228,70 @@ void rask::subscriber::local_change(
 /*
     rask::subscriber::change
 */
+
+
+rask::subscriber::change::change(
+    subscriber &s, const fostlib::string &rp, const boost::filesystem::path &p,
+    const fostlib::json &t
+) :
+    m_sub(s),
+    m_pred([this](const fostlib::json &j) {
+        return j["filetype"] != inode_target();
+    }),
+    m_priority([](fostlib::json n, const fostlib::json &) {
+        fostlib::insert(n, "priority", tick::next());
+        return n;
+    }),
+    relpath(rp), nhash(name_hash(relpath())),
+    location(p),
+    inode_target(t),
+    dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(location()))
+{
+    if ( inode_target() == tenant::file_inode ) {
+        m_priority = [](fostlib::json n, const fostlib::json &o) {
+            if ( o.has_key("priority") )
+                fostlib::insert(n, "priority", tick::next());
+            return n;
+        };
+    }
+}
+
+
+rask::subscriber::change::~change() = default;
+
+
+rask::subscriber::change &rask::subscriber::change::record_priority(
+    fostlib::t_null
+) {
+    m_priority = [](fostlib::json n, const fostlib::json &) { return n; };
+    return *this;
+}
+
+
+void rask::subscriber::change::cancel() {
+}
+void rask::subscriber::change::execute() {
+    m_sub.inodes().add(dbpath(), relpath(), nhash(),
+        [this](workers &w, fostlib::json &data, const fostlib::json &dbconf) {
+            auto logger(fostlib::log::debug(c_fost_rask));
+            logger("", "rask::subscriber::change::execute()")
+                ("dbpath", dbpath());
+            const bool entry = data.has_key(dbpath());
+            if ( entry ) {
+                logger("node", "old", data[dbpath()]);
+            }
+            const fostlib::json old = entry ? data[dbpath()] : fostlib::json();
+            if ( !entry || m_pred(old) ) {
+                logger("predicate", true);
+                fostlib::json node;
+                fostlib::insert(node, "filetype", inode_target());
+                fostlib::insert(node, "name", relpath());
+                fostlib::insert(node, "hash", "name", nhash());
+                node = m_priority(node, old);
+                logger("node", "new", node);
+            } else {
+                logger("predicate", false);
+            }
+        });
+}
+
