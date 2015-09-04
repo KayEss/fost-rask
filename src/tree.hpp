@@ -82,7 +82,7 @@ namespace rask {
         /// contains the path requested
         void add(const fostlib::jcursor &dbpath,
             const fostlib::string &path, const name_hash_type &hash,
-            manipulator_fn);
+            manipulator_fn, std::function<void(void)> post_commit = [](){});
 
         class const_iterator {
             friend class rask::tree;

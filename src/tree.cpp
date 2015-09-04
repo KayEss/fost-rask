@@ -63,30 +63,36 @@ namespace {
         std::size_t layer, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath,
         const rask::name_hash_type &hash,
-        rask::tree::manipulator_fn manipulator);
+        rask::tree::manipulator_fn manipulator,
+        std::function<void(void)> post);
 
     void add_leaf(rask::workers &workers,
         std::size_t layer, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath,
         const rask::name_hash_type &hash,
-        rask::tree::manipulator_fn manipulator
+        rask::tree::manipulator_fn manipulator,
+        std::function<void(void)> post
     ) {
+        bool deferred = false;
         meta.transformation(
-            [&workers, &tree, manipulator, dbpath, layer, hash](fostlib::json &data) {
+            [&workers, &tree, manipulator, post, dbpath, layer, hash, &deferred](
+                fostlib::json &data
+            ) {
                 const bool recurse = rask::partitioned(data);
                 try {
                     if ( recurse ) {
                         ++p_deferred;
+                        deferred = true;
                         /// If we find that we need to recurse down, then we are almost
                         /// certainly recursing up at the same time due to child inode
                         /// rehashing. Therefore we'll allow this commit to complete
                         /// and recurse down in a new job so we aren't holding the lock
                         /// for any longer than we need to.
                         workers.files.get_io_service().post(
-                            [&workers, &tree, manipulator, dbpath, layer, hash]() {
+                            [&workers, &tree, manipulator, post, dbpath, layer, hash]() {
                                 beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
                                 add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                                    tree, dbpath, hash, manipulator);
+                                    tree, dbpath, hash, manipulator, post);
                             });
                     } else {
                         if ( !data.has_key(dbpath) ) {
@@ -142,19 +148,21 @@ namespace {
                 }
             });
         meta.commit();
+        if ( !deferred ) post();
     }
     void add_recurse(rask::workers &workers,
         std::size_t layer, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath,
         const rask::name_hash_type &hash,
-        rask::tree::manipulator_fn manipulator
+        rask::tree::manipulator_fn manipulator,
+        std::function<void(void)> post
     ) {
         const bool recurse = rask::partitioned(meta);
         if ( recurse ) {
             try {
                 beanbag::jsondb_ptr pdb(tree.layer_dbp(layer + 1, hash));
                 add_recurse(workers, layer + 1, fostlib::jsondb::local(*pdb),
-                    tree, dbpath, hash, manipulator);
+                    tree, dbpath, hash, manipulator, post);
             } catch ( fostlib::exceptions::exception &e ) {
                 fostlib::push_back(e.data(), "add", "stack", "add_recurse");
                 fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
@@ -166,7 +174,8 @@ namespace {
         } else {
             fostlib::json mdata(meta.data());
             try {
-                add_leaf(workers, layer, std::move(meta), tree, dbpath, hash, manipulator);
+                add_leaf(workers, layer, std::move(meta),
+                    tree, dbpath, hash, manipulator, post);
             } catch ( fostlib::exceptions::exception &e ) {
                 fostlib::push_back(e.data(), "add", "stack", "add_leaf");
                 fostlib::push_back(e.data(), "add", "layer", int64_t(layer));
@@ -181,11 +190,11 @@ namespace {
 void rask::tree::add(
     const fostlib::jcursor &dbpath,
     const fostlib::string &path, const name_hash_type &hash,
-    rask::tree::manipulator_fn m
+    rask::tree::manipulator_fn m, std::function<void(void)> post
 ) {
     auto dbp = root_dbp();
     fostlib::jsondb::local meta(*dbp);
-    add_recurse(workers, 0,  std::move(meta), *this, dbpath, hash, m);
+    add_recurse(workers, 0,  std::move(meta), *this, dbpath, hash, m, post);
 }
 
 
