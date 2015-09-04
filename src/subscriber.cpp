@@ -242,6 +242,7 @@ rask::subscriber::change::change(
         fostlib::insert(n, "priority", tick::next());
         return n;
     }),
+    m_broadcast([](auto &, const auto &, const auto &, const auto &) {}),
     relpath(rp), nhash(name_hash(relpath())),
     location(p),
     inode_target(t),
@@ -260,10 +261,69 @@ rask::subscriber::change::change(
 rask::subscriber::change::~change() = default;
 
 
+rask::subscriber::change &rask::subscriber::change::predicate(
+    std::function<bool(const fostlib::json &)> p
+) {
+    auto old_pred = m_pred;
+    m_pred = [old_pred, p](const fostlib::json &j) {
+        return old_pred(j) || p(j);
+    };
+    return *this;
+}
+
+
+rask::subscriber::change &rask::subscriber::change::compare_priority(
+    const tick &t
+) {
+    return predicate([t](const fostlib::json &j) {
+        return j["priority"].isnull() || rask::tick(j["priority"]) < t;
+    }).record_priority(t);
+}
+
+
 rask::subscriber::change &rask::subscriber::change::record_priority(
     fostlib::t_null
 ) {
     m_priority = [](fostlib::json n, const fostlib::json &) { return n; };
+    return *this;
+}
+rask::subscriber::change &rask::subscriber::change::record_priority(
+    const tick &t
+) {
+    m_priority = [t](fostlib::json n, const fostlib::json &) {
+        fostlib::insert(n, "priority", t);
+        return n;
+    };
+    return *this;
+}
+
+
+rask::subscriber::change &rask::subscriber::change::broadcast(
+    std::function<connection::out(rask::tenant &, const rask::tick &,
+        const fostlib::string &, const fostlib::json &)> b
+) {
+    m_broadcast = [b](
+            rask::tenant &t, const rask::tick &p,
+            const fostlib::string &i, const fostlib::json &j
+        ) {
+            rask::broadcast(b(t, p, i, j));
+        };
+    return *this;
+}
+
+
+rask::subscriber::change &rask::subscriber::change::post_commit(
+    std::function<void(change&)> f
+) {
+    m_post_commit.push_back(f);
+    return *this;
+}
+
+
+rask::subscriber::change &rask::subscriber::change::post_update(
+    std::function<void(change &, fostlib::json)> f
+) {
+    m_post_update.push_back(f);
     return *this;
 }
 
@@ -272,6 +332,12 @@ void rask::subscriber::change::cancel() {
 }
 void rask::subscriber::change::execute() {
     m_sub.inodes().add(dbpath(), relpath(), nhash(),
+        /**
+            Because of the way that `add` works this code is run inside of
+            the transaction. That means we can't assume that any other
+            jobs posted in here won't be started until after the commit
+            becomes visible.
+        */
         [this](workers &w, fostlib::json &data, const fostlib::json &dbconf) {
             auto logger(fostlib::log::debug(c_fost_rask));
             logger("", "rask::subscriber::change::execute()")

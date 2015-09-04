@@ -67,6 +67,15 @@ namespace rask {
             std::function<bool(const fostlib::json &)> m_pred;
             /// Add in the new priority for the new inode data
             std::function<fostlib::json(fostlib::json, const fostlib::json&)> m_priority;
+            /// Broadcast packet builder in case the database was updated
+            std::function<void(rask::tenant &, const rask::tick &,
+                const fostlib::string &, const fostlib::json &)> m_broadcast;
+            /// Functions to be run after the transaction is committed
+            std::vector<std::function<void(change &)>> m_post_commit;
+            /// Functions to be run in the case where the database was updated
+            /// and the transaction committed.
+            std::vector<std::function<void(change &, fostlib::json)>> m_post_update;
+
             /// Construct the change
             change(
                 subscriber &,
@@ -113,6 +122,8 @@ namespace rask {
             /// update the priroty value this must be set after the
             /// `compare_prority`.
             change &record_priority(fostlib::t_null);
+            /// Record the specified clock tick as the priority
+            change &record_priority(const tick &);
 
             /// A post commit hook is run after the database transaction
             /// has completed whether or not there was an update
