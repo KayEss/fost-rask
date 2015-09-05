@@ -338,7 +338,7 @@ void rask::subscriber::change::execute() {
             jobs posted in here won't be started until after the commit
             becomes visible.
         */
-        [this](workers &w, fostlib::json &data, const fostlib::json &dbconf) {
+        [](workers &w, fostlib::json &data, const fostlib::json &dbconf) {
             auto logger(fostlib::log::debug(c_fost_rask));
             logger("", "rask::subscriber::change::execute()")
                 ("dbpath", dbpath());
