@@ -248,7 +248,7 @@ struct rask::subscriber::change::impl {
     /// The tenant relative path
     fostlib::string relpath;
     /// The hash for the file name
-    fostlib::string nhash;
+    rask::name_hash_type nhash;
     /// The file path on this server
     boost::filesystem::path location;
     /// The target inode type
