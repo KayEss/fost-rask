@@ -60,22 +60,9 @@ namespace rask {
         /// of changes coming from different places can build an instance
         /// of this that handles the differences from the base behaviour
         class change {
+            struct impl;
+            std::shared_ptr<impl> pimpl;
             friend class subscriber;
-            /// The subscription that this change deals with
-            subscriber &m_sub;
-            /// The that determines if the db entry is up to date or not
-            std::function<bool(const fostlib::json &)> m_pred;
-            /// Add in the new priority for the new inode data
-            std::function<fostlib::json(fostlib::json, const fostlib::json&)> m_priority;
-            /// Broadcast packet builder in case the database was updated
-            std::function<void(rask::tenant &, const rask::tick &,
-                const fostlib::string &, const fostlib::json &)> m_broadcast;
-            /// Functions to be run after the transaction is committed
-            std::vector<std::function<void(change &)>> m_post_commit;
-            /// Functions to be run in the case where the database was updated
-            /// and the transaction committed.
-            std::vector<std::function<void(change &, fostlib::json)>> m_post_update;
-
             /// Construct the change
             change(
                 subscriber &,
@@ -88,21 +75,9 @@ namespace rask {
             ~change();
 
             /// Allow access to the subscriber
-            subscriber &subscription() {
-                return m_sub;
-            }
-
-            /// The tenant relative path
-            fostlib::accessors<const fostlib::string> relpath;
-            /// The hash for the file name
-            fostlib::accessors<const fostlib::string> nhash;
+            subscriber &subscription() const;
             /// The file path on this server
-            fostlib::accessors<const boost::filesystem::path> location;
-            /// The target inode type
-            fostlib::accessors<const fostlib::json &> inode_target;
-            /// The path into the database that this inode data will live
-            /// at.
-            fostlib::accessors<const fostlib::jcursor> dbpath;
+            const boost::filesystem::path &location() const;
 
             /// Set extra predicate conditions that must also be true
             /// in order that we record a new node in the database.

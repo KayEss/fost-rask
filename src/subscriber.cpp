@@ -230,42 +230,87 @@ void rask::subscriber::local_change(
 */
 
 
+struct rask::subscriber::change::impl {
+    /// The subscription that this change deals with
+    subscriber &sub;
+    /// The that determines if the db entry is up to date or not
+    std::function<bool(const fostlib::json &)> pred;
+    /// Add in the new priority for the new inode data
+    std::function<fostlib::json(fostlib::json, const fostlib::json&)> priority;
+    /// Broadcast packet builder in case the database was updated
+    std::function<void(rask::tenant &, const rask::tick &,
+        const fostlib::string &, const fostlib::json &)> broadcast;
+    /// Functions to be run after the transaction is committed
+    std::vector<std::function<void(change &)>> post_commit;
+    /// Functions to be run in the case where the database was updated
+    /// and the transaction committed.
+    std::vector<std::function<void(change &, fostlib::json)>> post_update;
+    /// The tenant relative path
+    fostlib::string relpath;
+    /// The hash for the file name
+    fostlib::string nhash;
+    /// The file path on this server
+    boost::filesystem::path location;
+    /// The target inode type
+    const fostlib::json &inode_target;
+    /// The path into the database
+    fostlib::jcursor dbpath;
+
+    impl(
+        subscriber &s, const fostlib::string &rp,
+         const boost::filesystem::path &p, const fostlib::json &t
+    ) :
+        sub(s),
+        pred([this](const fostlib::json &j) {
+            return j["filetype"] != inode_target;
+        }),
+        priority([](fostlib::json n, const fostlib::json &) {
+            fostlib::insert(n, "priority", tick::next());
+            return n;
+        }),
+        broadcast([](auto &, const auto &, const auto &, const auto &) {}),
+        relpath(rp),
+        nhash(name_hash(relpath)),
+        location(p),
+        inode_target(t),
+        dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(location))
+    {
+        if ( inode_target == tenant::file_inode ) {
+            priority = [](fostlib::json n, const fostlib::json &o) {
+                if ( o.has_key("priority") )
+                    fostlib::insert(n, "priority", tick::next());
+                return n;
+            };
+        }
+    }
+};
+
+
 rask::subscriber::change::change(
     subscriber &s, const fostlib::string &rp, const boost::filesystem::path &p,
     const fostlib::json &t
-) :
-    m_sub(s),
-    m_pred([this](const fostlib::json &j) {
-        return j["filetype"] != inode_target();
-    }),
-    m_priority([](fostlib::json n, const fostlib::json &) {
-        fostlib::insert(n, "priority", tick::next());
-        return n;
-    }),
-    m_broadcast([](auto &, const auto &, const auto &, const auto &) {}),
-    relpath(rp), nhash(name_hash(relpath())),
-    location(p),
-    inode_target(t),
-    dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(location()))
-{
-    if ( inode_target() == tenant::file_inode ) {
-        m_priority = [](fostlib::json n, const fostlib::json &o) {
-            if ( o.has_key("priority") )
-                fostlib::insert(n, "priority", tick::next());
-            return n;
-        };
-    }
+) : pimpl(std::make_shared<impl>(s, rp, p, t)) {
 }
 
 
 rask::subscriber::change::~change() = default;
 
 
+rask::subscriber &rask::subscriber::change::subscription() const {
+    return pimpl->sub;
+}
+
+
+const boost::filesystem::path &rask::subscriber::change::location() const {
+    return pimpl->location;
+}
+
+
 rask::subscriber::change &rask::subscriber::change::predicate(
     std::function<bool(const fostlib::json &)> p
 ) {
-    auto old_pred = m_pred;
-    m_pred = [old_pred, p](const fostlib::json &j) {
+    auto old_pred = pimpl->pred;
+    pimpl->pred = [old_pred, p](const fostlib::json &j) {
         return old_pred(j) || p(j);
     };
     return *this;
@@ -284,13 +329,13 @@ rask::subscriber::change &rask::subscriber::change::compare_priority(
 rask::subscriber::change &rask::subscriber::change::record_priority(
     fostlib::t_null
 ) {
-    m_priority = [](fostlib::json n, const fostlib::json &) { return n; };
+    pimpl->priority = [](fostlib::json n, const fostlib::json &) { return n; };
     return *this;
 }
 rask::subscriber::change &rask::subscriber::change::record_priority(
     const tick &t
 ) {
-    m_priority = [t](fostlib::json n, const fostlib::json &) {
+    pimpl->priority = [t](fostlib::json n, const fostlib::json &) {
         fostlib::insert(n, "priority", t);
         return n;
     };
@@ -302,7 +347,7 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
     std::function<connection::out(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> b
 ) {
-    m_broadcast = [b](
+    pimpl->broadcast = [b](
             rask::tenant &t, const rask::tick &p,
             const fostlib::string &i, const fostlib::json &j
         ) {
@@ -315,7 +360,7 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
 rask::subscriber::change &rask::subscriber::change::post_commit(
     std::function<void(change&)> f
 ) {
-    m_post_commit.push_back(f);
+    pimpl->post_commit.push_back(f);
     return *this;
 }
 
@@ -323,7 +368,7 @@ rask::subscriber::change &rask::subscriber::change::post_commit(
 rask::subscriber::change &rask::subscriber::change::post_update(
     std::function<void(change &, fostlib::json)> f
 ) {
-    m_post_update.push_back(f);
+    pimpl->post_update.push_back(f);
     return *this;
 }
 
@@ -331,29 +376,25 @@ rask::subscriber::change &rask::subscriber::change::post_update(
 void rask::subscriber::change::cancel() {
 }
 void rask::subscriber::change::execute() {
-    m_sub.inodes().add(dbpath(), relpath(), nhash(),
-        /**
-            Because of the way that `add` works this code is run inside of
-            the transaction. That means we can't assume that any other
-            jobs posted in here won't be started until after the commit
-            becomes visible.
-        */
-        [](workers &w, fostlib::json &data, const fostlib::json &dbconf) {
+    pimpl->sub.inodes().add(pimpl->dbpath, pimpl->relpath, pimpl->nhash,
+        [pimpl = this->pimpl](
+            workers &w, fostlib::json &data, const fostlib::json &dbconf
+        ) {
             auto logger(fostlib::log::debug(c_fost_rask));
             logger("", "rask::subscriber::change::execute()")
-                ("dbpath", dbpath());
-            const bool entry = data.has_key(dbpath());
+                ("dbpath", pimpl->dbpath);
+            const bool entry = data.has_key(pimpl->dbpath);
             if ( entry ) {
-                logger("node", "old", data[dbpath()]);
+                logger("node", "old", data[pimpl->dbpath]);
             }
-            const fostlib::json old = entry ? data[dbpath()] : fostlib::json();
-            if ( !entry || m_pred(old) ) {
+            const fostlib::json old = entry ? data[pimpl->dbpath] : fostlib::json();
+            if ( !entry || pimpl->pred(old) ) {
                 logger("predicate", true);
                 fostlib::json node;
-                fostlib::insert(node, "filetype", inode_target());
-                fostlib::insert(node, "name", relpath());
-                fostlib::insert(node, "hash", "name", nhash());
-                node = m_priority(node, old);
+                fostlib::insert(node, "filetype", pimpl->inode_target);
+                fostlib::insert(node, "name", pimpl->relpath);
+                fostlib::insert(node, "hash", "name", pimpl->nhash);
+                node = pimpl->priority(node, old);
                 logger("node", "new", node);
             } else {
                 logger("predicate", false);
