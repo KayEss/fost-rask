@@ -235,10 +235,11 @@ struct rask::subscriber::change::impl {
     subscriber &sub;
     /// The that determines if the db entry is up to date or not
     std::function<bool(const fostlib::json &)> pred;
-    /// Add in the new priority for the new inode data
-    std::function<fostlib::json(fostlib::json, const fostlib::json&)> priority;
+    /// Add in the new priority for the new inode data if use_priority returns true
+    std::function<bool(const fostlib::json &)> use_priority;
+    std::function<tick(void)> priority;
     /// Broadcast packet builder in case the database was updated
-    std::function<void(rask::tenant &, const rask::tick &,
+    std::function<std::size_t(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> broadcast;
     /// Functions to be run after the transaction is committed
     std::vector<std::function<void(change &)>> post_commit;
@@ -255,6 +256,8 @@ struct rask::subscriber::change::impl {
     const fostlib::json &inode_target;
     /// The path into the database
     fostlib::jcursor dbpath;
+    /// Copy of the old node data (if any)
+    fostlib::json old;
 
     impl(
         subscriber &s, const fostlib::string &rp,
@@ -264,11 +267,15 @@ struct rask::subscriber::change::impl {
         pred([this](const fostlib::json &j) {
             return j["filetype"] != inode_target;
         }),
-        priority([](fostlib::json n, const fostlib::json &) {
-            fostlib::insert(n, "priority", tick::next());
-            return n;
+        use_priority([](const auto &) {
+            return true;
         }),
-        broadcast([](auto &, const auto &, const auto &, const auto &) {}),
+        priority([]() {
+            return tick::next();
+        }),
+        broadcast([](auto &, const auto &, const auto &, const auto &) {
+            return 0u;
+        }),
         relpath(rp),
         nhash(name_hash(relpath)),
         location(p),
@@ -276,10 +283,8 @@ struct rask::subscriber::change::impl {
         dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(location))
     {
         if ( inode_target == tenant::file_inode ) {
-            priority = [](fostlib::json n, const fostlib::json &o) {
-                if ( o.has_key("priority") )
-                    fostlib::insert(n, "priority", tick::next());
-                return n;
+            use_priority = [](const fostlib::json &o) {
+                return o.has_key("priority");
             };
         }
     }
@@ -329,16 +334,13 @@ rask::subscriber::change &rask::subscriber::change::compare_priority(
 rask::subscriber::change &rask::subscriber::change::record_priority(
     fostlib::t_null
 ) {
-    pimpl->priority = [](fostlib::json n, const fostlib::json &) { return n; };
+    pimpl->use_priority = [](const auto &) { return false; };
     return *this;
 }
 rask::subscriber::change &rask::subscriber::change::record_priority(
     const tick &t
 ) {
-    pimpl->priority = [t](fostlib::json n, const fostlib::json &) {
-        fostlib::insert(n, "priority", t);
-        return n;
-    };
+    pimpl->priority = [t]() { return t; };
     return *this;
 }
 
@@ -351,7 +353,7 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
             rask::tenant &t, const rask::tick &p,
             const fostlib::string &i, const fostlib::json &j
         ) {
-            rask::broadcast(b(t, p, i, j));
+            return rask::broadcast(b(t, p, i, j));
         };
     return *this;
 }
@@ -382,19 +384,28 @@ void rask::subscriber::change::execute() {
         ) {
             auto logger(fostlib::log::debug(c_fost_rask));
             logger("", "rask::subscriber::change::execute()")
+                ("tenant", pimpl->sub.tenant.name())
                 ("dbpath", pimpl->dbpath);
             const bool entry = data.has_key(pimpl->dbpath);
             if ( entry ) {
-                logger("node", "old", data[pimpl->dbpath]);
+                pimpl->old = data[pimpl->dbpath];
+                logger("node", "old", pimpl->old);
             }
-            const fostlib::json old = entry ? data[pimpl->dbpath] : fostlib::json();
-            if ( !entry || pimpl->pred(old) ) {
+            if ( !entry || pimpl->pred(pimpl->old) ) {
                 logger("predicate", true);
                 fostlib::json node;
                 fostlib::insert(node, "filetype", pimpl->inode_target);
                 fostlib::insert(node, "name", pimpl->relpath);
                 fostlib::insert(node, "hash", "name", pimpl->nhash);
-                node = pimpl->priority(node, old);
+                if ( pimpl->use_priority(pimpl->old) ) {
+                    auto priority = pimpl->priority();
+                    logger("priority", priority);
+                    fostlib::insert(node, "priority", priority);
+                    const auto sent = pimpl->broadcast(pimpl->sub.tenant,
+                        priority, pimpl->relpath, node);
+                    logger("broadcast", "to", sent);
+                }
+                pimpl->dbpath.replace(data, node);
                 logger("node", "new", node);
             } else {
                 logger("predicate", false);
