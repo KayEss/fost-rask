@@ -231,39 +231,35 @@ void rask::subscriber::local_change(
 
 
 struct rask::subscriber::change::impl {
-    /// The subscription that this change deals with
-    subscriber &sub;
+    /// Store the fields used for the final staus reporting
+    status result;
     /// The that determines if the db entry is up to date or not
     std::function<bool(const fostlib::json &)> pred;
     /// Add in the new priority for the new inode data if use_priority returns true
     std::function<bool(const fostlib::json &)> use_priority;
     std::function<tick(void)> priority;
-    /// Broadcast packet builder in case the database was updated
+    /// Broadcast packet builder in case the database was updated.
     std::function<std::size_t(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> broadcast;
     /// Functions to be run after the transaction is committed
-    std::vector<std::function<void(change &)>> post_commit;
+    std::vector<std::function<void(const change::status &)>> post_commit;
     /// Functions to be run in the case where the database was updated
     /// and the transaction committed.
-    std::vector<std::function<void(change &, fostlib::json)>> post_update;
+    std::vector<std::function<void(const change::status &)>> post_update;
     /// The tenant relative path
     fostlib::string relpath;
     /// The hash for the file name
     rask::name_hash_type nhash;
-    /// The file path on this server
-    boost::filesystem::path location;
     /// The target inode type
     const fostlib::json &inode_target;
     /// The path into the database
     fostlib::jcursor dbpath;
-    /// Copy of the old node data (if any)
-    fostlib::json old;
 
     impl(
         subscriber &s, const fostlib::string &rp,
          const boost::filesystem::path &p, const fostlib::json &t
     ) :
-        sub(s),
+        result(s, p),
         pred([this](const fostlib::json &j) {
             return j["filetype"] != inode_target;
         }),
@@ -278,9 +274,8 @@ struct rask::subscriber::change::impl {
         }),
         relpath(rp),
         nhash(name_hash(relpath)),
-        location(p),
         inode_target(t),
-        dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(location))
+        dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(result.location))
     {
         if ( inode_target == tenant::file_inode ) {
             use_priority = [](const fostlib::json &o) {
@@ -299,16 +294,6 @@ rask::subscriber::change::change(
 
 
 rask::subscriber::change::~change() = default;
-
-
-rask::subscriber &rask::subscriber::change::subscription() const {
-    return pimpl->sub;
-}
-
-
-const boost::filesystem::path &rask::subscriber::change::location() const {
-    return pimpl->location;
-}
 
 
 rask::subscriber::change &rask::subscriber::change::predicate(
@@ -360,7 +345,7 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
 
 
 rask::subscriber::change &rask::subscriber::change::post_commit(
-    std::function<void(change&)> f
+    std::function<void(const status &)> f
 ) {
     pimpl->post_commit.push_back(f);
     return *this;
@@ -368,7 +353,7 @@ rask::subscriber::change &rask::subscriber::change::post_commit(
 
 
 rask::subscriber::change &rask::subscriber::change::post_update(
-    std::function<void(change &, fostlib::json)> f
+    std::function<void(const status &)> f
 ) {
     pimpl->post_update.push_back(f);
     return *this;
@@ -378,38 +363,65 @@ rask::subscriber::change &rask::subscriber::change::post_update(
 void rask::subscriber::change::cancel() {
 }
 void rask::subscriber::change::execute() {
-    pimpl->sub.inodes().add(pimpl->dbpath, pimpl->relpath, pimpl->nhash,
+    pimpl->result.subscription.inodes().add(
+        pimpl->dbpath, pimpl->relpath, pimpl->nhash,
         [pimpl = this->pimpl](
             workers &w, fostlib::json &data, const fostlib::json &dbconf
         ) {
             auto logger(fostlib::log::debug(c_fost_rask));
             logger("", "rask::subscriber::change::execute()")
-                ("tenant", pimpl->sub.tenant.name())
+                ("tenant", pimpl->result.subscription.tenant.name())
                 ("dbpath", pimpl->dbpath);
             const bool entry = data.has_key(pimpl->dbpath);
             if ( entry ) {
-                pimpl->old = data[pimpl->dbpath];
-                logger("node", "old", pimpl->old);
+                pimpl->result.old = data[pimpl->dbpath];
+                logger("node", "old", pimpl->result.old);
             }
-            if ( !entry || pimpl->pred(pimpl->old) ) {
+            if ( !entry || pimpl->pred(pimpl->result.old) ) {
+                pimpl->result.updated = true;
                 logger("predicate", true);
                 fostlib::json node;
                 fostlib::insert(node, "filetype", pimpl->inode_target);
                 fostlib::insert(node, "name", pimpl->relpath);
                 fostlib::insert(node, "hash", "name", pimpl->nhash);
-                if ( pimpl->use_priority(pimpl->old) ) {
+                if ( pimpl->use_priority(pimpl->result.old) ) {
                     auto priority = pimpl->priority();
                     logger("priority", priority);
                     fostlib::insert(node, "priority", priority);
-                    const auto sent = pimpl->broadcast(pimpl->sub.tenant,
+                    const auto sent = pimpl->broadcast(
+                        pimpl->result.subscription.tenant,
                         priority, pimpl->relpath, node);
                     logger("broadcast", "to", sent);
                 }
                 pimpl->dbpath.replace(data, node);
+                pimpl->result.inode = node;
                 logger("node", "new", node);
             } else {
+                pimpl->result.updated = false;
                 logger("predicate", false);
+            }
+        },
+        [pimpl = this->pimpl]() {
+            if ( pimpl->result.updated ) {
+                for ( auto fn : pimpl->post_update ) {
+                    fn(pimpl->result);
+                }
+            }
+            for ( auto fn : pimpl->post_commit ) {
+                fn(pimpl->result);
             }
         });
 }
+
+
+/*
+    rask::subscriber::change::result
+*/
+
+
+rask::subscriber::change::status::status(
+    subscriber &s, boost::filesystem::path p
+) :
+    subscription(s), location(std::move(p)), updated(false)
+{}
 

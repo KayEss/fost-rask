@@ -79,9 +79,9 @@ void rask::file_exists(rask::connection::in &packet) {
                     .compare_priority(priority)
                     .record_priority(fostlib::null)
                     .post_commit(
-                        [size](subscriber::change&c) {
+                        [size](const auto&c) {
                             if ( !size.isnull() ) {
-                                allocate_file(c.location(),
+                                allocate_file(c.location,
                                     fostlib::coerce<std::size_t>(size.value()));
                             }
                         })

@@ -84,8 +84,8 @@ namespace {
                             tenant->subscription->directory(filename)
                                 .broadcast(rask::create_directory_out)
                                 .post_update(
-                                    [this, tenant](auto &c) {
-                                        rask::start_sweep(w, tenant, c.location());
+                                    [this, tenant](const auto &c) {
+                                        rask::start_sweep(w, tenant, c.location);
                                     })
                                 .execute();
                         });
@@ -96,9 +96,9 @@ namespace {
                             tenant->subscription->file(filename)
                                 .broadcast(rask::file_exists_out)
                                 .post_update(
-                                    [this](auto &c, auto inode) {
-                                        rask::rehash_file(w, c.subscription(), c.location(),
-                                            inode, [](){});
+                                    [this](const auto &c) {
+                                        rask::rehash_file(w, c.subscription, c.location,
+                                            c.inode, [](){});
                                     })
                                 .execute();
                         });

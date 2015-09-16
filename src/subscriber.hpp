@@ -70,14 +70,29 @@ namespace rask {
                 const boost::filesystem::path &,
                 const fostlib::json &);
         public:
+            /// Change status is used to report on what happened to the
+            /// post change callbacks
+            struct status {
+                /// The subscription that this change deals with
+                subscriber &subscription;
+                /// The file path on this server
+                boost::filesystem::path location;
+                /// Assigned true/false depending on whether the predicatae has told
+                /// us to do the database update or not
+                bool updated;
+                /// Copy of the old node data (if any)
+                fostlib::json old;
+                /// Copy of the new inode data (if set)
+                fostlib::json inode;
+
+            private:
+                friend struct change::impl;
+                status(subscriber &, boost::filesystem::path);
+            };
+
             /// Show an error in the log stream if the change was neither
             /// cancelled or executed
             ~change();
-
-            /// Allow access to the subscriber
-            subscriber &subscription() const;
-            /// The file path on this server
-            const boost::filesystem::path &location() const;
 
             /// Set extra predicate conditions that must also be true
             /// in order that we record a new node in the database.
@@ -100,22 +115,19 @@ namespace rask {
             /// Record the specified clock tick as the priority
             change &record_priority(const tick &);
 
-            /// A post commit hook is run after the database transaction
-            /// has completed whether or not there was an update
-            change &post_commit(std::function<void(change&)>);
-            /// This hook is executed only when the database was updated
-            change &post_update(std::function<void(change &)> f) {
-                return post_update(
-                    [f](auto &c, auto) {
-                        f(c);
-                    });
-            }
-            /// This hook is also provided with the new JSON for the inode
-            change &post_update(std::function<void(change &, fostlib::json)>);
-            /// Broadcast a packet when the change has been recorded
+            /// Broadcast a packet when the change has been recorded. This
+            /// function will only be called if a clock tick is recorded in an
+            /// update
             change &broadcast(std::function<
                 connection::out(rask::tenant &, const rask::tick &,
                         const fostlib::string &, const fostlib::json &)>);
+
+            /// This hook is executed only when the database was updated
+            change &post_update(std::function<void(const status &)>);
+            /// A post commit hook is run after the database transaction
+            /// has completed whether or not there was an update. These are
+            /// all called after the post_update functions.
+            change &post_commit(std::function<void(const status &)>);
 
             /// Mark the job as cancelled. This stops logging of an error
             /// and also causes any future call to `execute` to error

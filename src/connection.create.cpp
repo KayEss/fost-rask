@@ -46,8 +46,8 @@ void rask::create_directory(rask::connection::in &packet) {
                 tenant->subscription->directory(name)
                     .compare_priority(priority)
                     .post_update(
-                        [](subscriber::change &c) {
-                            boost::filesystem::create_directories(c.location());
+                        [](const auto &c) {
+                            boost::filesystem::create_directories(c.location);
                         })
                     .execute();
             });

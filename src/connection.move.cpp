@@ -39,13 +39,13 @@ void rask::move_out(rask::connection::in &packet) {
                 tenant->subscription->move_out(name)
                     .compare_priority(priority)
                     .post_update(
-                        [](auto &c) {
-                            auto removed = boost::filesystem::remove_all(c.location());
+                        [](const auto &c) {
+                            auto removed = boost::filesystem::remove_all(c.location);
                             if ( removed ) {
                                 fostlib::log::warning(c_fost_rask)
                                     ("", "Deleting files")
-                                    ("tenant", c.subscription().tenant.name())
-                                    ("root", c.location())
+                                    ("tenant", c.subscription.tenant.name())
+                                    ("root", c.location)
                                     ("count", removed);
                             }
                         })
