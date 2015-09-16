@@ -403,11 +403,11 @@ void rask::subscriber::change::execute() {
         },
         [pimpl = this->pimpl]() {
             if ( pimpl->result.updated ) {
-                for ( auto fn : pimpl->post_update ) {
+                for ( auto &fn : pimpl->post_update ) {
                     fn(pimpl->result);
                 }
             }
-            for ( auto fn : pimpl->post_commit ) {
+            for ( auto &fn : pimpl->post_commit ) {
                 fn(pimpl->result);
             }
         });
