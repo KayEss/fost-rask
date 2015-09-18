@@ -150,30 +150,30 @@ void rask::subscriber::local_change(
     local_change(location, inode_type, pred, builder, inoder,
         [](const auto &i) { return i; });
 }
-void rask::subscriber::local_change(
-    const boost::filesystem::path &location,
-    const fostlib::json &inode_type,
-    packet_builder builder, inode_function inoder
-) {
-    local_change(location, inode_type,
-        [&inode_type](const fostlib::json &inode) {
-            return inode["filetype"] != inode_type;
-        }, builder, inoder);
-}
-void rask::subscriber::local_change(
-    const boost::filesystem::path &location,
-    const fostlib::json &inode_type,
-    packet_builder builder
-) {
-    local_change(location, inode_type, builder,
-        [](const rask::tick &priority, fostlib::json inode) {
-            fostlib::digester hash(fostlib::sha256);
-            hash << priority;
-            fostlib::insert(inode, "hash", "inode",
-                fostlib::coerce<fostlib::base64_string>(hash.digest()));
-            return inode;
-        });
-}
+// void rask::subscriber::local_change(
+//     const boost::filesystem::path &location,
+//     const fostlib::json &inode_type,
+//     packet_builder builder, inode_function inoder
+// ) {
+//     local_change(location, inode_type,
+//         [&inode_type](const fostlib::json &inode) {
+//             return inode["filetype"] != inode_type;
+//         }, builder, inoder);
+// }
+// void rask::subscriber::local_change(
+//     const boost::filesystem::path &location,
+//     const fostlib::json &inode_type,
+//     packet_builder builder
+// ) {
+//     local_change(location, inode_type, builder,
+//         [](const rask::tick &priority, fostlib::json inode) {
+//             fostlib::digester hash(fostlib::sha256);
+//             hash << priority;
+//             fostlib::insert(inode, "hash", "inode",
+//                 fostlib::coerce<fostlib::base64_string>(hash.digest()));
+//             return inode;
+//         });
+// }
 
 // void rask::subscriber::remote_change(
 //     const boost::filesystem::path &location,
@@ -238,6 +238,8 @@ struct rask::subscriber::change::impl {
     /// Add in the new priority for the new inode data if use_priority returns true
     std::function<bool(const fostlib::json &)> use_priority;
     std::function<tick(void)> priority;
+    /// The function that generates the inode data hash
+    std::function<fostlib::json(const tick &, const fostlib::json &)> hasher;
     /// Broadcast packet builder in case the database was updated.
     std::function<std::size_t(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> broadcast;
@@ -268,6 +270,12 @@ struct rask::subscriber::change::impl {
         }),
         priority([]() {
             return tick::next();
+        }),
+        hasher([](const auto &priority, const auto &) {
+            fostlib::digester hash(fostlib::sha256);
+            hash << priority;
+            return fostlib::coerce<fostlib::json>(
+                fostlib::coerce<fostlib::base64_string>(hash.digest()));
         }),
         broadcast([](auto &, const auto &, const auto &, const auto &) {
             return 0u;
@@ -330,6 +338,14 @@ rask::subscriber::change &rask::subscriber::change::record_priority(
 }
 
 
+rask::subscriber::change &rask::subscriber::change::hash(
+    std::function<fostlib::json(const tick &, const fostlib::json &)> h
+) {
+    pimpl->hasher = h;
+    return *this;
+}
+
+
 rask::subscriber::change &rask::subscriber::change::broadcast(
     std::function<connection::out(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> b
@@ -378,6 +394,7 @@ void rask::subscriber::change::execute() {
                 logger("node", "old", pimpl->result.old);
             }
             if ( !entry || pimpl->pred(pimpl->result.old) ) {
+                logger("updating", true);
                 pimpl->result.updated = true;
                 fostlib::json node;
                 fostlib::insert(node, "filetype", pimpl->inode_target);
@@ -387,6 +404,8 @@ void rask::subscriber::change::execute() {
                     auto priority = pimpl->priority();
                     logger("priority", priority);
                     fostlib::insert(node, "priority", priority);
+                    fostlib::insert(node, "hash", "inode",
+                        pimpl->hasher(priority, node));
                     const auto sent = pimpl->broadcast(
                         pimpl->result.subscription.tenant,
                         priority, pimpl->relpath, node);
@@ -397,7 +416,9 @@ void rask::subscriber::change::execute() {
                 pimpl->result.inode = node;
                 logger("node", "new", node);
             } else {
+                logger("updating", false);
                 pimpl->result.updated = false;
+                pimpl->result.inode = pimpl->result.old;
             }
         },
         [pimpl = this->pimpl]() {

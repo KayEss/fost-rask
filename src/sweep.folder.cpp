@@ -41,8 +41,9 @@ namespace {
                         fostlib::coerce<fostlib::string>(folder));
                 }
                 fostlib::log::debug(rask::c_fost_rask, "Sweep recursing into folder", folder);
-                tenant->subscription->local_change(
-                    folder, rask::tenant::directory_inode, rask::create_directory_out);
+                tenant->subscription->directory(folder)
+                    .broadcast(rask::create_directory_out)
+                    .execute();
                 w.notify.watch(tenant, folder);
                 std::size_t files = 0, directories = 0, ignored = 0;
                 using d_iter = boost::filesystem::recursive_directory_iterator;
@@ -51,19 +52,22 @@ namespace {
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
                         ++directories;
                         auto directory = inode->path();
-                        tenant->subscription->local_change(directory,
-                            rask::tenant::directory_inode, rask::create_directory_out);
+                        tenant->subscription->directory(directory)
+                            .broadcast(rask::create_directory_out)
+                            .execute();
                         w.notify.watch(tenant, directory);
                     } else if ( inode->status().type() == boost::filesystem::regular_file ) {
                         ++files;
                         auto filename = inode->path();
                         auto task(++limit);
-                        tenant->subscription->local_change(filename,
-                            rask::tenant::file_inode, rask::file_exists_out,
-                            [&w, filename, tenant, task](
-                                const rask::tick &, fostlib::json inode
-                            ) {
-                                rask::rehash_file(w, *tenant->subscription, filename, inode,
+                        tenant->subscription->file(filename)
+                            .hash([](const auto &, const auto &) {
+                                /// We don't have the hash yet so leave blank for now
+                                return fostlib::json();
+                            })
+                            .broadcast(rask::file_exists_out)
+                            .post_commit([&w, task](const auto &c) {
+                                rask::rehash_file(w, c.subscription, c.location, c.inode,
                                     [task] () {
                                         task->done(
                                             [](const auto &error, auto bytes) {
@@ -74,16 +78,8 @@ namespace {
                                                     ("bytes", bytes);
                                             });
                                     });
-                                /// There might be some worry that there is
-                                /// a race here between this code and the
-                                /// above call to `rehash_file`. This callback
-                                /// is executed inside the transaction that
-                                /// updates the beanbag which means that
-                                /// it is guaranteed to finish executing
-                                /// before the rehash gets its own shot at
-                                /// updating the database hash.
-                                return inode;
-                            });
+                            })
+                        .execute();
                     } else {
                         ++ignored;
                     }

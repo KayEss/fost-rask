@@ -115,6 +115,11 @@ namespace rask {
             /// Record the specified clock tick as the priority
             change &record_priority(const tick &);
 
+            /// Provide a function that generates the hash for the node. The
+            /// default function will generate a hash based on the tick.
+            change &hash(std::function<
+                fostlib::json(const tick &, const fostlib::json &inode)>);
+
             /// Broadcast a packet when the change has been recorded. This
             /// function will only be called if a clock tick is recorded in an
             /// update
@@ -151,19 +156,19 @@ namespace rask {
         change directory(const fostlib::string &relpath);
         change move_out(const fostlib::string &relpath);
 
-        /// Write details about something observed on this file system. After
-        /// recording in the database it will build a packet and broadcast it to
-        /// the other connected nodes
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            packet_builder);
-        /// Write details about something observed on this file system. This version
-        /// allows for custom hashing of the item if it's added to the database
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            packet_builder, inode_function);
+//         /// Write details about something observed on this file system. After
+//         /// recording in the database it will build a packet and broadcast it to
+//         /// the other connected nodes
+//         void local_change(
+//             const boost::filesystem::path &location,
+//             const fostlib::json &inode_type,
+//             packet_builder);
+//         /// Write details about something observed on this file system. This version
+//         /// allows for custom hashing of the item if it's added to the database
+//         void local_change(
+//             const boost::filesystem::path &location,
+//             const fostlib::json &inode_type,
+//             packet_builder, inode_function);
         /// Write details about something observed on this file system. This version
         /// allows for custom hashing and also a custom predicate to determine if
         /// the inode data entry needs to be updated
