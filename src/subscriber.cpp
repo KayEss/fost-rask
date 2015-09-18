@@ -393,6 +393,7 @@ void rask::subscriber::change::execute() {
                     logger("broadcast", "to", sent);
                 }
                 pimpl->dbpath.replace(data, node);
+                rehash_inodes(w, dbconf);
                 pimpl->result.inode = node;
                 logger("node", "new", node);
             } else {
