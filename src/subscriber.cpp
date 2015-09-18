@@ -379,7 +379,6 @@ void rask::subscriber::change::execute() {
             }
             if ( !entry || pimpl->pred(pimpl->result.old) ) {
                 pimpl->result.updated = true;
-                logger("predicate", true);
                 fostlib::json node;
                 fostlib::insert(node, "filetype", pimpl->inode_target);
                 fostlib::insert(node, "name", pimpl->relpath);
@@ -398,7 +397,6 @@ void rask::subscriber::change::execute() {
                 logger("node", "new", node);
             } else {
                 pimpl->result.updated = false;
-                logger("predicate", false);
             }
         },
         [pimpl = this->pimpl]() {
