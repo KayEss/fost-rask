@@ -169,13 +169,13 @@ namespace rask {
 //             const boost::filesystem::path &location,
 //             const fostlib::json &inode_type,
 //             packet_builder, inode_function);
-        /// Write details about something observed on this file system. This version
-        /// allows for custom hashing and also a custom predicate to determine if
-        /// the inode data entry needs to be updated
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            condition_function, packet_builder, inode_function);
+//         /// Write details about something observed on this file system. This version
+//         /// allows for custom hashing and also a custom predicate to determine if
+//         /// the inode data entry needs to be updated
+//         void local_change(
+//             const boost::filesystem::path &location,
+//             const fostlib::json &inode_type,
+//             condition_function, packet_builder, inode_function);
         /// Write details about something observed on this file system. This
         /// version allows for custom hashing, a custom predicate to deterime if
         /// the inode data entry needs to be updated plus a secondary updater

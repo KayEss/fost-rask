@@ -142,14 +142,14 @@ void rask::subscriber::local_change(
             }
         });
 }
-void rask::subscriber::local_change(
-    const boost::filesystem::path &location,
-    const fostlib::json &inode_type,
-    condition_function pred, packet_builder builder, inode_function inoder
-) {
-    local_change(location, inode_type, pred, builder, inoder,
-        [](const auto &i) { return i; });
-}
+// void rask::subscriber::local_change(
+//     const boost::filesystem::path &location,
+//     const fostlib::json &inode_type,
+//     condition_function pred, packet_builder builder, inode_function inoder
+// ) {
+//     local_change(location, inode_type, pred, builder, inoder,
+//         [](const auto &i) { return i; });
+// }
 // void rask::subscriber::local_change(
 //     const boost::filesystem::path &location,
 //     const fostlib::json &inode_type,
