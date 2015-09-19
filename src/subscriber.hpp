@@ -120,6 +120,13 @@ namespace rask {
             change &hash(std::function<
                 fostlib::json(const tick &, const fostlib::json &inode)>);
 
+            /// Allow us to store extra information in the JSON when we
+            /// update the node database.
+            change &enrich_update(std::function<fostlib::json(fostlib::json)>);
+            /// Allow us to store extra information in the JSON when we
+            /// do not update the database
+            change &enrich_otherwise(std::function<fostlib::json(fostlib::json)>);
+
             /// Broadcast a packet when the change has been recorded. This
             /// function will only be called if a clock tick is recorded in an
             /// update
@@ -127,8 +134,10 @@ namespace rask {
                 connection::out(rask::tenant &, const rask::tick &,
                         const fostlib::string &, const fostlib::json &)>);
 
-            /// This hook is executed only when the database was updated
+            /// These hook is executed only when the database was updated
             change &post_update(std::function<void(const status &)>);
+            /// These hook is executed only when the database is not updated
+            change &post_otherwise(std::function<void(const status &)>);
             /// A post commit hook is run after the database transaction
             /// has completed whether or not there was an update. These are
             /// all called after the post_update functions.
@@ -176,14 +185,14 @@ namespace rask {
 //             const boost::filesystem::path &location,
 //             const fostlib::json &inode_type,
 //             condition_function, packet_builder, inode_function);
-        /// Write details about something observed on this file system. This
-        /// version allows for custom hashing, a custom predicate to deterime if
-        /// the inode data entry needs to be updated plus a secondary updater
-        /// that allows other information in the inode to be updated if required.
-        void local_change(
-            const boost::filesystem::path &location,
-            const fostlib::json &inode_type,
-            condition_function, packet_builder, inode_function, otherwise_function);
+//         /// Write details about something observed on this file system. This
+//         /// version allows for custom hashing, a custom predicate to deterime if
+//         /// the inode data entry needs to be updated plus a secondary updater
+//         /// that allows other information in the inode to be updated if required.
+//         void local_change(
+//             const boost::filesystem::path &location,
+//             const fostlib::json &inode_type,
+//             condition_function, packet_builder, inode_function, otherwise_function);
 
 //         /// Record a change that has come from another server
 //         void remote_change(

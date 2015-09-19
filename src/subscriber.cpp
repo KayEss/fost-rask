@@ -95,53 +95,53 @@ rask::subscriber::change rask::subscriber::move_out(
 }
 
 
-void rask::subscriber::local_change(
-    const boost::filesystem::path &location,
-    const fostlib::json &inode_type,
-    condition_function pred, packet_builder builder, inode_function inoder,
-    otherwise_function otherwise
-) {
-    auto path = relative_path(root, location);
-    auto path_hash = name_hash(path);
-    fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
-    inodes().add(dbpath, path, path_hash,
-        [
-            self = this, inode_type, pred, builder, inoder, otherwise, dbpath,
-            path = std::move(path), path_hash = std::move(path_hash)
-        ](
-            workers &w, fostlib::json &data, const fostlib::json &dbconf
-        ) {
-            if ( pred(data[dbpath]) ) {
-                auto priority = tick::next();
-                fostlib::json node;
-                fostlib::insert(node, "filetype", inode_type);
-                fostlib::insert(node, "name", path);
-                fostlib::insert(node, "priority", priority);
-                fostlib::insert(node, "hash", "name", path_hash);
-                auto inode(inoder(priority, node));
-                dbpath.replace(data, inode);
-                rehash_inodes(w, dbconf);
-                const auto sent = broadcast(
-                    builder(self->tenant, priority, path, inode));
-                fostlib::log::info(c_fost_rask)
-                    ("", inode_type)
-                    ("broadcast", "to", sent)
-                    ("tenant", self->tenant.name())
-                    ("node", inode);
-            } else {
-                const auto node = data[dbpath];
-                auto inode(otherwise(node));
-                if ( inode != node ) {
-                    dbpath.replace(data, inode);
-                    fostlib::log::info(c_fost_rask)
-                        ("", inode_type)
-                        ("tenant", self->tenant.name())
-                        ("node", "old", node)
-                        ("node", "new", inode);
-                }
-            }
-        });
-}
+// void rask::subscriber::local_change(
+//     const boost::filesystem::path &location,
+//     const fostlib::json &inode_type,
+//     condition_function pred, packet_builder builder, inode_function inoder,
+//     otherwise_function otherwise
+// ) {
+//     auto path = relative_path(root, location);
+//     auto path_hash = name_hash(path);
+//     fostlib::jcursor dbpath(inodes().key(), fostlib::coerce<fostlib::string>(location));
+//     inodes().add(dbpath, path, path_hash,
+//         [
+//             self = this, inode_type, pred, builder, inoder, otherwise, dbpath,
+//             path = std::move(path), path_hash = std::move(path_hash)
+//         ](
+//             workers &w, fostlib::json &data, const fostlib::json &dbconf
+//         ) {
+//             if ( pred(data[dbpath]) ) {
+//                 auto priority = tick::next();
+//                 fostlib::json node;
+//                 fostlib::insert(node, "filetype", inode_type);
+//                 fostlib::insert(node, "name", path);
+//                 fostlib::insert(node, "priority", priority);
+//                 fostlib::insert(node, "hash", "name", path_hash);
+//                 auto inode(inoder(priority, node));
+//                 dbpath.replace(data, inode);
+//                 rehash_inodes(w, dbconf);
+//                 const auto sent = broadcast(
+//                     builder(self->tenant, priority, path, inode));
+//                 fostlib::log::info(c_fost_rask)
+//                     ("", inode_type)
+//                     ("broadcast", "to", sent)
+//                     ("tenant", self->tenant.name())
+//                     ("node", inode);
+//             } else {
+//                 const auto node = data[dbpath];
+//                 auto inode(otherwise(node));
+//                 if ( inode != node ) {
+//                     dbpath.replace(data, inode);
+//                     fostlib::log::info(c_fost_rask)
+//                         ("", inode_type)
+//                         ("tenant", self->tenant.name())
+//                         ("node", "old", node)
+//                         ("node", "new", inode);
+//                 }
+//             }
+//         });
+// }
 // void rask::subscriber::local_change(
 //     const boost::filesystem::path &location,
 //     const fostlib::json &inode_type,
@@ -240,14 +240,22 @@ struct rask::subscriber::change::impl {
     std::function<tick(void)> priority;
     /// The function that generates the inode data hash
     std::function<fostlib::json(const tick &, const fostlib::json &)> hasher;
+    /// Enrich the JSON that is used for a database update
+    std::function<fostlib::json(fostlib::json)> enrich_update;
+    /// Allow the database node to be changed even if there is no update
+    std::function<fostlib::json(fostlib::json)> enrich_otherwise;
     /// Broadcast packet builder in case the database was updated.
     std::function<std::size_t(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> broadcast;
-    /// Functions to be run after the transaction is committed
-    std::vector<std::function<void(const change::status &)>> post_commit;
     /// Functions to be run in the case where the database was updated
     /// and the transaction committed.
     std::vector<std::function<void(const change::status &)>> post_update;
+    /// Functions to be run after the transaction is committed if there was no
+    /// database update
+    std::vector<std::function<void(const change::status &)>> post_otherwise;
+    /// Functions to be run after the transaction is committed
+    std::vector<std::function<void(const change::status &)>> post_commit;
+
     /// The tenant relative path
     fostlib::string relpath;
     /// The hash for the file name
@@ -276,6 +284,12 @@ struct rask::subscriber::change::impl {
             hash << priority;
             return fostlib::coerce<fostlib::json>(
                 fostlib::coerce<fostlib::base64_string>(hash.digest()));
+        }),
+        enrich_update([](auto j) {
+            return j;
+        }),
+        enrich_otherwise([](auto j) {
+            return j;
         }),
         broadcast([](auto &, const auto &, const auto &, const auto &) {
             return 0u;
@@ -346,6 +360,20 @@ rask::subscriber::change &rask::subscriber::change::hash(
 }
 
 
+rask::subscriber::change &rask::subscriber::change::enrich_update(
+    std::function<fostlib::json(fostlib::json)> f
+) {
+    pimpl->enrich_update = f;
+    return *this;
+}
+rask::subscriber::change &rask::subscriber::change::enrich_otherwise(
+    std::function<fostlib::json(fostlib::json)> f
+) {
+    pimpl->enrich_otherwise = f;
+    return *this;
+}
+
+
 rask::subscriber::change &rask::subscriber::change::broadcast(
     std::function<connection::out(rask::tenant &, const rask::tick &,
         const fostlib::string &, const fostlib::json &)> b
@@ -360,18 +388,24 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
 }
 
 
-rask::subscriber::change &rask::subscriber::change::post_commit(
-    std::function<void(const status &)> f
-) {
-    pimpl->post_commit.push_back(f);
-    return *this;
-}
-
-
 rask::subscriber::change &rask::subscriber::change::post_update(
     std::function<void(const status &)> f
 ) {
     pimpl->post_update.push_back(f);
+    return *this;
+}
+rask::subscriber::change &rask::subscriber::change::post_otherwise(
+    std::function<void(const status &)> f
+) {
+    pimpl->post_otherwise.push_back(f);
+    return *this;
+}
+
+
+rask::subscriber::change &rask::subscriber::change::post_commit(
+    std::function<void(const status &)> f
+) {
+    pimpl->post_commit.push_back(f);
     return *this;
 }
 
@@ -406,10 +440,13 @@ void rask::subscriber::change::execute() {
                     fostlib::insert(node, "priority", priority);
                     fostlib::insert(node, "hash", "inode",
                         pimpl->hasher(priority, node));
+                    node = pimpl->enrich_update(node);
                     const auto sent = pimpl->broadcast(
                         pimpl->result.subscription.tenant,
                         priority, pimpl->relpath, node);
                     logger("broadcast", "to", sent);
+                } else {
+                    node = pimpl->enrich_update(node);
                 }
                 pimpl->dbpath.replace(data, node);
                 rehash_inodes(w, dbconf);
@@ -418,12 +455,20 @@ void rask::subscriber::change::execute() {
             } else {
                 logger("updating", false);
                 pimpl->result.updated = false;
-                pimpl->result.inode = pimpl->result.old;
+                pimpl->result.inode = pimpl->enrich_otherwise(pimpl->result.old);
+                if ( pimpl->result.inode != pimpl->result.old ) {
+                    pimpl->dbpath.replace(data, pimpl->result.inode);
+                    logger("node", "new", pimpl->result.inode);
+                }
             }
         },
         [pimpl = this->pimpl]() {
             if ( pimpl->result.updated ) {
                 for ( auto &fn : pimpl->post_update ) {
+                    fn(pimpl->result);
+                }
+            } else {
+                for ( auto &fn : pimpl->post_otherwise ) {
                     fn(pimpl->result);
                 }
             }

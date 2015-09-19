@@ -158,47 +158,51 @@ void rask::rehash_file(
                             ("tenant", sub.tenant.name())
                             ("filename", filename)
                             ("hash", hash_value);
-                        sub.local_change(filename, tenant::file_inode,
-                            [&hash_value](const fostlib::json &inode) {
-                                return inode["filetype"] != tenant::file_inode ||
-                                    inode["hash"].isnull() ||
+                        sub.file(filename)
+                            .predicate([hash_value](const fostlib::json &inode) {
+                                return inode["hash"].isnull() ||
                                     inode["hash"]["inode"] != fostlib::json(hash_value);
-                            }, rask::file_exists_out,
-                            [
-                                &sub, filename, hash_value, after_status,
-                                level = hash.level() + 1
-                            ](
-                                const rask::tick &, fostlib::json old_inode
-                            ) {
-                                fostlib::json new_inode = old_inode;
-                                fostlib::insert(new_inode, "hash", "inode", hash_value);
-                                fostlib::insert(new_inode, "stat", after_status);
-                                fostlib::log::info(c_fost_rask)
-                                    ("", "Recorded stable file hash")
-                                    ("tenant", sub.tenant.name())
-                                    ("filename", filename)
-                                    ("hash", hash_value)
-                                    ("inode", "old", old_inode)
-                                    ("inode", "new", new_inode)
-                                    ("levels", level)
-                                    ("stat", after_status);
-                                return new_inode;
-                            },
-                            [&sub, filename, hash_value, after_status](fostlib::json node) {
-                                fostlib::log::info(c_fost_rask)
-                                    ("", "Stable hash is no different to the existing one")
-                                    ("tenant", sub.tenant.name())
-                                    ("filename", filename)
-                                    ("hash", hash_value);
-                                static fostlib::jcursor stat("stat");
-                                const auto status =
-                                    fostlib::coerce<fostlib::json>(after_status);
-                                if ( node.has_key(stat) )
-                                    stat.replace(node, status);
-                                else
-                                    stat.insert(node, status);
-                                return node;
-                            });
+                            })
+                            .hash([hash_value](const tick &, const fostlib::json &) {
+                                return fostlib::json(hash_value);
+                            })
+                            .enrich_update([after_status](fostlib::json j) {
+                                fostlib::insert(j, "stat", after_status);
+                                return j;
+                            })
+                            .broadcast(rask::file_exists_out)
+                            .post_update(
+                                [level = hash.level() + 1](
+                                    const auto &c
+                                ) {
+                                    fostlib::log::info(c_fost_rask)
+                                        ("", "Recorded stable file hash")
+                                        ("tenant", c.subscription.tenant.name())
+                                        ("filename", c.location)
+                                        ("inode", "old", c.old)
+                                        ("inode", "new", c.inode)
+                                        ("levels", level);
+                                })
+                            .enrich_otherwise(
+                                [after_status](fostlib::json node) {
+                                    static fostlib::jcursor stat("stat");
+                                    const auto status =
+                                        fostlib::coerce<fostlib::json>(after_status);
+                                    if ( node.has_key(stat) )
+                                        stat.replace(node, status);
+                                    else
+                                        stat.insert(node, status);
+                                    return node;
+                                })
+                            .post_otherwise(
+                                [hash_value](const auto &c) {
+                                    fostlib::log::info(c_fost_rask)
+                                        ("", "Stable hash is no different to the existing one")
+                                        ("tenant", c.subscription.tenant.name())
+                                        ("filename", c.location)
+                                        ("hash", hash_value);
+                                })
+                            .execute();
                         g_hashing.remove(filename);
                         callback();
                     } else {
