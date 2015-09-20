@@ -71,7 +71,10 @@ void rask::file_exists(rask::connection::in &packet) {
     }
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
-            [tenant, name = std::move(name), priority, size, hash64]() {
+            [
+                tenant, name = std::move(name), priority, size, hash64,
+                socket = packet.socket
+            ]() {
                 tenant->subscription->file(name)
                     .compare_priority(priority)
                     .record_priority(fostlib::null)
@@ -83,10 +86,23 @@ void rask::file_exists(rask::connection::in &packet) {
                             return j;
                         })
                     .post_commit(
-                        [size](const auto&c) {
+                        [size, socket, hash64 = fostlib::coerce<fostlib::json>(hash64)](auto&c) {
                             if ( !size.isnull() ) {
                                 allocate_file(c.location,
                                     fostlib::coerce<std::size_t>(size.value()));
+                            }
+                            if ( socket->identity && hash64 != c.inode["hash"]["inode"] ) {
+                                auto logger(fostlib::log::error(c_fost_rask));
+                                logger
+                                    ("", "sendfile")
+                                    ("id", socket->id)
+                                    ("peer", socket->identity.load())
+                                    ("tenant", c.subscription.tenant.name())
+                                    ("location", c.location);
+                                if ( c.inode.has_key("remote") ) {
+                                    logger("receiving", true);
+                                } else
+                                    logger("receiving", false);
                             }
                         })
                     .execute();
