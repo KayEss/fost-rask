@@ -61,14 +61,12 @@ void rask::file_exists(rask::connection::in &packet) {
         ("tenant", tenant->name())
         ("name", name);
     fostlib::nullable<uint64_t> size;
-    std::vector<unsigned char> hash;
-    fostlib::base64_string hash64;
     if ( !packet.empty() ) {
         size = packet.read<uint64_t>() & 0x7FFF'FFFF'FFFF'FFFF;
         logger("size", "bytes", size);
         if ( !packet.empty() ) {
-            hash = packet.read(32);
-            hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+            auto hash = packet.read(32);
+            auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
             logger("hash", hash64);
         }
     }
