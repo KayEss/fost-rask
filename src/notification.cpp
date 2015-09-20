@@ -95,7 +95,7 @@ namespace {
                         [this, filename, tenant]() {
                             tenant->subscription->file(filename)
                                 .broadcast(rask::file_exists_out)
-                                .post_update(
+                                .post_commit(
                                     [this](const auto &c) {
                                         rask::rehash_file(w, c.subscription, c.location,
                                             c.inode, [](){});
