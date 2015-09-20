@@ -19,8 +19,6 @@ namespace {
         rask::c_fost_rask, "packets", "file_exists", "received");
     fostlib::performance p_file_exists_written(
         rask::c_fost_rask, "packets", "file_exists", "written");
-
-    const fostlib::jcursor jc_priority("priority");
 }
 
 
