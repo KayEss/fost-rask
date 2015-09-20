@@ -160,9 +160,19 @@ void rask::rehash_file(
                             ("hash", hash_value);
                         sub.file(filename)
                             .predicate([hash_value](const fostlib::json &inode) {
-                                return inode["hash"].isnull() ||
-                                    inode["hash"]["inode"] != fostlib::json(hash_value);
+                                if ( inode["remote"].isnull() )
+                                    return inode["hash"].isnull() ||
+                                        inode["hash"]["inode"] != fostlib::json(hash_value);
+                                else
+                                    return inode["remote"]["hash"] == fostlib::json(hash_value);
                             })
+                            .record_priority(
+                                [](const fostlib::json &oldnode) {
+                                    if ( oldnode["remote"].isnull() )
+                                        return tick::next();
+                                    else
+                                        return tick(oldnode["remote"]["priority"]);
+                                })
                             .hash([hash_value](const tick &, const fostlib::json &) {
                                 return fostlib::json(hash_value);
                             })
