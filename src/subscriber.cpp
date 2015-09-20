@@ -237,7 +237,7 @@ struct rask::subscriber::change::impl {
     std::function<bool(const fostlib::json &)> pred;
     /// Add in the new priority for the new inode data if use_priority returns true
     std::function<bool(const fostlib::json &)> use_priority;
-    std::function<tick(void)> priority;
+    std::function<tick(const fostlib::json &)> priority;
     /// The function that generates the inode data hash
     std::function<fostlib::json(const tick &, const fostlib::json &)> hasher;
     /// Enrich the JSON that is used for a database update
@@ -276,7 +276,7 @@ struct rask::subscriber::change::impl {
         use_priority([](const auto &) {
             return true;
         }),
-        priority([]() {
+        priority([](const auto &) {
             return tick::next();
         }),
         hasher([](const auto &priority, const auto &) {
@@ -341,7 +341,15 @@ rask::subscriber::change &rask::subscriber::change::record_priority(
 rask::subscriber::change &rask::subscriber::change::record_priority(
     const tick &t
 ) {
-    pimpl->priority = [t]() { return t; };
+    pimpl->use_priority = [](const auto &) { return true; };
+    pimpl->priority = [t](const auto &) { return t; };
+    return *this;
+}
+rask::subscriber::change &rask::subscriber::change::record_priority(
+    std::function<tick(const fostlib::json &)> f
+) {
+    pimpl->use_priority = [](const auto &) { return true; };
+    pimpl->priority = f;
     return *this;
 }
 
@@ -429,7 +437,7 @@ void rask::subscriber::change::execute() {
                 fostlib::insert(node, "name", pimpl->relpath);
                 fostlib::insert(node, "hash", "name", pimpl->nhash);
                 if ( pimpl->use_priority(pimpl->result.old) ) {
-                    auto priority = pimpl->priority();
+                    auto priority = pimpl->priority(pimpl->result.old);
                     logger("priority", priority);
                     fostlib::insert(node, "priority", priority);
                     fostlib::insert(node, "hash", "inode",

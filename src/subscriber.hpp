@@ -114,6 +114,8 @@ namespace rask {
             change &record_priority(fostlib::t_null);
             /// Record the specified clock tick as the priority
             change &record_priority(const tick &);
+            /// Return the priority to update given the old inode
+            change &record_priority(std::function<tick(const fostlib::json &)>);
 
             /// Provide a function that generates the hash for the node. The
             /// default function will generate a hash based on the tick.
