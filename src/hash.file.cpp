@@ -223,21 +223,6 @@ void rask::rehash_file(
 }
 
 
-void rask::rehash_file(
-    workers &w, rask::tenant &tenant, const boost::filesystem::path &filename
-) {
-    if ( !tenant.subscription )
-        throw fostlib::exceptions::null(
-            "Trying to hash a file in a tenant that isn't subscribed",
-            tenant.name());
-    const auto relpath = relative_path(tenant.subscription->root, filename);
-    const auto pathhash = name_hash(relpath);
-    fostlib::json inode;
-    fostlib::insert(inode, "hash", "name", pathhash);
-    rehash_file(w, *tenant.subscription, filename, inode, []() {});
-}
-
-
 /*
     rask:file::hashdb
 */
