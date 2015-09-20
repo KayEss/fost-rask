@@ -61,21 +61,29 @@ void rask::file_exists(rask::connection::in &packet) {
         ("tenant", tenant->name())
         ("name", name);
     fostlib::nullable<uint64_t> size;
+    fostlib::base64_string hash64;
     if ( !packet.empty() ) {
         size = packet.read<uint64_t>() & 0x7FFF'FFFF'FFFF'FFFF;
         logger("size", "bytes", size);
         if ( !packet.empty() ) {
             auto hash = packet.read(32);
-            auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+            hash64 = fostlib::coerce<fostlib::base64_string>(hash);
             logger("hash", hash64);
         }
     }
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
-            [tenant, name = std::move(name), priority, size]() {
+            [tenant, name = std::move(name), priority, size, hash64]() {
                 tenant->subscription->file(name)
                     .compare_priority(priority)
                     .record_priority(fostlib::null)
+                    .enrich_update(
+                        [priority, size, hash64](auto j) {
+                            fostlib::insert(j, "remote", "priority", priority);
+                            fostlib::insert(j, "remote", "size", size);
+                            fostlib::insert(j, "remote", "hash", hash64);
+                            return j;
+                        })
                     .post_commit(
                         [size](const auto&c) {
                             if ( !size.isnull() ) {
