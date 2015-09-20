@@ -298,13 +298,7 @@ struct rask::subscriber::change::impl {
         nhash(name_hash(relpath)),
         inode_target(t),
         dbpath(s.inodes().key(), fostlib::coerce<fostlib::string>(result.location))
-    {
-        if ( inode_target == tenant::file_inode ) {
-            use_priority = [](const fostlib::json &o) {
-                return o.has_key("priority");
-            };
-        }
-    }
+    {}
 };
 
 
