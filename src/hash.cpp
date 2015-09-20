@@ -36,7 +36,7 @@ namespace {
 
 
 rask::name_hash_type rask::name_hash(const fostlib::string &s) {
-    fostlib::digester d(fostlib::md5);
+    fostlib::digester d(fostlib::sha256);
     d << s;
     return fostlib::coerce<fostlib::string>(
         fostlib::coerce<rask::base32_string>(d.digest()));
