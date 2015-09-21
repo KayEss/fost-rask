@@ -101,6 +101,16 @@ void rask::file_exists(rask::connection::in &packet) {
                                     ("location", c.location);
                                 if ( c.inode.has_key("remote") ) {
                                     logger("receiving", true);
+                                    socket->queue(
+                                        [&tenant = c.subscription.tenant, inode = c.inode]() {
+                                            /// TODO: This should really send the current
+                                            /// hashes so that we don't redundantly keep
+                                            /// sending the same file data over and over.
+                                            /// Of course if we've just created this file then
+                                            /// we do want to send this as we don't have
+                                            /// any file data at all.
+                                            return send_empty_file_hash(tenant, inode);
+                                        });
                                 } else
                                     logger("receiving", false);
                             }
@@ -108,5 +118,15 @@ void rask::file_exists(rask::connection::in &packet) {
                     .execute();
             });
     }
+}
+
+
+rask::connection::out rask::send_empty_file_hash(
+    rask::tenant &tenant, const fostlib::json &inode
+) {
+    connection::out packet(0x83);
+    packet << tenant.name();
+    packet << fostlib::coerce<fostlib::string>(inode["name"]);
+    return std::move(packet);
 }
 

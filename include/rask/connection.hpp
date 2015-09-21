@@ -277,6 +277,9 @@ namespace rask {
     /// React to a file exists instruction
     void file_exists(connection::in &);
 
+    /// An empty file hash packet without priority
+    connection::out send_empty_file_hash(tenant &, const fostlib::json &);
+
     /// Create a move an inode out packet
     connection::out move_out_packet(
         tenant &, const rask::tick &, const fostlib::string &, const fostlib::json &);
