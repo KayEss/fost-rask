@@ -17,8 +17,13 @@
 namespace {
     fostlib::performance p_file_exists_received(
         rask::c_fost_rask, "packets", "file_exists", "received");
+    fostlib::performance p_file_hash_no_priority_received(
+        rask::c_fost_rask, "packets", "file_hash_no_priority", "received");
+
     fostlib::performance p_file_exists_written(
         rask::c_fost_rask, "packets", "file_exists", "written");
+    fostlib::performance p_empty_file_hash_written(
+        rask::c_fost_rask, "packets", "file_hash_no_priority", "written");
 }
 
 
@@ -95,8 +100,8 @@ void rask::file_exists(rask::connection::in &packet) {
                                 auto logger(fostlib::log::error(c_fost_rask));
                                 logger
                                     ("", "sendfile")
-                                    ("id", socket->id)
-                                    ("peer", socket->identity.load())
+                                    ("connection", "id", socket->id)
+                                    ("connection", "peer", socket->identity.load())
                                     ("tenant", c.subscription.tenant.name())
                                     ("location", c.location);
                                 if ( c.inode.has_key("remote") ) {
@@ -124,9 +129,15 @@ void rask::file_exists(rask::connection::in &packet) {
 rask::connection::out rask::send_empty_file_hash(
     rask::tenant &tenant, const fostlib::json &inode
 ) {
+    ++p_empty_file_hash_written;
     connection::out packet(0x83);
     packet << tenant.name();
     packet << fostlib::coerce<fostlib::string>(inode["name"]);
     return std::move(packet);
+}
+
+
+void rask::file_hash_without_priority(connection::in &packet) {
+    ++p_file_hash_no_priority_received;
 }
 

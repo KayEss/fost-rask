@@ -279,6 +279,8 @@ namespace rask {
 
     /// An empty file hash packet without priority
     connection::out send_empty_file_hash(tenant &, const fostlib::json &);
+    /// Recieve a file hash packet
+    void file_hash_without_priority(connection::in &);
 
     /// Create a move an inode out packet
     connection::out move_out_packet(
