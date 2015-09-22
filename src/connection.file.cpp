@@ -154,11 +154,12 @@ namespace {
         sending(
             std::shared_ptr<rask::connection> socket,
             boost::filesystem::path loc
-        ) : location(std::move(loc)) {
+        ) : location(std::move(loc)), position(location) {
         }
 
     public:
         const boost::filesystem::path location;
+        rask::const_file_block_hash_iterator position, end;
 
         /// Start sending a file to the recipient if we're not already doing so.
         /// If we are already sending the file then we're going to attach this
