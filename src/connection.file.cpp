@@ -182,8 +182,6 @@ namespace {
                         ("location", s.location);
                 });
         }
-
-        ~sending() = default;
     };
 
     f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
