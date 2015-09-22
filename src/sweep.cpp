@@ -40,6 +40,19 @@ rask::const_file_block_hash_iterator::~const_file_block_hash_iterator() {
 }
 
 
+std::size_t rask::const_file_block_hash_iterator::offset() const {
+    return pimpl->offset;
+}
+fostlib::const_memory_block rask::const_file_block_hash_iterator::data() const {
+    const unsigned char *begin =
+        reinterpret_cast< const unsigned char * >(pimpl->file.data());
+    const unsigned char *starts = begin + pimpl->offset;
+    const unsigned char *ends =
+        std::min(begin + pimpl->size, starts + file_hash_block_size);
+    return std::make_pair(starts, ends);
+}
+
+
 void rask::const_file_block_hash_iterator::operator ++ () {
     pimpl->offset += file_hash_block_size;
     if ( pimpl->offset >= pimpl->size ) {
@@ -58,11 +71,7 @@ bool rask::const_file_block_hash_iterator::operator == (
 std::vector<unsigned char> rask::const_file_block_hash_iterator::operator * () const {
     digester hasher(sha256);
     if ( pimpl->size ) {
-        const unsigned char *begin = reinterpret_cast< const unsigned char * >(
-            pimpl->file.data());
-        const unsigned char *starts = begin + pimpl->offset;
-        const unsigned char *ends = std::min(begin + pimpl->size, starts + file_hash_block_size);
-        hasher << std::make_pair(starts, ends);
+        hasher << data();
     }
     return hasher.digest();
 }

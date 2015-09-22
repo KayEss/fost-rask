@@ -10,6 +10,7 @@
 
 
 #include <fost/file>
+#include <fost/pointers>
 
 
 namespace rask {
@@ -29,6 +30,12 @@ namespace rask {
         const_file_block_hash_iterator();
         /// Destructor so we can use pimpl;
         ~const_file_block_hash_iterator();
+
+        /// Return the offset from the start of the file of the beginning
+        /// of the block
+        std::size_t offset() const;
+        /// Return the underlying data that we're at
+        fostlib::const_memory_block data() const;
 
         /// Move to the next block
         void operator ++ ();
