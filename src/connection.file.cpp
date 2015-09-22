@@ -11,6 +11,8 @@
 #include <rask/connection.hpp>
 #include <rask/tenant.hpp>
 
+#include <f5/threading/map.hpp>
+#include <f5/threading/set.hpp>
 #include <fost/counter>
 
 
@@ -137,7 +139,74 @@ rask::connection::out rask::send_empty_file_hash(
 }
 
 
+namespace {
+
+    class sending {
+        /// Globally track the files we're sending
+        static f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
+            g_sending;
+        /// Locally track who we are sending to
+        f5::tsset<std::shared_ptr<rask::connection>> recipients;
+        /// Create the instance and track the first recipient
+        sending(
+            std::shared_ptr<rask::connection> socket,
+            boost::filesystem::path loc
+        ) : location(std::move(loc)) {
+        }
+
+    public:
+        const boost::filesystem::path location;
+
+        /// Start sending a file to the recipient if we're not already doing so.
+        /// If we are already sending the file then we're going to attach this
+        /// recipient to the data as it goes out
+        static void start(
+            std::shared_ptr<rask::connection> socket,
+            boost::filesystem::path location
+        ) {
+            g_sending.add_if_not_found(
+                location,
+                [socket, location]() {
+                    fostlib::log::info(rask::c_fost_rask)
+                        ("", "Starting send of file")
+                        ("location", location);
+                    return new sending(socket, std::move(location));
+                },
+                [socket](const auto &s) {
+                    fostlib::log::debug(rask::c_fost_rask)
+                        ("", "Already sending file")
+                        ("location", s.location);
+                });
+        }
+
+        ~sending() = default;
+    };
+
+    f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
+            sending::g_sending;
+}
+
+
 void rask::file_hash_without_priority(connection::in &packet) {
     ++p_file_hash_no_priority_received;
+    auto logger(fostlib::log::debug(c_fost_rask));
+    logger
+        ("", "File hash packet without priority")
+        ("connection", "id", packet.socket_id());
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
+    logger("tenant", tenant->name());
+    auto filename(packet.read<fostlib::string>());
+    logger("filename", filename);
+    if ( tenant->subscription ) {
+        logger("subscribed", true);
+        packet.socket->workers.files.get_io_service().post(
+            [socket = packet.socket, tenant, filename = std::move(filename)]() {
+                sending::start(socket, tenant->subscription->local_path() /
+                    fostlib::coerce<boost::filesystem::path>(filename));
+            });
+    } else {
+        logger("subscribed", false);
+    }
 }
 
