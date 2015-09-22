@@ -10,6 +10,7 @@
 #include "subscriber.hpp"
 #include <rask/connection.hpp>
 #include <rask/tenant.hpp>
+#include <rask/sweep.hpp>
 
 #include <f5/threading/map.hpp>
 #include <f5/threading/set.hpp>
@@ -26,6 +27,8 @@ namespace {
         rask::c_fost_rask, "packets", "file_exists", "written");
     fostlib::performance p_empty_file_hash_written(
         rask::c_fost_rask, "packets", "file_hash_no_priority", "written");
+    fostlib::performance p_file_data_block_written(
+        rask::c_fost_rask, "packets", "file_data_block", "written");
 }
 
 
@@ -208,5 +211,18 @@ void rask::file_hash_without_priority(connection::in &packet) {
     } else {
         logger("subscribed", false);
     }
+}
+
+
+rask::connection::out rask::send_file_block(
+    rask::tenant &tenant, const tick &priority,
+    const fostlib::string &name, const boost::filesystem::path &location,
+    const const_file_block_hash_iterator &block
+) {
+    connection::out packet(0x9f);
+    packet << priority << tenant.name() << name <<
+        (fostlib::coerce<int64_t>(block.offset()) >> 15);
+    packet << block.data();
+    return std::move(packet);
 }
 

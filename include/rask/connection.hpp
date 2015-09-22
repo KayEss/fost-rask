@@ -27,6 +27,7 @@
 namespace rask {
 
 
+    class const_file_block_hash_iterator;
     class tenant;
     class tick;
     struct workers;
@@ -281,6 +282,10 @@ namespace rask {
     connection::out send_empty_file_hash(tenant &, const fostlib::json &);
     /// Recieve a file hash packet
     void file_hash_without_priority(connection::in &);
+    /// Send a file data block
+    connection::out send_file_block(tenant &, const tick &,
+        const fostlib::string &, const boost::filesystem::path &,
+        const const_file_block_hash_iterator &);
 
     /// Create a move an inode out packet
     connection::out move_out_packet(
