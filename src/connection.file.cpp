@@ -228,7 +228,7 @@ rask::connection::out rask::send_file_block(
 ) {
     connection::out packet(0x9f);
     packet << priority << tenant.name() << name <<
-        (fostlib::coerce<int64_t>(block.offset()) >> 15);
+        (fostlib::coerce<int64_t>(block.offset()) / file_hash_block_size);
     packet << block.data();
     return std::move(packet);
 }
