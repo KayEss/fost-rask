@@ -155,6 +155,7 @@ namespace {
             std::shared_ptr<rask::connection> socket,
             boost::filesystem::path loc
         ) : location(std::move(loc)), position(location) {
+            recipients.insert_if_not_found(socket);
         }
 
     public:
@@ -176,10 +177,17 @@ namespace {
                         ("location", location);
                     return new sending(socket, std::move(location));
                 },
-                [socket](const auto &s) {
-                    fostlib::log::debug(rask::c_fost_rask)
-                        ("", "Already sending file")
-                        ("location", s.location);
+                [socket](auto &s) {
+                    if ( s.recipients.insert_if_not_found(socket) ) {
+                        /// We have added a new recipient for the file
+                        fostlib::log::debug(rask::c_fost_rask)
+                            ("", "Already sending file -- recipient added")
+                            ("location", s.location);
+                    } else {
+                        fostlib::log::debug(rask::c_fost_rask)
+                            ("", "Already sending file -- recipient already receiving")
+                            ("location", s.location);
+                    }
                 });
         }
     };
