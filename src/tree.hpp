@@ -75,6 +75,13 @@ namespace rask {
         /// inode at the leaf positions.
         root_block hash;
 
+        /// Look up an inode entry for the requested file. Run the lambda,
+        /// possibly asynchronously. If the lookup fails to find a node then
+        /// the lambda is never called.
+        void lookup(const name_hash_type &,
+            const boost::filesystem::path &,
+            std::function<void(const fostlib::json &)> found);
+
         /// The type of the manipulator that runs inside the node database
         using manipulator_fn =
             std::function<void(rask::workers &, fostlib::json &, const fostlib::json &)>;

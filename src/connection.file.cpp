@@ -8,6 +8,7 @@
 
 #include "file.hpp"
 #include "subscriber.hpp"
+#include "tree.hpp"
 #include <rask/connection.hpp>
 #include <rask/tenant.hpp>
 #include <rask/sweep.hpp>
@@ -146,6 +147,8 @@ namespace {
 
     class sending {
         /// Globally track the files we're sending
+        /// TODO: Track the sending instance as a weak_ptr here and then
+        /// the shared_ptr goes in the closure for queueing packets
         static f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
             g_sending;
         /// Locally track who we are sending to
@@ -153,12 +156,19 @@ namespace {
         /// Create the instance and track the first recipient
         sending(
             std::shared_ptr<rask::connection> socket,
+            std::shared_ptr<rask::tenant> tenant,
+            rask::tick priority,
             boost::filesystem::path loc
-        ) : location(std::move(loc)), position(location) {
+        ) : tenant(tenant), priority(priority), location(std::move(loc)),
+            position(location)
+        {
             recipients.insert_if_not_found(socket);
         }
 
     public:
+        std::shared_ptr<rask::tenant> tenant;
+        const rask::tick priority;
+        const fostlib::string name;
         const boost::filesystem::path location;
         rask::const_file_block_hash_iterator position, end;
 
@@ -167,15 +177,16 @@ namespace {
         /// recipient to the data as it goes out
         static void start(
             std::shared_ptr<rask::connection> socket,
+            std::shared_ptr<rask::tenant> tenant, rask::tick priority,
             boost::filesystem::path location
         ) {
             g_sending.add_if_not_found(
                 location,
-                [socket, location]() {
+                [socket, tenant, priority, location]() {
                     fostlib::log::info(rask::c_fost_rask)
                         ("", "Starting send of file")
                         ("location", location);
-                    return new sending(socket, std::move(location));
+                    return new sending(socket, tenant, priority, std::move(location));
                 },
                 [socket](auto &s) {
                     if ( s.recipients.insert_if_not_found(socket) ) {
@@ -188,6 +199,23 @@ namespace {
                             ("", "Already sending file -- recipient already receiving")
                             ("location", s.location);
                     }
+                });
+        }
+
+        void queue() {
+            /// TODO: This needs to use tsmap with an iterator per receiver
+            /// and remove_if to drop those that have been dropped
+            recipients.for_each(
+                [this](auto &socket) {
+                    socket->queue(
+                        [this]() {
+                            auto packet = send_file_block(*tenant, priority, name,
+                                location, position);
+                            if ( ++position != end ) {
+                                queue();
+                            }
+                            return std::move(packet);
+                        });
                 });
         }
     };
@@ -212,8 +240,16 @@ void rask::file_hash_without_priority(connection::in &packet) {
         logger("subscribed", true);
         packet.socket->workers.files.get_io_service().post(
             [socket = packet.socket, tenant, filename = std::move(filename)]() {
-                sending::start(socket, tenant->subscription->local_path() /
-                    fostlib::coerce<boost::filesystem::path>(filename));
+                auto location = tenant->subscription->local_path() /
+                    fostlib::coerce<boost::filesystem::path>(filename);
+                tenant->subscription->inodes().lookup(
+                    name_hash(filename), location,
+                    [socket, tenant, location](
+                        const fostlib::json &inode
+                    ) {
+                        if ( inode.has_key("priority") )
+                            sending::start(socket, tenant, tick(inode["priority"]), location);
+                    });
             });
     } else {
         logger("subscribed", false);
