@@ -38,7 +38,7 @@ namespace rask {
         fostlib::const_memory_block data() const;
 
         /// Move to the next block
-        void operator ++ ();
+        const_file_block_hash_iterator &operator ++ ();
         /// Allow comparison
         bool operator == (const const_file_block_hash_iterator &) const;
 

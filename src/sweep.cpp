@@ -53,11 +53,13 @@ fostlib::const_memory_block rask::const_file_block_hash_iterator::data() const {
 }
 
 
-void rask::const_file_block_hash_iterator::operator ++ () {
+rask::const_file_block_hash_iterator &
+        rask::const_file_block_hash_iterator::operator ++ () {
     pimpl->offset += file_hash_block_size;
     if ( pimpl->offset >= pimpl->size ) {
         pimpl.reset();
     }
+    return *this;
 }
 
 
