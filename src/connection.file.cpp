@@ -163,6 +163,7 @@ namespace {
             position(location)
         {
             recipients.insert_if_not_found(socket);
+            queue();
         }
 
     public:
@@ -190,6 +191,7 @@ namespace {
                 },
                 [socket](auto &s) {
                     if ( s.recipients.insert_if_not_found(socket) ) {
+                        s.queue();
                         /// We have added a new recipient for the file
                         fostlib::log::debug(rask::c_fost_rask)
                             ("", "Already sending file -- recipient added")
@@ -211,7 +213,9 @@ namespace {
                         [this]() {
                             auto packet = send_file_block(*tenant, priority, name,
                                 location, position);
-                            if ( ++position != end ) {
+                            if ( ++position == end ) {
+                                g_sending.remove(location);
+                            } else {
                                 queue();
                             }
                             return std::move(packet);
@@ -262,6 +266,7 @@ rask::connection::out rask::send_file_block(
     const fostlib::string &name, const boost::filesystem::path &location,
     const const_file_block_hash_iterator &block
 ) {
+    ++p_file_data_block_written;
     connection::out packet(0x9f);
     packet << priority << tenant.name() << name <<
         (fostlib::coerce<int64_t>(block.offset()) / file_hash_block_size);
