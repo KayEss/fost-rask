@@ -58,6 +58,29 @@ rask::tree::const_iterator rask::tree::end() const {
 }
 
 
+void rask::tree::lookup(
+    const name_hash_type &hash,
+    const boost::filesystem::path &location,
+    std::function<void(const fostlib::json &)> found
+) {
+    auto down =
+        [&hash, location = fostlib::coerce<fostlib::string>(location), &found](
+            auto &data
+        ) {
+            const bool recurse = rask::partitioned(data);
+            if ( recurse ) {
+                throw fostlib::exceptions::not_implemented(
+                    "rask::tree::lookup where the data is partitioned");
+            } else {
+                if ( data["inodes"].has_key(location) )
+                    found(data["inodes"][location]);
+            }
+        };
+    fostlib::jsondb::local data(*root_dbp());
+    down(data);
+}
+
+
 namespace {
     void add_recurse(rask::workers &workers,
         std::size_t layer, fostlib::jsondb::local meta,
