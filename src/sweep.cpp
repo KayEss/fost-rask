@@ -6,6 +6,7 @@
 */
 
 
+#include <rask/configuration.hpp>
 #include <rask/sweep.hpp>
 #include <fost/crypto>
 #include <boost/iostreams/device/mapped_file.hpp>

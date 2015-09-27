@@ -16,9 +16,6 @@
 namespace rask {
 
 
-    /// Use a 32KB block size for hashing a file
-    const std::size_t file_hash_block_size = 32 * 1024;
-
     /// Iterator that can be used to go through a file block by block
     class const_file_block_hash_iterator final {
         struct impl;

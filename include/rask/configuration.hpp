@@ -19,6 +19,10 @@ namespace rask {
     extern const fostlib::module c_fost_rask;
 
 
+    /// Use a 32KB block size for hashing a file
+    const std::size_t file_hash_block_size = 32 * 1024;
+
+
     /// The peering database to use
     extern const fostlib::setting<fostlib::json> c_peers_db;
     /// The server database to use
