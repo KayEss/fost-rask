@@ -293,8 +293,19 @@ std::size_t rask::connection::in::size_control() {
     auto header(read<uint8_t>());
     if ( header < 0x80 ) {
         return header;
+    } else if ( header > 0xf8 ) {
+        std::size_t bytes = 0;
+        /// We disallow anything too big
+        while ( header > 0xf8 && header <= 0xfa ) {
+            bytes *= 0x100;
+            bytes += read<unsigned char>();
+            --header;
+        }
+        return bytes;
     } else
-        throw fostlib::exceptions::not_implemented("Large data size");
+        throw fostlib::exceptions::not_implemented(
+            "size_control recived invalid size byte",
+            fostlib::coerce<fostlib::string>(int(header)));
 }
 
 
