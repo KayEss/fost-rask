@@ -288,6 +288,8 @@ namespace rask {
     connection::out send_file_block(tenant &, const tick &,
         const fostlib::string &, const boost::filesystem::path &,
         const const_file_block_hash_iterator &);
+    /// Process a data block
+    void file_data_block(connection::in &);
 
     /// Create a move an inode out packet
     connection::out move_out_packet(

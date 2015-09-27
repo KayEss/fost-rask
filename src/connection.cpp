@@ -108,6 +108,8 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     create_directory(packet);
                 } else if ( control == 0x93 ) {
                     move_out(packet);
+                } else if ( control == 0x9f ) {
+                    file_data_block(packet);
                 } else {
                     fostlib::log::warning(c_fost_rask)
                         ("", "Unknown control byte received")

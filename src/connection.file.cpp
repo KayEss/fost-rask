@@ -23,6 +23,8 @@ namespace {
         rask::c_fost_rask, "packets", "file_exists", "received");
     fostlib::performance p_file_hash_no_priority_received(
         rask::c_fost_rask, "packets", "file_hash_no_priority", "received");
+    fostlib::performance p_file_data_block_received(
+        rask::c_fost_rask, "packets", "file_data_block", "received");
 
     fostlib::performance p_file_exists_written(
         rask::c_fost_rask, "packets", "file_exists", "written");
@@ -272,8 +274,40 @@ rask::connection::out rask::send_file_block(
     ++p_file_data_block_written;
     connection::out packet(0x9f);
     packet << priority << tenant.name() << name <<
-        (fostlib::coerce<int64_t>(block.offset()) / file_hash_block_size);
-    packet << block.data();
+        (fostlib::coerce<int64_t>(block.offset())) << *block;
+    packet.size_sequence(block.data()) << block.data();
     return std::move(packet);
+}
+
+
+void rask::file_data_block(connection::in &packet) {
+    ++p_file_data_block_received;
+    auto logger(fostlib::log::debug(c_fost_rask));
+    logger
+        ("", "File data block packet")
+        ("connection", "id", packet.socket_id());
+    auto priority(packet.read<tick>());
+    logger("priority", priority);
+    auto tenant(
+        known_tenant(packet.socket->workers, packet.read<fostlib::string>()));
+    logger("tenant", tenant->name());
+    auto filename(packet.read<fostlib::string>());
+    logger("filename", filename);
+    auto offset(packet.read<int64_t>());
+    logger("offset", offset);
+    auto hash(packet.read(32));
+    logger("hash", fostlib::coerce<fostlib::base64_string>(hash));
+    auto size(packet.size_control());
+    logger("data", "size", size);
+    auto data(packet.read(size));
+    fostlib::digester hasher(fostlib::sha256);
+    hasher << data;
+    auto data_hash = hasher.digest();
+    logger("data", "hash",
+        fostlib::coerce<fostlib::base64_string>(data_hash));
+    if ( data_hash != hash ) {
+        throw fostlib::exceptions::not_implemented(
+            "Calculated data hash does not match sent data hash");
+    }
 }
 
