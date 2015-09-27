@@ -158,9 +158,10 @@ namespace {
             std::shared_ptr<rask::connection> socket,
             std::shared_ptr<rask::tenant> tenant,
             rask::tick priority,
+            fostlib::string name,
             boost::filesystem::path loc
-        ) : tenant(tenant), priority(priority), location(std::move(loc)),
-            position(location)
+        ) : tenant(tenant), priority(priority), name(std::move(name)),
+            location(std::move(loc)), position(location)
         {
             recipients.insert_if_not_found(socket);
             queue();
@@ -179,15 +180,16 @@ namespace {
         static void start(
             std::shared_ptr<rask::connection> socket,
             std::shared_ptr<rask::tenant> tenant, rask::tick priority,
-            boost::filesystem::path location
+            fostlib::string name, boost::filesystem::path location
         ) {
             g_sending.add_if_not_found(
                 location,
-                [socket, tenant, priority, location]() {
+                [socket, tenant, priority, name, location]() {
                     fostlib::log::info(rask::c_fost_rask)
                         ("", "Starting send of file")
                         ("location", location);
-                    return new sending(socket, tenant, priority, std::move(location));
+                    return new sending(socket, tenant, priority,
+                        std::move(name), std::move(location));
                 },
                 [socket](auto &s) {
                     if ( s.recipients.insert_if_not_found(socket) ) {
@@ -252,7 +254,8 @@ void rask::file_hash_without_priority(connection::in &packet) {
                         const fostlib::json &inode
                     ) {
                         if ( inode.has_key("priority") )
-                            sending::start(socket, tenant, tick(inode["priority"]), location);
+                            sending::start(socket, tenant, tick(inode["priority"]),
+                                fostlib::coerce<fostlib::string>(inode["name"]), location);
                     });
             });
     } else {
