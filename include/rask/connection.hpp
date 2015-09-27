@@ -142,7 +142,9 @@ namespace rask {
             template<typename CB>
             void operator () (std::shared_ptr<connection> socket, CB cb) const {
                 auto sender = socket->sender.wrap(
-                    [socket, cb](const boost::system::error_code &error, std::size_t bytes) {
+                    [socket, cb](
+                        const boost::system::error_code &error, std::size_t bytes
+                    ) {
                         if ( error ) {
                             fostlib::log::error(c_fost_rask)
                                 ("", "Error sending data packet")
