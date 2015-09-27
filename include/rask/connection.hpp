@@ -133,6 +133,12 @@ namespace rask {
                 size_sequence(s, *buffer);
                 return *this;
             }
+            /// Add a size control sequence for a memory block
+            out &size_sequence(const fostlib::const_memory_block b) {
+                return size_sequence(
+                    reinterpret_cast<const char *>(b.second) -
+                    reinterpret_cast<const char *>(b.first));
+            }
 
             /// Put the data on the wire
             void operator () (std::shared_ptr<connection> socket) const {
