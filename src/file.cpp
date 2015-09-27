@@ -151,3 +151,18 @@ rask::stat rask::file_stat(const boost::filesystem::path &filename) {
     }
 }
 
+
+/*
+    rask::filedata
+*/
+
+
+struct rask::file::data::impl {
+};
+
+
+/*
+    rask::const_block_iterator
+*/
+
+

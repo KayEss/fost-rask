@@ -290,10 +290,6 @@ namespace rask {
     connection::out send_empty_file_hash(tenant &, const fostlib::json &);
     /// Recieve a file hash packet
     void file_hash_without_priority(connection::in &);
-    /// Send a file data block
-    connection::out send_file_block(tenant &, const tick &,
-        const fostlib::string &, const boost::filesystem::path &,
-        const const_file_block_hash_iterator &);
     /// Process a data block
     void file_data_block(connection::in &);
 

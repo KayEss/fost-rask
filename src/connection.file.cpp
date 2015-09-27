@@ -154,7 +154,7 @@ namespace {
         static f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
             g_sending;
         /// Locally track who we are sending to
-        f5::tsset<std::shared_ptr<rask::connection>> recipients;
+        f5::tsmap<std::shared_ptr<rask::connection>> recipients;
         /// Create the instance and track the first recipient
         sending(
             std::shared_ptr<rask::connection> socket,
@@ -163,7 +163,7 @@ namespace {
             fostlib::string name,
             boost::filesystem::path loc
         ) : tenant(tenant), priority(priority), name(std::move(name)),
-            location(std::move(loc)), position(location)
+            location(std::move(loc)), position(location.begin()), end(location.end())
         {
             recipients.insert_if_not_found(socket);
             queue();
@@ -173,8 +173,8 @@ namespace {
         std::shared_ptr<rask::tenant> tenant;
         const rask::tick priority;
         const fostlib::string name;
-        const boost::filesystem::path location;
-        rask::const_file_block_hash_iterator position, end;
+        const rask::file::data location;
+        rask::file::const_block_iterator position, end;
 
         /// Start sending a file to the recipient if we're not already doing so.
         /// If we are already sending the file then we're going to attach this
@@ -199,33 +199,16 @@ namespace {
                         /// We have added a new recipient for the file
                         fostlib::log::debug(rask::c_fost_rask)
                             ("", "Already sending file -- recipient added")
-                            ("location", s.location);
+                            ("location", s.location.location());
                     } else {
                         fostlib::log::debug(rask::c_fost_rask)
                             ("", "Already sending file -- recipient already receiving")
-                            ("location", s.location);
+                            ("location", s.location.location());
                     }
                 });
         }
 
-        void queue() {
-            /// TODO: This needs to use tsmap with an iterator per receiver
-            /// and remove_if to drop those that have been dropped
-            recipients.for_each(
-                [this](auto &socket) {
-                    socket->queue(
-                        [this]() {
-                            auto packet = send_file_block(*tenant, priority, name,
-                                location, position);
-                            if ( ++position == end ) {
-                                g_sending.remove(location);
-                            } else {
-                                queue();
-                            }
-                            return std::move(packet);
-                        });
-                });
-        }
+        void queue();
     };
 
     f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
@@ -266,17 +249,40 @@ void rask::file_hash_without_priority(connection::in &packet) {
 }
 
 
-rask::connection::out rask::send_file_block(
-    rask::tenant &tenant, const tick &priority,
-    const fostlib::string &name, const boost::filesystem::path &location,
-    const const_file_block_hash_iterator &block
-) {
-    ++p_file_data_block_written;
-    connection::out packet(0x9f);
-    packet << priority << tenant.name() << name <<
-        (fostlib::coerce<int64_t>(block.offset())) << *block;
-    packet.size_sequence(block.data()) << block.data();
-    return std::move(packet);
+namespace {
+    rask::connection::out send_file_block(
+        rask::tenant &tenant, const rask::tick &priority,
+        const fostlib::string &name, const boost::filesystem::path &location,
+        const rask::file::const_block_iterator &block
+    ) {
+        ++p_file_data_block_written;
+        rask::connection::out packet(0x9f);
+        packet << priority << tenant.name() << name <<
+            (fostlib::coerce<int64_t>(block.offset()));
+        fostlib::digester hash(fostlib::sha256);
+        hash << *block;
+        packet << hash.digest();
+        packet.size_sequence(*block) << *block;
+        return std::move(packet);
+    }
+    void sending::queue() {
+        /// TODO: This needs to use tsmap with an iterator per receiver
+        /// and remove_if to drop those that have been dropped
+        recipients.for_each(
+            [this](auto &socket) {
+                socket->queue(
+                    [this]() {
+                        auto packet = send_file_block(*tenant, priority, name,
+                            location.location(), position);
+                        if ( ++position == end ) {
+                            g_sending.remove(location.location());
+                        } else {
+                            queue();
+                        }
+                        return std::move(packet);
+                    });
+            });
+    }
 }
 
 

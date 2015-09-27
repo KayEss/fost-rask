@@ -10,6 +10,7 @@
 
 
 #include <fost/datetime>
+#include <fost/pointers>
 
 #include <boost/filesystem/path.hpp>
 
@@ -44,6 +45,56 @@ namespace rask {
     /// Calculate a relative path
     fostlib::string relative_path(
         const fostlib::string &root, const boost::filesystem::path &location);
+
+
+    namespace file {
+
+
+        class const_block_iterator;
+
+
+        /// A file that is undergoing synchronisation in either direction, or
+        /// hashing. State is shared between different processes that need
+        /// to be able to read or write the file.
+        class data {
+            friend class const_block_iterator;
+            /// Underlying implementation of the file wrapper
+            struct impl;
+            std::shared_ptr<impl> pimpl;
+        public:
+            /// Wrap an existing file on the filesystem
+            data(boost::filesystem::path location);
+
+            /// Store the file location
+            const fostlib::accessors<boost::filesystem::path> location;
+
+            /// The start of the file data
+            const_block_iterator begin() const;
+            /// The end of the file data
+            const_block_iterator end() const;
+        };
+
+
+        /// An iterator that is able to walk a data file (target) or a hash
+        /// file (meta-data).
+        class const_block_iterator {
+            /// Stored in order to make sure that the underlying file is kept
+            /// alive.
+            std::shared_ptr<data::impl> keep_alive;
+
+        public:
+            /// Increment the iterator
+            const_block_iterator operator ++ ();
+            /// The offset of the current data block
+            std::size_t offset() const;
+            /// The data
+            fostlib::const_memory_block operator *() const;
+            /// Return true if the two iterators point to the same thing
+            bool operator == (const const_block_iterator &) const;
+        };
+
+
+    }
 
 
 }
