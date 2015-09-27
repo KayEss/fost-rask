@@ -154,7 +154,11 @@ namespace {
         static f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
             g_sending;
         /// Locally track who we are sending to
-        f5::tsmap<std::shared_ptr<rask::connection>> recipients;
+        f5::tsmap<std::shared_ptr<rask::connection>,
+            std::unique_ptr<
+                std::pair<
+                    rask::file::const_block_iterator,
+                    rask::file::const_block_iterator>>> recipients;
         /// Create the instance and track the first recipient
         sending(
             std::shared_ptr<rask::connection> socket,
@@ -163,10 +167,17 @@ namespace {
             fostlib::string name,
             boost::filesystem::path loc
         ) : tenant(tenant), priority(priority), name(std::move(name)),
-            location(std::move(loc)), position(location.begin()), end(location.end())
+            location(std::move(loc))
         {
-            recipients.insert_if_not_found(socket);
-            queue();
+            recipients.add_if_not_found(socket,
+                [this]() {
+                    return std::make_unique<
+                            std::pair<
+                                rask::file::const_block_iterator,
+                                rask::file::const_block_iterator>
+                        >(location.begin(), location.end());
+                });
+            queue(socket);
         }
 
     public:
@@ -174,7 +185,6 @@ namespace {
         const rask::tick priority;
         const fostlib::string name;
         const rask::file::data location;
-        rask::file::const_block_iterator position, end;
 
         /// Start sending a file to the recipient if we're not already doing so.
         /// If we are already sending the file then we're going to attach this
@@ -194,21 +204,23 @@ namespace {
                         std::move(name), std::move(location));
                 },
                 [socket](auto &s) {
-                    if ( s.recipients.insert_if_not_found(socket) ) {
-                        s.queue();
-                        /// We have added a new recipient for the file
-                        fostlib::log::debug(rask::c_fost_rask)
-                            ("", "Already sending file -- recipient added")
-                            ("location", s.location.location());
-                    } else {
-                        fostlib::log::debug(rask::c_fost_rask)
-                            ("", "Already sending file -- recipient already receiving")
-                            ("location", s.location.location());
-                    }
+                    s.recipients.add_if_not_found(socket,
+                        [&s]() {
+                            /// We have added a new recipient for the file
+                            fostlib::log::debug(rask::c_fost_rask)
+                                ("", "Already sending file -- recipient added")
+                                ("location", s.location.location());
+                            return std::make_unique<
+                                    std::pair<
+                                        rask::file::const_block_iterator,
+                                        rask::file::const_block_iterator>
+                                >(s.location.begin(), s.location.end());
+                        });
+                    s.queue(socket);
                 });
         }
 
-        void queue();
+        void queue(std::shared_ptr<rask::connection> socket);
     };
 
     f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
@@ -265,23 +277,21 @@ namespace {
         packet.size_sequence(*block) << *block;
         return std::move(packet);
     }
-    void sending::queue() {
-        /// TODO: This needs to use tsmap with an iterator per receiver
-        /// and remove_if to drop those that have been dropped
-        recipients.for_each(
-            [this](auto &socket) {
-                socket->queue(
-                    [this]() {
-                        auto packet = send_file_block(*tenant, priority, name,
-                            location.location(), position);
-                        if ( ++position == end ) {
-                            g_sending.remove(location.location());
-                        } else {
-                            queue();
-                        }
-                        return std::move(packet);
-                    });
-            });
+    void sending::queue(std::shared_ptr<rask::connection> socket) {
+        auto position = recipients.find(socket);
+        if ( position ) {
+            socket->queue(
+                [this, socket, position]() {
+                    auto packet = send_file_block(*tenant, priority, name,
+                        location.location(), position->first);
+                    if ( ++(position->first) == position->second ) {
+                        g_sending.remove(location.location());
+                    } else {
+                        queue(socket);
+                    }
+                    return std::move(packet);
+                });
+        }
     }
 }
 
