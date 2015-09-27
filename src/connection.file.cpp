@@ -103,7 +103,7 @@ void rask::file_exists(rask::connection::in &packet) {
                                     fostlib::coerce<std::size_t>(size.value()));
                             }
                             if ( socket->identity && hash64 != c.inode["hash"]["inode"] ) {
-                                auto logger(fostlib::log::error(c_fost_rask));
+                                auto logger(fostlib::log::debug(c_fost_rask));
                                 logger
                                     ("", "sendfile")
                                     ("connection", "id", socket->id)
