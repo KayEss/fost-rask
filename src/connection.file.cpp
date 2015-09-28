@@ -167,7 +167,7 @@ namespace {
             fostlib::string name,
             boost::filesystem::path loc
         ) : tenant(tenant), priority(priority), name(std::move(name)),
-            location(std::move(loc))
+            file(std::move(loc))
         {
             recipients.add_if_not_found(socket,
                 [this]() {
@@ -175,7 +175,7 @@ namespace {
                             std::pair<
                                 rask::file::const_block_iterator,
                                 rask::file::const_block_iterator>
-                        >(location.begin(), location.end());
+                        >(file.begin(), file.end());
                 });
             queue(socket);
         }
@@ -184,7 +184,7 @@ namespace {
         std::shared_ptr<rask::tenant> tenant;
         const rask::tick priority;
         const fostlib::string name;
-        const rask::file::data location;
+        const rask::file::data file;
 
         /// Start sending a file to the recipient if we're not already doing so.
         /// If we are already sending the file then we're going to attach this
@@ -283,9 +283,9 @@ namespace {
             socket->queue(
                 [this, socket, position]() {
                     auto packet = send_file_block(*tenant, priority, name,
-                        location.location(), position->first);
+                        file.location(), position->first);
                     if ( ++(position->first) == position->second ) {
-                        g_sending.remove(location.location());
+                        g_sending.remove(file.location());
                     } else {
                         queue(socket);
                     }
