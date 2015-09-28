@@ -151,14 +151,16 @@ namespace {
         /// Globally track the files we're sending
         /// TODO: Track the sending instance as a weak_ptr here and then
         /// the shared_ptr goes in the closure for queueing packets
-        static f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
+        static f5::tsmap<boost::filesystem::path, std::shared_ptr<sending>>
             g_sending;
         /// Locally track who we are sending to
         f5::tsmap<std::shared_ptr<rask::connection>,
-            std::unique_ptr<
+            std::shared_ptr<
                 std::pair<
                     rask::file::const_block_iterator,
                     rask::file::const_block_iterator>>> recipients;
+
+    public:
         /// Create the instance and track the first recipient
         sending(
             std::shared_ptr<rask::connection> socket,
@@ -169,18 +171,8 @@ namespace {
         ) : tenant(tenant), priority(priority), name(std::move(name)),
             file(std::move(loc))
         {
-            recipients.add_if_not_found(socket,
-                [this]() {
-                    return std::make_unique<
-                            std::pair<
-                                rask::file::const_block_iterator,
-                                rask::file::const_block_iterator>
-                        >(file.begin(), file.end());
-                });
-            queue(socket);
         }
 
-    public:
         std::shared_ptr<rask::tenant> tenant;
         const rask::tick priority;
         const fostlib::string name;
@@ -194,36 +186,38 @@ namespace {
             std::shared_ptr<rask::tenant> tenant, rask::tick priority,
             fostlib::string name, boost::filesystem::path location
         ) {
-            g_sending.add_if_not_found(
-                location,
-                [socket, tenant, priority, name, location]() {
-                    fostlib::log::info(rask::c_fost_rask)
-                        ("", "Starting send of file")
-                        ("location", location);
-                    return new sending(socket, tenant, priority,
-                        std::move(name), std::move(location));
-                },
-                [socket](auto &s) {
-                    s.recipients.add_if_not_found(socket,
-                        [&s]() {
-                            /// We have added a new recipient for the file
-                            fostlib::log::debug(rask::c_fost_rask)
-                                ("", "Already sending file -- recipient added")
-                                ("location", s.location.location());
-                            return std::make_unique<
-                                    std::pair<
-                                        rask::file::const_block_iterator,
-                                        rask::file::const_block_iterator>
-                                >(s.location.begin(), s.location.end());
-                        });
-                    s.queue(socket);
-                });
+            auto sender = std::make_shared<sending>(socket, tenant,
+                priority, std::move(name), std::move(location));
+            if ( sender->file.begin() != sender->file.end() ) {
+                g_sending.add_if_not_found(sender->file.location(),
+                    [&]() {
+                        fostlib::log::info(rask::c_fost_rask)
+                            ("", "Starting send of file")
+                            ("location", sender->file.location());
+                        return sender;
+                    });
+                bool added = false;
+                sender->recipients.add_if_not_found(socket,
+                    [&]() {
+                        /// We have added a new recipient for the file
+                        added = true;
+                        fostlib::log::debug(rask::c_fost_rask)
+                            ("", "Already sending file -- recipient added")
+                            ("location", sender->file.location());
+                        return std::make_unique<
+                                std::pair<
+                                    rask::file::const_block_iterator,
+                                    rask::file::const_block_iterator>
+                            >(sender->file.begin(), sender->file.end());
+                    });
+                if ( added ) sender->queue(socket);
+            }
         }
 
         void queue(std::shared_ptr<rask::connection> socket);
     };
 
-    f5::tsmap<boost::filesystem::path, std::unique_ptr<sending>>
+    f5::tsmap<boost::filesystem::path, std::shared_ptr<sending>>
             sending::g_sending;
 }
 
@@ -267,15 +261,22 @@ namespace {
         const fostlib::string &name, const boost::filesystem::path &location,
         const rask::file::const_block_iterator &block
     ) {
-        ++p_file_data_block_written;
-        rask::connection::out packet(0x9f);
-        packet << priority << tenant.name() << name <<
-            (fostlib::coerce<int64_t>(block.offset()));
-        fostlib::digester hash(fostlib::sha256);
-        hash << *block;
-        packet << hash.digest();
-        packet.size_sequence(*block) << *block;
-        return std::move(packet);
+        try {
+            ++p_file_data_block_written;
+            rask::connection::out packet(0x9f);
+            auto data = *block;
+            packet << priority << tenant.name() << name <<
+                (fostlib::coerce<int64_t>(data.first));
+            fostlib::digester hash(fostlib::sha256);
+            hash << data.second;
+            packet << hash.digest();
+            packet.size_sequence(data.second) << data.second;
+            return std::move(packet);
+        } catch ( fostlib::exceptions::exception &e ) {
+            fostlib::insert(e.data(), "tenant", tenant.name());
+            fostlib::insert(e.data(), "location", location);
+            throw;
+        }
     }
     void sending::queue(std::shared_ptr<rask::connection> socket) {
         auto position = recipients.find(socket);

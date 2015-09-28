@@ -78,17 +78,22 @@ namespace rask {
         /// An iterator that is able to walk a data file (target) or a hash
         /// file (meta-data).
         class const_block_iterator {
+            friend class data;
             /// Stored in order to make sure that the underlying file is kept
             /// alive.
-            std::shared_ptr<data::impl> keep_alive;
-
+            std::shared_ptr<data::impl> file;
+            /// The offset in the current iteration
+            std::size_t m_offset;
+            /// Construct an iterator
+            explicit const_block_iterator(std::shared_ptr<data::impl> = nullptr);
         public:
+            /// The type of value pointed to by the iterator
+            using value_type =
+                std::pair<std::size_t, fostlib::const_memory_block>;
             /// Increment the iterator
-            const_block_iterator operator ++ ();
-            /// The offset of the current data block
-            std::size_t offset() const;
-            /// The data
-            fostlib::const_memory_block operator *() const;
+            const_block_iterator &operator ++ ();
+            /// The data and its offset
+            value_type operator *() const;
             /// Return true if the two iterators point to the same thing
             bool operator == (const const_block_iterator &) const;
         };

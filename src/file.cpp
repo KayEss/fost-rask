@@ -13,6 +13,7 @@
 #include <fost/exception/unexpected_eof.hpp>
 
 #include <boost/filesystem.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
 
 #include <system_error>
 
@@ -153,16 +154,90 @@ rask::stat rask::file_stat(const boost::filesystem::path &filename) {
 
 
 /*
-    rask::filedata
+    rask::file::data
 */
 
 
 struct rask::file::data::impl {
+    std::size_t size;
+    boost::iostreams::mapped_file_source file;
+
+    /// We can't memory map a zero byte file, so we only open the file
+    impl(std::size_t s, const boost::filesystem::path &p)
+    : size(s) {
+        if ( size ) file.open(p.string());
+    }
+
+    fostlib::const_memory_block data(std::size_t offset, std::size_t bytes) {
+        if ( !size ) {
+            throw fostlib::exceptions::null("Memory mapped file is empty");
+        } else if ( offset >= size ) {
+            throw fostlib::exceptions::unexpected_eof(
+                "Requesting data past the end of the file");
+        }
+        const unsigned char *begin =
+            reinterpret_cast< const unsigned char * >(file.data());
+        const unsigned char *starts = begin + offset;
+        const unsigned char *ends = std::min(begin + size, starts + bytes);
+        return std::make_pair(starts, ends);
+    }
 };
 
 
+rask::file::data::data(boost::filesystem::path p)
+: pimpl(std::make_shared<impl>(boost::filesystem::file_size(p), p)),
+    location(std::move(p))
+{
+}
+
+
+rask::file::const_block_iterator rask::file::data::begin() const {
+    return const_block_iterator(pimpl);
+}
+
+
+rask::file::const_block_iterator rask::file::data::end() const {
+    return const_block_iterator();
+}
+
+
 /*
-    rask::const_block_iterator
+    rask::file::const_block_iterator
 */
 
+
+rask::file::const_block_iterator::const_block_iterator(
+    std::shared_ptr<data::impl> fptr
+) : file(fptr && fptr->size ? fptr : nullptr), m_offset(0) {
+}
+
+
+rask::file::const_block_iterator &rask::file::const_block_iterator::operator ++ () {
+    if ( !file )
+        throw fostlib::exceptions::unexpected_eof(
+            "Can't increment an end rask::file::const_block_iterator");
+    m_offset += file_hash_block_size;
+    if ( m_offset >= file->size ) {
+        file.reset();
+        m_offset = 0;
+    }
+    return *this;
+}
+
+
+rask::file::const_block_iterator::value_type
+        rask::file::const_block_iterator::operator * () const {
+    if ( !file )
+        throw fostlib::exceptions::unexpected_eof(
+            "Can't dereference an end rask::file::const_block_iterator");
+    return std::make_pair(m_offset,
+        file->data(m_offset, file_hash_block_size));
+}
+
+
+bool rask::file::const_block_iterator::operator == (
+    const rask::file::const_block_iterator &right
+) const {
+    return file == right.file && m_offset == right.m_offset;
+}
 
