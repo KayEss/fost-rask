@@ -84,6 +84,12 @@ void rask::listen(workers &w, const fostlib::json &config) {
     std::shared_ptr<state> port{new state{
         config,
         {w.io.get_io_service(), endpoint}}};
+
+    boost::asio::socket_base::receive_buffer_size rbuffer(connection::buffer_size);
+    port->listener.set_option(rbuffer);
+    boost::asio::socket_base::send_buffer_size sbuffer(connection::buffer_size);
+    port->listener.set_option(sbuffer);
+
     accept(w, port);
     fostlib::log::info(c_fost_rask, "Rask now listening for peer connections", config);
 }

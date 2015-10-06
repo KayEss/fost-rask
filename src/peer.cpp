@@ -39,10 +39,19 @@ void rask::peer_with(workers &w, std::shared_ptr<connection::reconnect> client) 
     socket->restart = client;
     client->socket = socket;
     reset_watchdog(w, client);
+
     boost::asio::ip::tcp::resolver resolver(client->watchdog.get_io_service());
     boost::asio::ip::tcp::resolver::query q(
         fostlib::coerce<fostlib::string>(client->configuration["host"]).c_str(),
         fostlib::coerce<fostlib::string>(client->configuration["port"]).c_str());
+    auto endp = resolver.resolve(q);
+
+    socket->cnx.open(endp->endpoint().protocol());
+    boost::asio::socket_base::receive_buffer_size rbuffer(connection::buffer_size);
+    socket->cnx.set_option(rbuffer);
+    boost::asio::socket_base::send_buffer_size sbuffer(connection::buffer_size);
+    socket->cnx.set_option(sbuffer);
+
     boost::asio::async_connect(socket->cnx, resolver.resolve(q),
         [socket](const boost::system::error_code &error, auto iterator) {
             if ( error ) {

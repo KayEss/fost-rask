@@ -148,7 +148,7 @@ rask::connection::connection(rask::workers &w)
         sender(w.io.get_io_service()),
         heartbeat(w.io.get_io_service()),
         identity(0), packets(buffer_capacity) {
-    input_buffer.prepare(8 * 1024);
+    input_buffer.prepare(buffer_size);
 }
 
 

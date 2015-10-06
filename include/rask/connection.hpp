@@ -55,6 +55,9 @@ namespace rask {
         /// The connection ID used in log messages
         const int64_t id;
 
+        /// The buffer size to be used
+        const static std::size_t buffer_size = 64 * 1024;
+
         /// The socket used for this connection
         boost::asio::ip::tcp::socket cnx;
         /// Strand used for sending
