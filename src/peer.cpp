@@ -46,7 +46,7 @@ void rask::peer_with(workers &w, std::shared_ptr<connection::reconnect> client) 
     boost::asio::async_connect(socket->cnx, resolver.resolve(q),
         [socket](const boost::system::error_code &error, auto iterator) {
             if ( error ) {
-                fostlib::log::error(c_fost_rask, "Connected to peer", error.message().c_str());
+                fostlib::log::error(c_fost_rask, "Not connected to peer", error.message().c_str());
             } else {
                 fostlib::log::debug(c_fost_rask, "Connected to peer");
                 monitor_connection(socket);
