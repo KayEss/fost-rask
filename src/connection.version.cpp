@@ -19,17 +19,26 @@
 
 
 namespace {
+    fostlib::performance p_sent(rask::c_fost_rask,
+        "packets", "version", "sent");
     fostlib::performance p_received(rask::c_fost_rask,
         "packets", "version", "received");
 }
 
 
 rask::connection::out rask::send_version() {
+    ++p_sent;
+    auto logger(fostlib::log::debug(c_fost_rask));
+    logger
+        ("", "Sending version block");
     connection::out version(0x80);
     version << rask::known_version;
     if ( server_identity() ) {
+        logger("identity", server_identity());
         version << server_identity();
         auto state = rask::tick::now();
+        logger("time", state.first);
+        logger("hash", state.second);
         version << state.first;
         if ( !state.second.isnull() ) {
             const auto hash = fostlib::coerce<std::vector<unsigned char>>(
@@ -40,6 +49,30 @@ rask::connection::out rask::send_version() {
         }
     }
     return std::move(version);
+}
+
+
+namespace {
+    void send_tenants(std::shared_ptr<rask::connection> socket) {
+        auto logger(fostlib::log::debug(rask::c_fost_rask));
+        logger
+            ("", "Sending tenants")
+            ("connection", socket->id);
+        auto tdbconf = rask::c_tenant_db.value();
+        logger("tenants", tdbconf);
+        if ( !tdbconf.isnull() ) {
+            auto tenants_dbp = beanbag::database(tdbconf);
+            fostlib::jsondb::local tenants(*tenants_dbp);
+            static const fostlib::jcursor pos("known");
+            for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
+                auto name = fostlib::coerce<fostlib::string>(iter.key());
+                socket->queue(
+                    [name = std::move(name), data = *iter]() {
+                        return rask::tenant_packet(name, data);
+                    });
+            }
+        }
+    }
 }
 
 
@@ -70,20 +103,7 @@ void rask::receive_version(connection::in &packet) {
                 logger("conversation", "sending tenants");
                 packet.socket->workers.responses.get_io_service().post(
                     [socket = packet.socket]() {
-                        auto tdbconf = c_tenant_db.value();
-                        if ( !tdbconf.isnull() ) {
-                            auto tenants_dbp = beanbag::database(tdbconf);
-                            fostlib::jsondb::local tenants(*tenants_dbp);
-                            static const fostlib::jcursor pos("known");
-                            for ( auto iter(tenants[pos].begin()); iter != tenants[pos].end(); ++iter ) {
-                                auto name = fostlib::coerce<fostlib::string>(iter.key());
-                                auto mytenant(known_tenant(socket->workers, name));
-                                socket->queue(
-                                    [name = std::move(name), data = *iter]() {
-                                        return tenant_packet(name, data);
-                                    });
-                            }
-                        }
+                        send_tenants(socket);
                     });
             } else {
                 logger("conversation", "not needed");
