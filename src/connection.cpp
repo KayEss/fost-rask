@@ -33,25 +33,27 @@ namespace {
 
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
     std::unique_lock<std::mutex> lock(g_mutex);
-    for ( auto w = g_connections.begin(); w != g_connections.end(); ++w ) {
-        std::shared_ptr<rask::connection> slot(w->lock());
+    /// Try to find an empty slot
+    for ( auto &w : g_connections ) {
+        auto slot(w.lock());
         if ( !slot ) {
-            *w = socket;
+            /// And if there is one then use it
+            w = socket;
             return;
         }
     }
+    /// Otherwise just stick this one onto the end
     g_connections.push_back(socket);
 }
 
 
-std::size_t rask::broadcast(const connection::out &packet) {
+std::size_t rask::broadcast(std::function<rask::connection::out(void)> fn) {
     std::size_t to = 0;
     std::unique_lock<std::mutex> lock(g_mutex);
-    for ( auto w = g_connections.begin(); w != g_connections.end(); ++w ) {
-        std::shared_ptr<rask::connection> slot(w->lock());
+    for ( auto &w : g_connections ) {
+        auto slot(w.lock());
         if ( slot ) {
-            ++to;
-            packet(slot);
+            if ( slot->queue(fn) ) ++to;
         }
     }
     return to;
@@ -157,7 +159,7 @@ rask::connection::~connection() {
 }
 
 
-void rask::connection::queue(std::function<out(void)> fn) {
+bool rask::connection::queue(std::function<out(void)> fn) {
     bool added = false;
     const auto size = packets.push_back(
         [fn]() {
@@ -179,6 +181,7 @@ void rask::connection::queue(std::function<out(void)> fn) {
     if ( added ) {
         sender.produced();
     }
+    return added;
 }
 
 

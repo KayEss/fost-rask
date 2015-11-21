@@ -163,9 +163,10 @@ namespace rask {
             static void size_sequence(std::size_t, boost::asio::streambuf &);
         };
 
-        /// Queue a packet for outbound sending. Can be called from multiple
-        /// threads.
-        void queue(std::function<out(void)>);
+        /// Queue a packet for outbound sending. Can be called from
+        /// multiple threads. Returns true if the packet was queued and
+        // false if it was spilled.
+        bool queue(std::function<out(void)>);
 
         /// Allows a network connection to be read from
         class in {
@@ -240,8 +241,8 @@ namespace rask {
     };
 
 
-    /// Broadcast a packet to all connections -- return how many were sent
-    std::size_t broadcast(const connection::out &packet);
+    /// Broadcast a packet to all connections -- return how many were queued
+    std::size_t broadcast(std::function<rask::connection::out(void)>);
 
     /// Monitor the connection
     void monitor_connection(std::shared_ptr<connection>);
