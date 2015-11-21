@@ -158,28 +158,26 @@ rask::connection::~connection() {
 
 
 void rask::connection::queue(std::function<out(void)> fn) {
+    bool added = false;
     const auto size = packets.push_back(
         [fn]() {
             ++p_queued;
+            added = true;
             return fn;
         },
         [](auto &) {
             ++p_spill;
             return false;
         });
-    if ( size == queue_capactiy - 1 ) {
-        auto self(shared_from_this());
-        workers.io.get_io_service().post(
-            [self]() {
-                self->send_head();
-            });
-        fostlib::log::info(c_fost_rask)
-            ("", "Queueing packet")
-            ("buffer", "length", size);
-    } else {
-        fostlib::log::debug(c_fost_rask)
-            ("", "Queueing packet")
-            ("buffer", "length", size);
+    /// We notify the consumer here and not in the lambda above because
+    /// when that lambda executes the function is not yet in the buffer so
+    /// there would be race between getting it there and the consumer
+    /// pulling it off. Because the queue is protected by a mutex this
+    /// can't actually be a problem, until the queue is re-implemented
+    /// to be lock free, and then it will be. Doing it at the end is always
+    /// safe.
+    if ( added ) {
+        sender.produced();
     }
 }
 

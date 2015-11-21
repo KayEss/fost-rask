@@ -16,6 +16,7 @@
 #include <fost/jsondb>
 #include <fost/log>
 
+#include <f5/threading/eventfd.hpp>
 #include <f5/threading/ring.hpp>
 
 #include <boost/asio/streambuf.hpp>
@@ -61,7 +62,7 @@ namespace rask {
         /// The socket used for this connection
         boost::asio::ip::tcp::socket cnx;
         /// Strand used for sending
-        boost::asio::io_service::strand sender;
+        f5::eventfd::unlimted sender;
         /// An input buffer
         boost::asio::streambuf input_buffer;
         /// Heartbeat timer
