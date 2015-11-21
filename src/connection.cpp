@@ -197,7 +197,6 @@ void rask::connection::start_sending() {
     queue(send_version);
     boost::asio::spawn(sending_strand,
         [self](boost::asio::yield_context yield) {
-            while ( true ) {
                 auto queued = self->sender.consume(yield);
                 while ( queued > 0 ) {
                     auto packet = self->packets.pop_front(
@@ -212,6 +211,7 @@ void rask::connection::start_sending() {
                                 self->queue(send_version);
                             }
                         });
+            while ( self->cnx.is_open() ) {
                 }
             }
         });
