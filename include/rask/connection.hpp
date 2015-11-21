@@ -146,32 +146,16 @@ namespace rask {
                     reinterpret_cast<const char *>(b.first));
             }
 
-            /// Put the data on the wire
-            void operator () (std::shared_ptr<connection> socket) const {
-                (*this)(socket, [](){});
-            }
             /// Put the data on the wire, then call the requested callback
-            template<typename CB>
-            void operator () (std::shared_ptr<connection> socket, CB cb) const {
-                auto sender = socket->sender.wrap(
-                    [socket, cb](
-                        const boost::system::error_code &error, std::size_t bytes
-                    ) {
-                        if ( error ) {
-                            fostlib::log::error(c_fost_rask)
-                                ("", "Error sending data packet")
-                                ("connection", socket->id)
-                                ("error", error.message().c_str());
-                        } else {
-                            cb();
-                        }
-                    });
+            void operator () (
+                std::shared_ptr<connection> socket, boost::asio::yield_context &yield
+            ) const {
                 boost::asio::streambuf header;
                 size_sequence(size(), header);
                 header.sputc(control);
                 std::array<boost::asio::streambuf::const_buffers_type, 2>
                     data{{header.data(), buffer->data()}};
-                async_write(socket->cnx, data, sender);
+                async_write(socket->cnx, data, yield);
             }
 
         private:
