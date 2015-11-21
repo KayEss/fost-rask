@@ -23,6 +23,9 @@ namespace {
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
 
+    fostlib::performance p_cnx_created(rask::c_fost_rask,
+        "connections", "created");
+
     fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
     fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
     fostlib::performance p_spill(rask::c_fost_rask, "packets", "spills");
@@ -149,11 +152,8 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
 const std::size_t queue_capactiy = 256;
 
 
-std::atomic<int64_t> rask::connection::g_id(0);
-
-
 rask::connection::connection(rask::workers &w)
-: workers(w), id(++g_id), cnx(w.io.get_io_service()),
+: workers(w), id(++p_cnx_created), cnx(w.io.get_io_service()),
         sending_strand(w.io.get_io_service()),
         sender(w.io.get_io_service()),
         heartbeat(w.io.get_io_service()),

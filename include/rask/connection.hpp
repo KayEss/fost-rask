@@ -45,7 +45,6 @@ namespace rask {
     /// A connection between two Rask servers
     class connection : public std::enable_shared_from_this<connection> {
         friend void read_and_process(std::shared_ptr<connection>);
-        static std::atomic<int64_t> g_id;
     public:
         /// Construct a connection
         connection(rask::workers&);
