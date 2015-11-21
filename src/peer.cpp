@@ -69,8 +69,8 @@ void rask::reset_watchdog(workers &w, std::shared_ptr<connection::reconnect> cli
     client->watchdog.expires_from_now(boost::posix_time::seconds(15));
     client->watchdog.async_wait(
         [&w, client](const boost::system::error_code &error) {
-            std::shared_ptr<connection> socket(client->socket.lock());
             if ( !error ) {
+                auto socket(client->socket.lock());
                 fostlib::log::error(c_fost_rask)
                     ("", "Watchdog timer fired")
                     ("connection", socket ? fostlib::json(socket->id) : fostlib::json())

@@ -64,77 +64,78 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
     socket->start_sending();
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
-            try {
-                fostlib::json size_bytes = fostlib::json::array_t();
-                boost::asio::async_read(socket->cnx, socket->input_buffer,
-                    boost::asio::transfer_exactly(2), yield);
-                std::size_t packet_size = socket->input_buffer.sbumpc();
-                fostlib::push_back(size_bytes, int64_t(packet_size));
-                if ( packet_size > 0xf8 ) {
-                    const int bytes = packet_size - 0xf8;
+            while ( socket->cnx.is_open() ) {
+                try {
+                    fostlib::json size_bytes = fostlib::json::array_t();
                     boost::asio::async_read(socket->cnx, socket->input_buffer,
-                        boost::asio::transfer_exactly(bytes), yield);
-                    packet_size = 0u;
-                    for ( auto i = 0; i != bytes; ++i ) {
-                        unsigned char byte = socket->input_buffer.sbumpc();
-                        fostlib::push_back(size_bytes, int64_t(byte));
-                        packet_size = (packet_size << 8) + byte;
+                        boost::asio::transfer_exactly(2), yield);
+                    std::size_t packet_size = socket->input_buffer.sbumpc();
+                    fostlib::push_back(size_bytes, int64_t(packet_size));
+                    if ( packet_size > 0xf8 ) {
+                        const int bytes = packet_size - 0xf8;
+                        boost::asio::async_read(socket->cnx, socket->input_buffer,
+                            boost::asio::transfer_exactly(bytes), yield);
+                        packet_size = 0u;
+                        for ( auto i = 0; i != bytes; ++i ) {
+                            unsigned char byte = socket->input_buffer.sbumpc();
+                            fostlib::push_back(size_bytes, int64_t(byte));
+                            packet_size = (packet_size << 8) + byte;
+                        }
+                    } else if ( packet_size >= 0x80 ) {
+                        socket->cnx.close();
+                        throw fostlib::exceptions::not_implemented(
+                            "Invalid packet size control byte",
+                            fostlib::coerce<fostlib::string>(packet_size));
                     }
-                } else if ( packet_size >= 0x80 ) {
-                    socket->cnx.close();
-                    throw fostlib::exceptions::not_implemented(
-                        "Invalid packet size control byte",
-                        fostlib::coerce<fostlib::string>(packet_size));
-                }
-                unsigned char control = socket->input_buffer.sbumpc();
-                boost::asio::async_read(socket->cnx, socket->input_buffer,
-                    boost::asio::transfer_exactly(packet_size), yield);
-                fostlib::log::debug(c_fost_rask)
-                    ("", "Got packet")
-                    ("connection", socket->id)
-                    ("bytes", size_bytes)
-                    ("control", control)
-                    ("size", packet_size);
-                connection::in packet(socket, packet_size);
-                if ( control == 0x80 ) {
-                    receive_version(packet);
-                } else if ( control == 0x81 ) {
-                    tenant_packet(packet);
-                } else if ( control == 0x82 ) {
-                    tenant_hash_packet(packet);
-                } else if ( control == 0x83 ) {
-                    file_hash_without_priority(packet);
-                } else if ( control == 0x90 ) {
-                    file_exists(packet);
-                } else if ( control == 0x91 ) {
-                    create_directory(packet);
-                } else if ( control == 0x93 ) {
-                    move_out(packet);
-                } else if ( control == 0x9f ) {
-                    file_data_block(packet);
-                } else {
-                    fostlib::log::warning(c_fost_rask)
-                        ("", "Unknown control byte received")
+                    unsigned char control = socket->input_buffer.sbumpc();
+                    boost::asio::async_read(socket->cnx, socket->input_buffer,
+                        boost::asio::transfer_exactly(packet_size), yield);
+                    fostlib::log::debug(c_fost_rask)
+                        ("", "Got packet")
                         ("connection", socket->id)
-                        ("control", int(control))
-                        ("packet-size", packet_size);
+                        ("bytes", size_bytes)
+                        ("control", control)
+                        ("size", packet_size);
+                    connection::in packet(socket, packet_size);
+                    if ( control == 0x80 ) {
+                        receive_version(packet);
+                    } else if ( control == 0x81 ) {
+                        tenant_packet(packet);
+                    } else if ( control == 0x82 ) {
+                        tenant_hash_packet(packet);
+                    } else if ( control == 0x83 ) {
+                        file_hash_without_priority(packet);
+                    } else if ( control == 0x90 ) {
+                        file_exists(packet);
+                    } else if ( control == 0x91 ) {
+                        create_directory(packet);
+                    } else if ( control == 0x93 ) {
+                        move_out(packet);
+                    } else if ( control == 0x9f ) {
+                        file_data_block(packet);
+                    } else {
+                        fostlib::log::warning(c_fost_rask)
+                            ("", "Unknown control byte received")
+                            ("connection", socket->id)
+                            ("control", int(control))
+                            ("packet-size", packet_size);
+                    }
+                    if ( socket->restart ) {
+                        reset_watchdog(socket->workers, socket->restart);
+                    }
+                } catch ( fostlib::exceptions::exception &e ) {
+                    fostlib::log::error(c_fost_rask)
+                        ("", "read_and_process caught an exception")
+                        ("connection", socket->id)
+                        ("exception", e.as_json());
+                    fostlib::absorb_exception();
+                } catch ( std::exception &e ) {
+                    fostlib::log::error(c_fost_rask)
+                        ("", "read_and_process caught an exception")
+                        ("connection", socket->id)
+                        ("exception", e.what());
+                    fostlib::absorb_exception();
                 }
-                if ( socket->restart ) {
-                    reset_watchdog(socket->workers, socket->restart);
-                }
-                read_and_process(socket);
-            } catch ( fostlib::exceptions::exception &e ) {
-                fostlib::log::error(c_fost_rask)
-                    ("", "read_and_process caught an exception")
-                    ("connection", socket->id)
-                    ("exception", e.as_json());
-                fostlib::absorb_exception();
-            } catch ( std::exception &e ) {
-                fostlib::log::error(c_fost_rask)
-                    ("", "read_and_process caught an exception")
-                    ("connection", socket->id)
-                    ("exception", e.what());
-                fostlib::absorb_exception();
             }
         });
 }
@@ -193,6 +194,9 @@ bool rask::connection::queue(std::function<out(void)> fn) {
 
 
 void rask::connection::start_sending() {
+    fostlib::log::info(c_fost_rask)
+        ("", "Starting sending on connection")
+        ("connection", id);
     auto self(shared_from_this());
     queue(send_version);
     boost::asio::spawn(sending_strand,
@@ -210,6 +214,8 @@ void rask::connection::start_sending() {
                         self->heartbeat.async_wait(
                             [self](const boost::system::error_code &error) {
                                 if ( !error ) {
+                                    fostlib::log::debug(c_fost_rask)
+                                        ("", "Heartbeat fired without error");
                                     self->queue(send_version);
                                 }
                             });
