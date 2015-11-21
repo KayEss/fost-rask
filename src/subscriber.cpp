@@ -384,7 +384,10 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
             rask::tenant &t, const rask::tick &p,
             const fostlib::string &i, const fostlib::json &j
         ) {
-            return rask::broadcast(b(t, p, i, j));
+            return rask::broadcast(
+                [b, &t, p, i, j]() {
+                    return std::move(b(t, p, i, j));
+                });
         };
     return *this;
 }
