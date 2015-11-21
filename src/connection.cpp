@@ -197,21 +197,35 @@ void rask::connection::start_sending() {
     queue(send_version);
     boost::asio::spawn(sending_strand,
         [self](boost::asio::yield_context yield) {
-                auto queued = self->sender.consume(yield);
-                while ( queued > 0 ) {
-                    auto packet = self->packets.pop_front(
-                        fostlib::nullable<std::function<out(void)>>()).value();
-                    --queued;
-                    packet()(self, yield);
-                    ++p_sends;
-                    self->heartbeat.expires_from_now(boost::posix_time::seconds(5));
-                    self->heartbeat.async_wait(
-                        [self](const boost::system::error_code &error) {
-                            if ( !error ) {
-                                self->queue(send_version);
-                            }
-                        });
             while ( self->cnx.is_open() ) {
+                try {
+                    auto queued = self->sender.consume(yield);
+                    while ( queued > 0 ) {
+                        auto packet = self->packets.pop_front(
+                            fostlib::nullable<std::function<out(void)>>()).value();
+                        --queued;
+                        packet()(self, yield);
+                        ++p_sends;
+                        self->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+                        self->heartbeat.async_wait(
+                            [self](const boost::system::error_code &error) {
+                                if ( !error ) {
+                                    self->queue(send_version);
+                                }
+                            });
+                    }
+                } catch ( fostlib::exceptions::exception &e ) {
+                    fostlib::log::error(c_fost_rask)
+                        ("", "connection::start_sending caught an exception")
+                        ("connection", self->id)
+                        ("exception", e.as_json());
+                    fostlib::absorb_exception();
+                } catch ( std::exception &e ) {
+                    fostlib::log::error(c_fost_rask)
+                        ("", "connection::start_sending caught an exception")
+                        ("connection", self->id)
+                        ("exception", e.what());
+                    fostlib::absorb_exception();
                 }
             }
         });
