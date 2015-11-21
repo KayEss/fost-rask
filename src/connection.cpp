@@ -161,8 +161,8 @@ rask::connection::~connection() {
 
 bool rask::connection::queue(std::function<out(void)> fn) {
     bool added = false;
-    const auto size = packets.push_back(
-        [fn]() {
+    packets.push_back(
+        [fn, &added]() {
             ++p_queued;
             added = true;
             return fn;
