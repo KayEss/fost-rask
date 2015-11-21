@@ -32,7 +32,6 @@ namespace {
 
 
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
-    send_version(socket);
     std::unique_lock<std::mutex> lock(g_mutex);
     for ( auto w = g_connections.begin(); w != g_connections.end(); ++w ) {
         std::shared_ptr<rask::connection> slot(w->lock());
