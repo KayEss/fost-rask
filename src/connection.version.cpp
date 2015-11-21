@@ -24,7 +24,7 @@ namespace {
 }
 
 
-connection::out rask::send_version() {
+rask::connection::out rask::send_version() {
     connection::out version(0x80);
     version << rask::known_version;
     if ( server_identity() ) {
