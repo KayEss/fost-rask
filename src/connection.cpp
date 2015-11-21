@@ -189,17 +189,18 @@ void rask::connection::start_sending() {
     auto self(shared_from_this());
     queue(send_version);
     boost::asio::spawn(sending_strand,
-        [self](auto &yield) {
+        [self](boost::asio::yield_context yield) {
             while ( true ) {
                 auto queued = self->sender.consume(yield);
                 while ( queued > 0 ) {
-                    auto packet = cnx.buffer.pop_front();
-                    queued--;
+                    auto packet = self->packets.pop_front(
+                        fostlib::nullable<std::function<out(void)>>()).value();
+                    --queued;
                     packet()(self, yield);
-                    p_sends++;
+                    ++p_sends;
                     self->heartbeat.expires_from_now(boost::posix_time::seconds(5));
                     self->heartbeat.async_wait(
-                        [socket](const boost::system::error_code &error) {
+                        [self](const boost::system::error_code &error) {
                             if ( !error ) {
                                 self->queue(send_version);
                             }
