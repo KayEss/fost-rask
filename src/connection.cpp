@@ -123,6 +123,12 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     reset_watchdog(socket->workers, socket->restart);
                 }
                 read_and_process(socket);
+            } catch ( fostlib::exceptions::exception &e ) {
+                fostlib::log::error(c_fost_rask)
+                    ("", "read_and_process caught an exception")
+                    ("connection", socket->id)
+                    ("exception", e.as_json());
+                fostlib::absorb_exception();
             } catch ( std::exception &e ) {
                 fostlib::log::error(c_fost_rask)
                     ("", "read_and_process caught an exception")
