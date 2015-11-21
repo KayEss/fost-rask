@@ -62,7 +62,9 @@ namespace rask {
         /// The socket used for this connection
         boost::asio::ip::tcp::socket cnx;
         /// Strand used for sending
-        f5::eventfd::unlimted sender;
+        boost::asio::io_service::strand sending_strand;
+        /// The communication channel for sending data
+        f5::eventfd::unlimited sender;
         /// An input buffer
         boost::asio::streambuf input_buffer;
         /// Heartbeat timer
@@ -249,8 +251,8 @@ namespace rask {
     private:
         /// Buffer of outbound packets
         f5::tsring<std::function<rask::connection::out(void)>> packets;
-        /// Send the head of the queue
-        void send_head();
+        /// Start the sender side
+        void start_sending();
     };
 
 

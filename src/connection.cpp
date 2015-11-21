@@ -145,6 +145,7 @@ std::atomic<int64_t> rask::connection::g_id(0);
 
 rask::connection::connection(rask::workers &w)
 : workers(w), id(++g_id), cnx(w.io.get_io_service()),
+        sending_strand(w.io.get_io_service()),
         sender(w.io.get_io_service()),
         heartbeat(w.io.get_io_service()),
         identity(0), packets(queue_capactiy) {
@@ -182,17 +183,20 @@ void rask::connection::queue(std::function<out(void)> fn) {
 }
 
 
-void rask::connection::send_head() {
+void rask::connection::start_sending() {
     auto self(shared_from_this());
-    auto fn = packets.pop_front(
-        fostlib::nullable<std::function<out(void)>>());
-    if ( !fn.isnull() ) {
-        ++p_sends;
-        fn.value()()(self,
-            [self]() {
-                self->send_head();
-            });
-    }
+    boost::asio::spawn(sending_strand,
+        [self](auto &yield) {
+            while ( true ) {
+                auto queued = self->sender.consume(yield);
+                while ( queued > 0 ) {
+                    auto packet = cnx.buffer.pop_front();
+                    queued--;
+                    packet()(self, yield);
+                    p_sends++;
+                }
+            }
+        });
 }
 
 
