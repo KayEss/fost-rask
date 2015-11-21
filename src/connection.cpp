@@ -61,6 +61,7 @@ std::size_t rask::broadcast(std::function<rask::connection::out(void)> fn) {
 
 
 void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
+    socket->start_sending();
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
             try {
