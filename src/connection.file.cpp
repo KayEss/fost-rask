@@ -148,18 +148,6 @@ rask::connection::out rask::send_empty_file_hash(
 namespace {
 
     class sending {
-        /// Globally track the files we're sending
-        /// TODO: Track the sending instance as a weak_ptr here and then
-        /// the shared_ptr goes in the closure for queueing packets
-        static f5::tsmap<boost::filesystem::path, std::shared_ptr<sending>>
-            g_sending;
-        /// Locally track who we are sending to
-        f5::tsmap<std::shared_ptr<rask::connection>,
-            std::shared_ptr<
-                std::pair<
-                    rask::file::const_block_iterator,
-                    rask::file::const_block_iterator>>> recipients;
-
     public:
         /// Create the instance and track the first recipient
         sending(
@@ -169,7 +157,7 @@ namespace {
             fostlib::string name,
             boost::filesystem::path loc
         ) : tenant(tenant), priority(priority), name(std::move(name)),
-            file(std::move(loc))
+            file(std::move(loc)), position(std::make_pair(file.begin(), file.end()))
         {
         }
 
@@ -177,10 +165,10 @@ namespace {
         const rask::tick priority;
         const fostlib::string name;
         const rask::file::data file;
+        std::pair<rask::file::const_block_iterator,
+            rask::file::const_block_iterator> position;
 
-        /// Start sending a file to the recipient if we're not already doing so.
-        /// If we are already sending the file then we're going to attach this
-        /// recipient to the data as it goes out
+        /// Start sending a file to the recipient
         static void start(
             std::shared_ptr<rask::connection> socket,
             std::shared_ptr<rask::tenant> tenant, rask::tick priority,
@@ -188,37 +176,12 @@ namespace {
         ) {
             auto sender = std::make_shared<sending>(socket, tenant,
                 priority, std::move(name), std::move(location));
-            if ( sender->file.begin() != sender->file.end() ) {
-                g_sending.add_if_not_found(sender->file.location(),
-                    [&]() {
-                        fostlib::log::info(rask::c_fost_rask)
-                            ("", "Starting send of file")
-                            ("location", sender->file.location());
-                        return sender;
-                    });
-                bool added = false;
-                sender->recipients.add_if_not_found(socket,
-                    [&]() {
-                        /// We have added a new recipient for the file
-                        added = true;
-                        fostlib::log::debug(rask::c_fost_rask)
-                            ("", "Already sending file -- recipient added")
-                            ("location", sender->file.location());
-                        return std::make_unique<
-                                std::pair<
-                                    rask::file::const_block_iterator,
-                                    rask::file::const_block_iterator>
-                            >(sender->file.begin(), sender->file.end());
-                    });
-                if ( added ) sender->queue(socket);
-            }
+            sender->queue(sender, socket);
         }
 
-        void queue(std::shared_ptr<rask::connection> socket);
+        void queue(std::shared_ptr<sending> self,
+            std::shared_ptr<rask::connection> socket);
     };
-
-    f5::tsmap<boost::filesystem::path, std::shared_ptr<sending>>
-            sending::g_sending;
 }
 
 
@@ -278,18 +241,17 @@ namespace {
             throw;
         }
     }
-    void sending::queue(std::shared_ptr<rask::connection> socket) {
-        auto position = recipients.find(socket);
-        if ( position ) {
+    void sending::queue(
+        std::shared_ptr<sending> self,
+        std::shared_ptr<rask::connection> socket
+    ) {
+        if ( position.first != position.second ) {
             socket->queue(
-                [this, socket, position]() {
+                [this, self, socket]() {
                     auto packet = send_file_block(*tenant, priority, name,
-                        file.location(), position->first);
-                    if ( ++(position->first) == position->second ) {
-                        g_sending.remove(file.location());
-                    } else {
-                        queue(socket);
-                    }
+                        file.location(), position.first);
+                    ++position.first;
+                    queue(self, socket);
                     return std::move(packet);
                 });
         }
