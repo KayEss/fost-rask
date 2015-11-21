@@ -285,8 +285,21 @@ void rask::file_data_block(connection::in &packet) {
     logger("data", "hash",
         fostlib::coerce<fostlib::base64_string>(data_hash));
     if ( data_hash != hash ) {
-        throw fostlib::exceptions::not_implemented(
+        fostlib::exceptions::not_implemented e(__FUNCTION__,
             "Calculated data hash does not match sent data hash");
+        fostlib::insert(e.data(), "tenant", tenant->name());
+        fostlib::insert(e.data(), "filename", filename);
+        fostlib::insert(e.data(), "offset", offset);
+        fostlib::insert(e.data(), "size", size);
+        fostlib::insert(e.data(), "hash",
+            fostlib::coerce<fostlib::base64_string>(hash));
+        fostlib::insert(e.data(), "data", "size", data.size());
+        fostlib::insert(e.data(), "data", "hash",
+            fostlib::coerce<fostlib::base64_string>(data_hash));
+//         for ( auto c : data ) {
+//             fostlib::push_back(e.data(), "data", "content", c);
+//         }
+        throw e;
     }
 }
 
