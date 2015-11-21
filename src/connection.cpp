@@ -185,6 +185,7 @@ void rask::connection::queue(std::function<out(void)> fn) {
 
 void rask::connection::start_sending() {
     auto self(shared_from_this());
+    queue(send_version);
     boost::asio::spawn(sending_strand,
         [self](auto &yield) {
             while ( true ) {
@@ -194,6 +195,13 @@ void rask::connection::start_sending() {
                     queued--;
                     packet()(self, yield);
                     p_sends++;
+                    self->heartbeat.expires_from_now(boost::posix_time::seconds(5));
+                    self->heartbeat.async_wait(
+                        [socket](const boost::system::error_code &error) {
+                            if ( !error ) {
+                                self->queue(send_version);
+                            }
+                        });
                 }
             }
         });

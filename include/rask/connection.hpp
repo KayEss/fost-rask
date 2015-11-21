@@ -265,7 +265,7 @@ namespace rask {
     void read_and_process(std::shared_ptr<connection>);
 
     /// Send a version packet with heartbeat
-    void send_version(std::shared_ptr<connection>);
+    connection::out send_version();
     /// Process a version packet body
     void receive_version(connection::in &);
 

@@ -24,7 +24,7 @@ namespace {
 }
 
 
-void rask::send_version(std::shared_ptr<connection> socket) {
+connection::out rask::send_version() {
     connection::out version(0x80);
     version << rask::known_version;
     if ( server_identity() ) {
@@ -39,13 +39,7 @@ void rask::send_version(std::shared_ptr<connection> socket) {
             version << hash;
         }
     }
-    version(socket, [socket]() {
-        socket->heartbeat.expires_from_now(boost::posix_time::seconds(5));
-        socket->heartbeat.async_wait(
-            [socket](const boost::system::error_code &) {
-                send_version(socket);
-            });
-    });
+    return std::move(version);
 }
 
 
