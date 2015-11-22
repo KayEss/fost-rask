@@ -17,6 +17,8 @@
 #include <f5/threading/set.hpp>
 #include <fost/counter>
 
+#include <boost/iostreams/device/mapped_file.hpp>
+
 
 namespace {
     fostlib::performance p_file_exists_received(
@@ -279,6 +281,21 @@ namespace {
                         ("location", result.location)
                         ("offset", offset)
                         ("bytes", data.size());
+                    const auto alignment =
+                        boost::iostreams::mapped_file_sink::alignment();
+                    logger("alignment", alignment);
+                    if ( offset % alignment != 0 ) {
+                        logger("action", "misaligned");
+                    } else {
+                        boost::iostreams::mapped_file_sink mmap;
+                        mmap.open(result.location, data.size(), offset);
+                        if ( mmap.is_open() && mmap.data() ) {
+                            logger("action", "write");
+                            std::memcpy(mmap.data(), data.data(), data.size());
+                        } else {
+                            logger("action", "mmap-failure");
+                        }
+                    }
                     return database[dbpath];
                 })
             .execute();
