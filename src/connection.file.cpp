@@ -296,9 +296,6 @@ void rask::file_data_block(connection::in &packet) {
         fostlib::insert(e.data(), "data", "size", data.size());
         fostlib::insert(e.data(), "data", "hash",
             fostlib::coerce<fostlib::base64_string>(data_hash));
-//         for ( auto c : data ) {
-//             fostlib::push_back(e.data(), "data", "content", c);
-//         }
         throw e;
     }
 }
