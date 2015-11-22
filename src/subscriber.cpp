@@ -110,6 +110,9 @@ struct rask::subscriber::change::impl {
     std::function<tick(const fostlib::json &)> priority;
     /// The function that generates the inode data hash
     std::function<fostlib::json(const tick &, const fostlib::json &)> hasher;
+    /// Function to run when the predicate is `true`
+    std::function<fostlib::json(fostlib::json&, const fostlib::jcursor&)>
+            if_predicate;
     /// Enrich the JSON that is used for a database update
     std::function<fostlib::json(fostlib::json)> enrich_update;
     /// Allow the database node to be changed even if there is no update
@@ -154,6 +157,26 @@ struct rask::subscriber::change::impl {
             hash << priority;
             return fostlib::coerce<fostlib::json>(
                 fostlib::coerce<fostlib::base64_string>(hash.digest()));
+        }),
+        if_predicate([pimpl = this](auto &data, const auto &dbpath) {
+            fostlib::json node;
+            fostlib::insert(node, "filetype", pimpl->inode_target);
+            fostlib::insert(node, "name", pimpl->relpath);
+            fostlib::insert(node, "hash", "name", pimpl->nhash);
+            if ( pimpl->use_priority(pimpl->result.old) ) {
+                auto priority = pimpl->priority(pimpl->result.old);
+                fostlib::insert(node, "priority", priority);
+                fostlib::insert(node, "hash", "inode",
+                    pimpl->hasher(priority, node));
+                node = pimpl->enrich_update(node);
+                pimpl->broadcast(
+                    pimpl->result.subscription.tenant,
+                    priority, pimpl->relpath, node);
+            } else {
+                node = pimpl->enrich_update(node);
+            }
+            dbpath.replace(data, node);
+            return node;
         }),
         enrich_update([](auto j) {
             return j;
@@ -232,6 +255,14 @@ rask::subscriber::change &rask::subscriber::change::hash(
 }
 
 
+rask::subscriber::change &rask::subscriber::change::if_predicate(
+    std::function<fostlib::json(fostlib::json&, const fostlib::jcursor&)> fn
+) {
+    pimpl->if_predicate = fn;
+    return *this;
+}
+
+
 rask::subscriber::change &rask::subscriber::change::enrich_update(
     std::function<fostlib::json(fostlib::json)> f
 ) {
@@ -303,30 +334,13 @@ void rask::subscriber::change::execute() {
                 logger("node", "old", pimpl->result.old);
             }
             if ( !entry || pimpl->pred(pimpl->result.old) ) {
-                logger("updating", true);
-                pimpl->result.updated = true;
-                fostlib::json node;
-                fostlib::insert(node, "filetype", pimpl->inode_target);
-                fostlib::insert(node, "name", pimpl->relpath);
-                fostlib::insert(node, "hash", "name", pimpl->nhash);
-                if ( pimpl->use_priority(pimpl->result.old) ) {
-                    auto priority = pimpl->priority(pimpl->result.old);
-                    logger("priority", priority);
-                    fostlib::insert(node, "priority", priority);
-                    fostlib::insert(node, "hash", "inode",
-                        pimpl->hasher(priority, node));
-                    node = pimpl->enrich_update(node);
-                    const auto sent = pimpl->broadcast(
-                        pimpl->result.subscription.tenant,
-                        priority, pimpl->relpath, node);
-                    logger("broadcast", "to", sent);
-                } else {
-                    node = pimpl->enrich_update(node);
+                pimpl->result.inode = pimpl->if_predicate(data, pimpl->dbpath);
+                pimpl->result.updated = (pimpl->result.old != pimpl->result.inode);
+                logger("updating", pimpl->result.updated);
+                if ( pimpl->result.updated ) {
+                    rehash_inodes(w, dbconf);
+                    logger("node", "new", pimpl->result.inode);
                 }
-                pimpl->dbpath.replace(data, node);
-                rehash_inodes(w, dbconf);
-                pimpl->result.inode = node;
-                logger("node", "new", node);
             } else {
                 logger("updating", false);
                 pimpl->result.updated = false;

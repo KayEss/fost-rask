@@ -263,11 +263,23 @@ namespace {
     ) {
         auto logger(fostlib::log::debug(rask::c_fost_rask));
         logger
-            ("", "Save file data")
+            ("", __FUNCTION__)
             ("tenant", sub.tenant.name())
             ("filename", filename)
             ("offset", offset)
             ("priority", priority);
+        sub.file(filename)
+            .compare_priority(priority)
+            .if_predicate(
+                [&sub, offset, data = std::move(data)]
+                    (auto &database, const auto &dbpath)
+                {
+                    auto logger(fostlib::log::debug(rask::c_fost_rask));
+                    logger
+                        ("", "save_file_data -- Write data");
+                    return database[dbpath];
+                })
+            .execute();
     }
 }
 
