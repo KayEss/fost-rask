@@ -111,7 +111,8 @@ struct rask::subscriber::change::impl {
     /// The function that generates the inode data hash
     std::function<fostlib::json(const tick &, const fostlib::json &)> hasher;
     /// Function to run when the predicate is `true`
-    std::function<fostlib::json(fostlib::json&, const fostlib::jcursor&)>
+    std::function<fostlib::json
+        (fostlib::json&, const fostlib::jcursor&, status &)>
             if_predicate;
     /// Enrich the JSON that is used for a database update
     std::function<fostlib::json(fostlib::json)> enrich_update;
@@ -158,7 +159,7 @@ struct rask::subscriber::change::impl {
             return fostlib::coerce<fostlib::json>(
                 fostlib::coerce<fostlib::base64_string>(hash.digest()));
         }),
-        if_predicate([pimpl = this](auto &data, const auto &dbpath) {
+        if_predicate([pimpl = this](auto &data, const auto &dbpath, auto&) {
             fostlib::json node;
             fostlib::insert(node, "filetype", pimpl->inode_target);
             fostlib::insert(node, "name", pimpl->relpath);
@@ -256,7 +257,7 @@ rask::subscriber::change &rask::subscriber::change::hash(
 
 
 rask::subscriber::change &rask::subscriber::change::if_predicate(
-    std::function<fostlib::json(fostlib::json&, const fostlib::jcursor&)> fn
+    std::function<fostlib::json(fostlib::json&, const fostlib::jcursor&, status &)> fn
 ) {
     pimpl->if_predicate = fn;
     return *this;
@@ -334,7 +335,8 @@ void rask::subscriber::change::execute() {
                 logger("node", "old", pimpl->result.old);
             }
             if ( !entry || pimpl->pred(pimpl->result.old) ) {
-                pimpl->result.inode = pimpl->if_predicate(data, pimpl->dbpath);
+                pimpl->result.inode =
+                    pimpl->if_predicate(data, pimpl->dbpath, pimpl->result);
                 pimpl->result.updated = (pimpl->result.old != pimpl->result.inode);
                 logger("updating", pimpl->result.updated);
                 if ( pimpl->result.updated ) {

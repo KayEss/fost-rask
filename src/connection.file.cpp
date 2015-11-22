@@ -272,11 +272,13 @@ namespace {
             .compare_priority(priority)
             .if_predicate(
                 [&sub, offset, data = std::move(data)]
-                    (auto &database, const auto &dbpath)
+                    (auto &database, const auto &dbpath, auto &result)
                 {
                     auto logger(fostlib::log::debug(rask::c_fost_rask));
-                    logger
-                        ("", "save_file_data -- Write data");
+                    logger("", "save_file_data -- Write data")
+                        ("location", result.location)
+                        ("offset", offset)
+                        ("bytes", data.size());
                     return database[dbpath];
                 })
             .execute();

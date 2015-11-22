@@ -127,7 +127,7 @@ namespace rask {
             /// new JSON and then enrich it according to the `enrich_update`
             /// calls. If the database entry is to be altered it should do it itself.
             change &if_predicate(std::function<fostlib::json
-                (fostlib::json&, const fostlib::jcursor&)>);
+                (fostlib::json&, const fostlib::jcursor&, status&)>);
 
             /// Allow us to store extra information in the JSON when we
             /// update the node database.
