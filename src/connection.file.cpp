@@ -72,20 +72,20 @@ void rask::file_exists(rask::connection::in &packet) {
         ("tenant", tenant->name())
         ("name", name);
     fostlib::nullable<uint64_t> size;
-    fostlib::base64_string hash64;
+    fostlib::json hash64;
     if ( !packet.empty() ) {
         size = packet.read<uint64_t>() & 0x7FFF'FFFF'FFFF'FFFF;
         logger("size", "bytes", size);
         if ( !packet.empty() ) {
             auto hash = packet.read(32);
-            hash64 = fostlib::coerce<fostlib::base64_string>(hash);
+            hash64 = fostlib::coerce<fostlib::json>(
+                fostlib::coerce<fostlib::base64_string>(hash));
             logger("hash", hash64);
         }
     }
     if ( tenant->subscription ) {
         packet.socket->workers.files.get_io_service().post(
-            [
-                tenant, name = std::move(name), priority, size, hash64,
+            [tenant, name = std::move(name), priority, size, hash64,
                 socket = packet.socket
             ]() {
                 tenant->subscription->file(name)
@@ -99,7 +99,7 @@ void rask::file_exists(rask::connection::in &packet) {
                             return j;
                         })
                     .post_commit(
-                        [size, socket, hash64 = fostlib::coerce<fostlib::json>(hash64)](auto&c) {
+                        [size, socket, hash64](auto&c) {
                             if ( !size.isnull() ) {
                                 allocate_file(c.location,
                                     fostlib::coerce<std::size_t>(size.value()));
@@ -248,8 +248,9 @@ namespace {
         if ( position.first != position.second ) {
             socket->queue(
                 [this, self, socket]() {
-                    auto packet = send_file_block(*tenant, priority, name,
-                        file.location(), position.first);
+                    auto packet =
+                        send_file_block(*tenant, priority, name,
+                            file.location(), position.first);
                     ++position.first;
                     queue(self, socket);
                     return std::move(packet);
