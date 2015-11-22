@@ -256,6 +256,18 @@ namespace {
                 });
         }
     }
+    void save_file_data(
+        rask::subscriber &sub, fostlib::string filename,
+        rask::tick priority, std::size_t offset, std::vector<unsigned char> data
+    ) {
+        auto logger(fostlib::log::debug(rask::c_fost_rask));
+        logger
+            ("", "Save file data")
+            ("tenant", sub.tenant.name())
+            ("filename", filename)
+            ("offset", offset)
+            ("priority", priority);
+    }
 }
 
 
@@ -299,8 +311,15 @@ void rask::file_data_block(connection::in &packet) {
         fostlib::insert(e.data(), "data", "hash",
             fostlib::coerce<fostlib::base64_string>(data_hash));
         throw e;
+    } else if ( tenant->subscription ) {
+        logger("action", "check");
+        packet.socket->workers.files.get_io_service().post(
+            [tenant, name = std::move(filename), priority, offset,
+                data = std::move(data)
+            ]() {
+                save_file_data(*tenant->subscription, name, priority, offset, data);
+            });
     } else {
-        /// Ok, we've got good file data, but we're going to ignore it
         logger("action", "drop");
     }
 }
