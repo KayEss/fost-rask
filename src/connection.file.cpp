@@ -277,7 +277,8 @@ void rask::file_data_block(connection::in &packet) {
     auto hash(packet.read(32));
     logger("hash", fostlib::coerce<fostlib::base64_string>(hash));
     auto size(packet.size_control());
-    logger("data", "size", size);
+    logger("size", size);
+    /// Read the data, hash it and then make sure the hash is right
     auto data(packet.read(size));
     fostlib::digester hasher(fostlib::sha256);
     hasher << data;
@@ -285,6 +286,7 @@ void rask::file_data_block(connection::in &packet) {
     logger("data", "hash",
         fostlib::coerce<fostlib::base64_string>(data_hash));
     if ( data_hash != hash ) {
+        logger("action", "throw");
         fostlib::exceptions::not_implemented e(__FUNCTION__,
             "Calculated data hash does not match sent data hash");
         fostlib::insert(e.data(), "tenant", tenant->name());
@@ -297,6 +299,9 @@ void rask::file_data_block(connection::in &packet) {
         fostlib::insert(e.data(), "data", "hash",
             fostlib::coerce<fostlib::base64_string>(data_hash));
         throw e;
+    } else {
+        /// Ok, we've got good file data, but we're going to ignore it
+        logger("action", "drop");
     }
 }
 
