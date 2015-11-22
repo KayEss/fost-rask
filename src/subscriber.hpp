@@ -167,44 +167,6 @@ namespace rask {
         change directory(const fostlib::string &relpath);
         change move_out(const fostlib::string &relpath);
 
-//         /// Write details about something observed on this file system. After
-//         /// recording in the database it will build a packet and broadcast it to
-//         /// the other connected nodes
-//         void local_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type,
-//             packet_builder);
-//         /// Write details about something observed on this file system. This version
-//         /// allows for custom hashing of the item if it's added to the database
-//         void local_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type,
-//             packet_builder, inode_function);
-//         /// Write details about something observed on this file system. This version
-//         /// allows for custom hashing and also a custom predicate to determine if
-//         /// the inode data entry needs to be updated
-//         void local_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type,
-//             condition_function, packet_builder, inode_function);
-//         /// Write details about something observed on this file system. This
-//         /// version allows for custom hashing, a custom predicate to deterime if
-//         /// the inode data entry needs to be updated plus a secondary updater
-//         /// that allows other information in the inode to be updated if required.
-//         void local_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type,
-//             condition_function, packet_builder, inode_function, otherwise_function);
-
-//         /// Record a change that has come from another server
-//         void remote_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type, const tick &);
-//         void remote_change(
-//             const boost::filesystem::path &location,
-//             const fostlib::json &inode_type, const tick &,
-//             inode_function);
-
         /// The inodes
         const tree &inodes() const {
             return *inodes_p;
