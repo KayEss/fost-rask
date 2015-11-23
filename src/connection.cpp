@@ -123,10 +123,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                             ("control", int(control))
                             ("packet-size", packet_size);
                     }
-                    if ( socket->restart ) {
-                        reset_watchdog(socket->workers, socket->restart);
-                    }
-                    socket->reset_heartbeat();
+                    socket->reset_heartbeat(control != 0x80);
                 } catch ( fostlib::exceptions::exception &e ) {
                     fostlib::log::error(c_fost_rask)
                         ("", "read_and_process caught an exception")
@@ -211,7 +208,7 @@ void rask::connection::start_sending() {
                         --queued;
                         packet()(self, yield);
                         ++p_sends;
-                        self->reset_heartbeat();
+                        self->reset_heartbeat(true);
                     }
                 } catch ( fostlib::exceptions::exception &e ) {
                     fostlib::log::error(c_fost_rask)
@@ -231,14 +228,19 @@ void rask::connection::start_sending() {
 }
 
 
-void rask::connection::reset_heartbeat() {
-    heartbeat.expires_from_now(boost::posix_time::seconds(5));
-    heartbeat.async_wait(
-        [self = shared_from_this()](const boost::system::error_code &error) {
-            if ( !error ) {
-                self->queue(send_version);
-            }
-        });
+void rask::connection::reset_heartbeat(bool hb) {
+    if ( hb ) {
+        heartbeat.expires_from_now(boost::posix_time::seconds(5));
+        heartbeat.async_wait(
+            [self = shared_from_this()](const boost::system::error_code &error) {
+                if ( !error ) {
+                    self->queue(send_version);
+                }
+            });
+    }
+    if ( restart ) {
+        reset_watchdog(workers, restart);
+    }
 }
 
 

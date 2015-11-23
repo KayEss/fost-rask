@@ -238,8 +238,11 @@ namespace rask {
         f5::tsring<std::function<rask::connection::out(void)>> packets;
         /// Start the sender side
         void start_sending();
-        /// Reset the heartbeat that will send a version packet
-        void reset_heartbeat();
+        /// Reset the heartbeat that will send a version packet. If we've
+        /// just received a version block we don't want the reset to push
+        /// out our own version packet, so receiving side can pass in
+        /// `false` here to reset only the watchdog.
+        void reset_heartbeat(bool);
     };
 
 
