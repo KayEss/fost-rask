@@ -204,7 +204,7 @@ void rask::connection::start_sending() {
             while ( self->cnx.is_open() ) {
                 try {
                     auto queued = self->sender.consume(yield);
-                    while ( queued > 0 ) {
+                    while ( self->cnx.is_open() && queued > 0 ) {
                         auto packet = self->packets.pop_front(
                             fostlib::nullable<std::function<out(void)>>()).value();
                         --queued;
