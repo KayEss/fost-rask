@@ -238,6 +238,8 @@ namespace rask {
         f5::tsring<std::function<rask::connection::out(void)>> packets;
         /// Start the sender side
         void start_sending();
+        /// Reset the heartbeat that will send a version packet
+        void reset_heartbeat();
     };
 
 
