@@ -131,13 +131,13 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                         ("", "read_and_process caught an exception")
                         ("connection", socket->id)
                         ("exception", e.as_json());
-                    fostlib::absorb_exception();
+                    return;
                 } catch ( std::exception &e ) {
                     fostlib::log::error(c_fost_rask)
                         ("", "read_and_process caught an exception")
                         ("connection", socket->id)
                         ("exception", e.what());
-                    fostlib::absorb_exception();
+                    return;
                 }
             }
         });
@@ -225,13 +225,13 @@ void rask::connection::start_sending() {
                         ("", "connection::start_sending caught an exception")
                         ("connection", self->id)
                         ("exception", e.as_json());
-                    fostlib::absorb_exception();
+                    return;
                 } catch ( std::exception &e ) {
                     fostlib::log::error(c_fost_rask)
                         ("", "connection::start_sending caught an exception")
                         ("connection", self->id)
                         ("exception", e.what());
-                    fostlib::absorb_exception();
+                    return;
                 }
             }
         });
