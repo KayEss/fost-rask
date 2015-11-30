@@ -27,7 +27,9 @@ namespace {
                 } catch ( std::exception &e ) {
                     fostlib::log::critical(rask::c_fost_rask)
                         ("", "Rask thread pool caught an exception")
-                        ("what", e.what());
+                        ("what", e.what())
+                        ("type", "name", typeid(e).name())
+                        ("type", "hash", typeid(e).hash_code());
                 } catch ( ... ) {
                     fostlib::log::critical(rask::c_fost_rask,
                         "Rask thread pool caught an unknown exception");
