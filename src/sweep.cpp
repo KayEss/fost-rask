@@ -9,7 +9,9 @@
 #include <rask/configuration.hpp>
 #include <rask/sweep.hpp>
 #include <fost/crypto>
-#include <boost/iostreams/device/mapped_file.hpp>
+
+#include <boost/filesystem/fstream.hpp>
+
 #include <vector>
 
 
@@ -17,14 +19,20 @@ using namespace fostlib;
 
 
 struct rask::const_file_block_hash_iterator::impl {
-    boost::iostreams::mapped_file_source file;
-    std::size_t size, offset;
+    boost::filesystem::path filename;
+    std::array<unsigned char, file_hash_block_size> block;
+    std::size_t bytes, offset;
+    boost::filesystem::ifstream file;
 
-    impl(const boost::filesystem::path &path)
-    : size(boost::filesystem::file_size(path)), offset(0) {
-        if ( size ) {
-            file.open(path.string());
-        }
+    impl(boost::filesystem::path path)
+    : filename(std::move(path)), bytes(0), offset(0), file(filename) {
+        read();
+    }
+
+    std::size_t read() {
+        offset += bytes;
+        bytes = file.read(reinterpret_cast<char *>(block.data()), block.size()).gcount();
+        return bytes;
     }
 };
 
@@ -37,29 +45,23 @@ rask::const_file_block_hash_iterator::const_file_block_hash_iterator(
 : pimpl(new impl(filename)) {
 }
 
-rask::const_file_block_hash_iterator::~const_file_block_hash_iterator() {
-}
+rask::const_file_block_hash_iterator::~const_file_block_hash_iterator() = default;
 
 
 std::size_t rask::const_file_block_hash_iterator::offset() const {
     return pimpl->offset;
 }
 fostlib::const_memory_block rask::const_file_block_hash_iterator::data() const {
-    const unsigned char *begin =
-        reinterpret_cast< const unsigned char * >(pimpl->file.data());
-    const unsigned char *starts = begin + pimpl->offset;
-    const unsigned char *ends =
-        std::min(begin + pimpl->size, starts + file_hash_block_size);
-    return std::make_pair(starts, ends);
+    const unsigned char * const begin = pimpl->block.data();
+    return std::make_pair(begin, begin + pimpl->bytes);
 }
 
 
 rask::const_file_block_hash_iterator &
         rask::const_file_block_hash_iterator::operator ++ () {
-    pimpl->offset += file_hash_block_size;
-    if ( pimpl->offset >= pimpl->size ) {
+    if ( pimpl->read() == 0u ) {
         pimpl.reset();
-    }
+    };
     return *this;
 }
 
@@ -73,7 +75,7 @@ bool rask::const_file_block_hash_iterator::operator == (
 
 std::vector<unsigned char> rask::const_file_block_hash_iterator::operator * () const {
     digester hasher(sha256);
-    if ( pimpl->size ) {
+    if ( pimpl->bytes ) {
         hasher << data();
     }
     return hasher.digest();
