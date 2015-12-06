@@ -50,6 +50,11 @@ namespace rask {
             return time == t.time && server == t.server && reserved == t.reserved;
         }
 
+        /// Return an advanced tick relative to this one
+        tick operator + ( int64_t amount ) {
+            return tick(time + amount, 0u);
+        }
+
         /// Return the current time with optional hash
         static std::pair<tick, fostlib::nullable<fostlib::string>> now();
         /// A Lamport clock used to give each event a unique ID
