@@ -9,6 +9,7 @@
 #pragma once
 
 
+#include <fost/array>
 #include <fost/string>
 
 
@@ -36,11 +37,30 @@ namespace rask {
 
 
 namespace fostlib {
+    /// Allow a base32 string to be generated from part of a memory array
+    template<>
+    struct coercer<rask::base32_string, fostlib::array_view<unsigned char>> {
+        rask::base32_string coerce(const fostlib::array_view<unsigned char>&);
+    };
+
     /// Allow a base32 string to be generated from a vector of byte values
     template<>
     struct coercer<rask::base32_string, std::vector< unsigned char >> {
         /// Perform the coercion
-        rask::base32_string coerce(const std::vector<unsigned char>&);
+        rask::base32_string coerce(const std::vector<unsigned char> &v) {
+            return fostlib::coerce<rask::base32_string>(
+                fostlib::array_view<unsigned char>(v));
+        }
+    };
+
+    /// Allow a base32 string to be generated from a fixed size array
+    template<std::size_t N>
+    struct coercer<rask::base32_string, std::array<unsigned char, N>> {
+        /// Perform the coercion
+        rask::base32_string coerce(const std::array<unsigned char, N> &v) {
+            return fostlib::coerce<rask::base32_string>(
+                fostlib::array_view<unsigned char>(v));
+        }
     };
 
     /// Allow integers to be converted to a padded base32 string

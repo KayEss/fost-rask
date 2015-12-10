@@ -41,8 +41,8 @@ void rask::base32_string_tag::check_encoded(const fostlib::ascii_string &s) {
 
 
 rask::base32_string fostlib::coercer<
-    rask::base32_string, std::vector<unsigned char>
->::coerce(const std::vector<unsigned char> &v) {
+    rask::base32_string, fostlib::array_view<unsigned char>
+>::coerce(const fostlib::array_view<unsigned char> &v) {
     std::string string;
     if ( v.size() ) {
         auto position = v.rbegin();
