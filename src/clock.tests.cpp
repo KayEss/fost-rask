@@ -32,6 +32,12 @@ FSL_TEST_FUNCTION(equality) {
 }
 
 
+FSL_TEST_FUNCTION(ordering) {
+    FSL_CHECK(rask::tick(0, 0) < rask::tick(1, 0));
+    FSL_CHECK(rask::tick(0, 0) < rask::tick(0, 1));
+}
+
+
 FSL_TEST_FUNCTION(hash) {
     fostlib::json t;
     fostlib::push_back(t, 1);

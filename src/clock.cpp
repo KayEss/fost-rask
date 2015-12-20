@@ -15,19 +15,19 @@
 
 
 rask::tick::tick(int64_t t)
-: time(t), server(server_identity()), reserved(0) {
+: t(t), s(server_identity()), r(0) {
 }
 
 
 rask::tick::tick(int64_t t, uint32_t s)
-: time(t), server(s), reserved(0) {
+: t(t), s(s), r(0) {
 }
 
 
 rask::tick::tick(const fostlib::json &j)
-: time(fostlib::coerce<int64_t>(j[0])),
-        server(fostlib::coerce<uint32_t>(j[1])),
-        reserved(0) {
+: t(fostlib::coerce<int64_t>(j[0])),
+        s(fostlib::coerce<uint32_t>(j[1])),
+        r(0) {
 }
 
 
@@ -100,8 +100,8 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
 
 fostlib::json fostlib::coercer<fostlib::json, rask::tick>::coerce(const rask::tick &t) {
     fostlib::json j;
-    fostlib::push_back(j, t.time);
-    fostlib::push_back(j, t.server);
+    fostlib::push_back(j, t.time());
+    fostlib::push_back(j, t.server());
     return j;
 }
 

@@ -89,7 +89,7 @@ void rask::receive_version(connection::in &packet) {
         packet.socket->identity = identity;
         logger("peer", identity);
         auto time(packet.read<tick>());
-        tick::overheard(time.time, time.server);
+        tick::overheard(time.time(), time.server());
         logger("tick", time);
         if ( !packet.empty() ) {
             // We got a hash

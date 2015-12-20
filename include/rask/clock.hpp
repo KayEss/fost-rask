@@ -19,40 +19,53 @@ namespace rask {
     class tick {
         /// Construct a local tick
         explicit tick(int64_t);
-        /// Construct any tick
-        tick(int64_t, uint32_t);
+
+        int64_t t;
+        uint32_t s, r;
 
     public:
+        /// Default construct to zero
+        tick()
+        : t{0}, s{0}, r{0}
+        {}
         /// Allow copying
         tick(const tick &) = default;
+        /// Construct any tick
+        tick(int64_t, uint32_t);
         /// Construct a clock from JSON
         tick(const fostlib::json &);
 
         /// The most significant part of the time
-        const int64_t time;
+        int64_t time() const {
+            return t;
+        }
         /// The server identity used as a tie breaker
-        const uint32_t server;
+        uint32_t server() const {
+            return s;
+        }
         /// Reserved to ensure we get 16 good bytes
-        const uint32_t reserved;
+        uint32_t reserved() const {
+            return r;
+        };
 
         /// Compare two ticks
-        bool operator < (const tick &t) const {
-            if ( time < t.time )
+        bool operator < (const tick &o) const {
+            if ( t < o.t )
                 return true;
-            else if ( time == t.time )
-                return server < t.server;
+            else if ( t == o.t )
+                return s < o.s;
             else
-                return false;
+                return r < o.r;
         }
 
         /// Compare for equality
-        bool operator == (const tick &t) const {
-            return time == t.time && server == t.server && reserved == t.reserved;
+        bool operator == (const tick &o) const {
+            return t == o.t && s == o.s && r == o.r;
         }
 
         /// Return an advanced tick relative to this one
-        tick operator + ( int64_t amount ) {
-            return tick(time + amount, 0u);
+        tick operator + ( int64_t amount ) const {
+            return tick(t + amount, 0u);
         }
 
         /// Return the current time with optional hash
@@ -88,7 +101,7 @@ namespace std {
 
     inline
     ostream &operator << (ostream &o, const rask::tick &t) {
-        return o << '[' << t.time << ", " << t.server << ", " << t.reserved << ']';
+        return o << '[' << t.time() << ", " << t.server() << ", " << t.reserved() << ']';
     }
 
 

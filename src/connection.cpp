@@ -260,7 +260,7 @@ rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &co
 
 
 rask::connection::out &rask::connection::out::operator << (const tick &t) {
-    return (*this) << t.time << t.server;
+    return (*this) << t.time() << t.server();
 }
 
 
