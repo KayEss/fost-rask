@@ -11,6 +11,7 @@ fost-project fost-rask :
         <include>../fost-orm/Cpp/include
         <include>../fost-web/Cpp/include
         <include>../fsnotify/include
+        <include>../tamarind/include
         <include>../threading/include
         <include>include
     ;
