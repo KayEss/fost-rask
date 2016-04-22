@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -99,8 +99,9 @@ namespace {
         bool deferred = false;
         meta.transformation(
             [&workers, &tree, manipulator, post, dbpath, layer, hash, &deferred](
-                fostlib::json &data
+                const fostlib::jcursor &root, fostlib::json &data
             ) {
+                assert(root.size() == 0u);
                 const bool recurse = rask::partitioned(data);
                 try {
                     if ( recurse ) {
@@ -133,7 +134,8 @@ namespace {
                 }
             });
         meta.pre_commit(
-            [&workers, layer, &tree](fostlib::json &data) {
+            [&workers, layer, &tree](const fostlib::jcursor &root, fostlib::json &data) {
+                assert(root.size() == 0u);
                 if ( data[tree.key()].size() > 96 ) {
                     fostlib::log::debug(rask::c_fost_rask)
                         ("", "partitioning beanbag")

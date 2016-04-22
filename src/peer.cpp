@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -18,7 +18,8 @@
 void rask::peer_with(workers &w, const fostlib::json &dbconf) {
     fostlib::log::debug(c_fost_rask, "Starting peering", dbconf);
     beanbag::jsondb_ptr dbp(beanbag::database(dbconf));
-    auto configure = [&w, dbp](const fostlib::json &peers) {
+    auto configure = [&w, dbp](const fostlib::jcursor &root, const fostlib::json &peers) {
+        assert(root.size() == 0u);
         if ( peers.has_key("connect") ) {
             const fostlib::json connect(peers["connect"]);
             for ( auto c(connect.begin()); c != connect.end(); ++c ) {
@@ -29,7 +30,7 @@ void rask::peer_with(workers &w, const fostlib::json &dbconf) {
     };
     dbp->post_commit(configure);
     fostlib::jsondb::local db(*dbp);
-    configure(db.data());
+    configure(fostlib::jcursor(), db.data());
 }
 
 

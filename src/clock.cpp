@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -53,12 +53,13 @@ rask::tick rask::tick::next() {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
         fostlib::jsondb::local server(*dbp);
         int64_t time;
-        server.transformation([&time](fostlib::json &db) {
+        server.transformation([&time](const fostlib::jcursor &root, fostlib::json &db) {
+            assert(root.size() == 0u);
             /*
                 By storing time without the server identity we allow the identity
                 to be changed and we still get good times afterwards.
             */
-            fostlib::jcursor location("time");
+            const fostlib::jcursor location("time");
             if ( db.has_key(location) ) {
                 time = fostlib::coerce<int64_t>(db[location][0]) + 1;
                 location.replace(db, fostlib::coerce<fostlib::json>(tick(time)));
@@ -81,8 +82,9 @@ rask::tick rask::tick::overheard(int64_t t, uint32_t s) {
     if ( !c_server_db.value().isnull() ) {
         beanbag::jsondb_ptr dbp(beanbag::database(c_server_db.value()["database"]));
         fostlib::jsondb::local server(*dbp);
-        server.transformation([heard](fostlib::json &db) {
-            fostlib::jcursor location("time");
+        server.transformation([heard](const fostlib::jcursor &root, fostlib::json &db) {
+            assert(root.size() == 0u);
+            const fostlib::jcursor location("time");
             if ( db.has_key(location) ) {
                 rask::tick mytime(db[location]);
                 if ( mytime < heard ) {

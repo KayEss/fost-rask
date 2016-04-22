@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -34,7 +34,8 @@ void rask::tenants(
         ("config", "tenants", tdbconfig)
         ("config", "subscriptions", sdbconfig);
     beanbag::jsondb_ptr dbp(beanbag::database(sdbconfig));
-    auto configure = [&w, dbp](const fostlib::json &subscribers) {
+    auto configure = [&w, dbp](const fostlib::jcursor &root, const fostlib::json &subscribers) {
+        assert(root.size() == 0u);
         if ( subscribers.has_key("subscription") ) {
             const fostlib::json subscriptions(subscribers["subscription"]);
             for ( auto t(subscriptions.begin()); t != subscriptions.end(); ++t ) {
@@ -52,7 +53,7 @@ void rask::tenants(
     };
     dbp->post_commit(configure);
     fostlib::jsondb::local db(*dbp);
-    configure(db.data());
+    configure(fostlib::jcursor(), db.data());
 }
 
 
