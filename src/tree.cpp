@@ -58,26 +58,31 @@ rask::tree::const_iterator rask::tree::end() const {
 }
 
 
+namespace {
+    void do_lookup(
+        rask::tree &t,
+        std::size_t layer,
+        const rask::name_hash_type &hash,
+        const fostlib::string &location,
+        std::function<void(const fostlib::json &)> found
+    ) {
+        auto dbp = t.layer_dbp(layer, hash);
+        fostlib::jsondb::local data(*dbp);
+        const bool recurse = rask::partitioned(data);
+        if ( recurse ) {
+            do_lookup(t, layer + 1u, hash, location, found);
+        } else {
+            if ( data["inodes"].has_key(location) )
+                found(data["inodes"][location]);
+        }
+    }
+}
 void rask::tree::lookup(
     const name_hash_type &hash,
     const boost::filesystem::path &location,
     std::function<void(const fostlib::json &)> found
 ) {
-    auto down =
-        [&hash, location = fostlib::coerce<fostlib::string>(location), &found](
-            auto &data
-        ) {
-            const bool recurse = rask::partitioned(data);
-            if ( recurse ) {
-                throw fostlib::exceptions::not_implemented(
-                    "rask::tree::lookup where the data is partitioned");
-            } else {
-                if ( data["inodes"].has_key(location) )
-                    found(data["inodes"][location]);
-            }
-        };
-    fostlib::jsondb::local data(*root_dbp());
-    down(data);
+    do_lookup(*this, 0u, hash, fostlib::coerce<fostlib::string>(location), found);
 }
 
 
