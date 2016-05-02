@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -110,7 +110,22 @@ namespace {
                 w.files.get_io_service().post(
                     [this, filename = std::move(filename), tenant]() {
                         /// TODO: It's not yet clear what the proper thing to
-                        /// do here is in all circumstances
+                        /// do here is in all circumstances. In any case we
+                        /// can hash it
+                        if ( is_regular_file(filename) ) {
+                            // The tenant should always be subscribed if
+                            // we have a watch that captures the file
+                            tenant->subscription->file(filename)
+                                .hash([](const auto &, const auto &) {
+                                    /// We don't have the hash yet so leave blank for now
+                                    return fostlib::json();
+                                })
+                                .broadcast(rask::file_exists_out)
+                                .post_commit([this](const auto &c) {
+                                    rask::rehash_file(w, c.subscription, c.location, c.inode, [](){});
+                                })
+                            .execute();
+                        }
                     });
             } else if ( event.mask & IN_DELETE_SELF ) {
                 ++p_in_delete_self;
