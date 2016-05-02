@@ -206,7 +206,7 @@ void rask::file_hash_without_priority(connection::in &packet) {
                     fostlib::coerce<boost::filesystem::path>(filename);
                 tenant->subscription->inodes().lookup(
                     name_hash(filename), location,
-                    [socket, tenant, location](
+                    [socket, tenant, filename = std::move(filename), location](
                         const fostlib::json &inode
                     ) {
                         if ( inode.has_key("priority") ) {
@@ -214,11 +214,14 @@ void rask::file_hash_without_priority(connection::in &packet) {
                                 sending::start(socket, tenant, tick(inode["priority"]),
                                     fostlib::coerce<fostlib::string>(inode["name"]), location);
                             } catch ( std::exception &e ) {
-                                fostlib::log::error(c_fost_rask)
-                                    ("", "Sending file")
+                                fostlib::log::warning(c_fost_rask)
+                                    ("", "Tried to send a file that no longer exists -- setting as deleted")
                                     ("function", "name", __FUNCTION__)
                                     ("inode", inode)
                                     ("exception", e.what());
+                                tenant->subscription->move_out(filename)
+                                    .broadcast(rask::move_out_packet)
+                                    .execute();
                             }
                         }
                     });
