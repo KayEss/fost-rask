@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -10,8 +10,7 @@
 
 
 #include <rask/notification.hpp>
-
-#include <f5/threading/boost-asio.hpp>
+#include <rask/wiring.hpp>
 
 
 namespace rask {
@@ -35,7 +34,11 @@ namespace rask {
         f5::boost_asio::reactor_pool hashes;
         /// File system notification
         notification notify;
+
+        /// The entry point for the FRP processing
+        wiring::local_server server;
     };
 
 
 }
+

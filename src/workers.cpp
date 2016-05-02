@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -50,6 +50,6 @@ namespace {
 
 
 rask::workers::workers()
-: io(eh(), 4), responses(eh(), 8), files(eh(), 8), hashes(eh(), 8), notify(*this) {
+: io(eh(), 4), responses(eh(), 8), files(eh(), 8), hashes(eh(), 8), notify(*this), server(files) {
 }
 

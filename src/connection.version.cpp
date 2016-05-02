@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -96,6 +96,9 @@ void rask::receive_version(connection::in &packet) {
             auto hash(packet.read(32));
             auto hash64 = fostlib::coerce<fostlib::base64_string>(hash);
             logger("hash",  hash64.underlying().underlying().c_str());
+            // Pass the signal on to the processing
+            packet.socket->workers.server.peer.push(
+                wiring::server_hash{time, identity, hash64});
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
             if ( !myhash.second.isnull() &&
