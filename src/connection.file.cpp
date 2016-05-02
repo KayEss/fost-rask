@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -209,9 +209,18 @@ void rask::file_hash_without_priority(connection::in &packet) {
                     [socket, tenant, location](
                         const fostlib::json &inode
                     ) {
-                        if ( inode.has_key("priority") )
-                            sending::start(socket, tenant, tick(inode["priority"]),
-                                fostlib::coerce<fostlib::string>(inode["name"]), location);
+                        if ( inode.has_key("priority") ) {
+                            try {
+                                sending::start(socket, tenant, tick(inode["priority"]),
+                                    fostlib::coerce<fostlib::string>(inode["name"]), location);
+                            } catch ( std::exception &e ) {
+                                fostlib::log::error(c_fost_rask)
+                                    ("", "Sending file")
+                                    ("function", "name", __FUNCTION__)
+                                    ("inode", inode)
+                                    ("exception", e.what());
+                            }
+                        }
                     });
             });
     } else {
