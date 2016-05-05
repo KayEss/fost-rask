@@ -253,10 +253,10 @@ fostlib::json rask::tree::layer_db_config(
         fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
         fostlib::insert(conf, "initial", "layer", "current", hash.substr(layer - 1, 1));
         fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
-        fostlib::log::debug(c_fost_rask)
-            ("", "layer_db_config")
-            ("layer", layer)
-            ("config", conf);
+//         fostlib::log::debug(c_fost_rask)
+//             ("", "layer_db_config")
+//             ("layer", layer)
+//             ("config", conf);
         return conf;
     }
 }
