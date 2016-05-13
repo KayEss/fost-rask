@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -340,7 +340,6 @@ void rask::subscriber::change::execute() {
                 pimpl->result.updated = (pimpl->result.old != pimpl->result.inode);
                 logger("updating", pimpl->result.updated);
                 if ( pimpl->result.updated ) {
-                    rehash_inodes(w, dbconf);
                     logger("node", "new", pimpl->result.inode);
                 }
             } else {
@@ -352,6 +351,7 @@ void rask::subscriber::change::execute() {
                     logger("node", "new", pimpl->result.inode);
                 }
             }
+            rehash_inodes(w, dbconf);
         },
         [pimpl = this->pimpl]() {
             if ( pimpl->result.updated ) {
