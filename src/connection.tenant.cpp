@@ -195,6 +195,7 @@ void rask::tenant_hash_packet(connection::in &packet) {
                 auto dbp = tenant->subscription->inodes().layer_dbp(layer, prefix);
                 fostlib::jsondb::local db(*dbp);
                 if ( partitioned(db) ) {
+                    bool found_difference = false;
                     auto subs = db["inodes"];
                     for ( auto iter(subs.begin()); iter != subs.end(); ++iter ) {
                         auto key = fostlib::coerce<fostlib::string>(iter.key());
@@ -208,9 +209,20 @@ void rask::tenant_hash_packet(connection::in &packet) {
                                     (*iter)[hashloc].get<fostlib::string>().value() ) {
                             auto next = prefix + key;
                             send_tenant_content(tenant, socket, layer + 1, next);
+                            found_difference = true;
                         }
                     }
+                    if ( not found_difference ) {
+                        /// We've cross indexed our hashes with the ones we got
+                        /// and they all came out the same :( We'll re-hash
+                        /// just to see if the error is on our side
+                        rehash_inodes(socket->workers, dbp);
+                    }
                 } else {
+                    /// The remote server has a lot more files here than we do.
+                    /// We can tell this because they've sent us a mid-level
+                    /// tenant hash packet and we have a non-partitioned
+                    /// database of actual file hashes.
                     socket->queue(
                         [tenant, layer, prefix = std::move(prefix), data = db.data()]() {
                             return tenant_packet(*tenant, layer, prefix, data);
