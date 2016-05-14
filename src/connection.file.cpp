@@ -90,16 +90,23 @@ void rask::file_exists(rask::connection::in &packet) {
             [tenant, name = std::move(name), priority, size, hash64,
                 socket = packet.socket
             ]() {
-                tenant->subscription->file(name)
-                    .compare_priority(priority)
-                    .record_priority(fostlib::null)
-                    .enrich_update(
-                        [priority, size, hash64](auto j) {
+                static const fostlib::jcursor remote("remote");
+                static const fostlib::jcursor hash_inode("hash", "inode");
+                auto save_remote_hash =
+                    [priority, size, hash64](auto j) {
+                        if ( j.has_key(remote) ) remote.del_key(j);
+                        if ( not j.has_key(hash_inode) ) {
                             fostlib::insert(j, "remote", "priority", priority);
                             fostlib::insert(j, "remote", "size", size);
                             fostlib::insert(j, "remote", "hash", hash64);
-                            return j;
-                        })
+                        }
+                        return j;
+                    };
+                tenant->subscription->file(name)
+                    .compare_priority(priority)
+                    .record_priority(fostlib::null)
+                    .enrich_update(save_remote_hash)
+                    .enrich_otherwise(save_remote_hash)
                     .post_commit(
                         [size, socket, hash64](auto&c) {
                             if ( !size.isnull() ) {
