@@ -205,8 +205,9 @@ void rask::tenant_hash_packet(connection::in &packet) {
                         }
                         static const fostlib::jcursor hashloc("hash", "inode");
                         if ( (*iter).has_key(hashloc) && !(*iter)[hashloc].isnull() &&
-                                hashes[from_base32_ascii_digit(key[0])].underlying().underlying().c_str() !=
-                                    (*iter)[hashloc].get<fostlib::string>().value() ) {
+                            hashes[from_base32_ascii_digit(key[0])].underlying().underlying().c_str() !=
+                                (*iter)[hashloc].get<fostlib::string>().value() )
+                        {
                             auto next = prefix + key;
                             send_tenant_content(tenant, socket, layer + 1, next);
                             found_difference = true;
