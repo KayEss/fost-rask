@@ -61,6 +61,22 @@ rask::connection::out rask::file_exists_out(
 }
 
 
+namespace {
+    void create_and_watch_parent(
+        rask::workers &w,
+        std::shared_ptr<rask::tenant> tenant,
+        const boost::filesystem::path &pathname
+    ) {
+        const auto parent = pathname.parent_path();
+        if ( not boost::filesystem::exists(parent) ) {
+            create_and_watch_parent(w, tenant, parent);
+            boost::filesystem::create_directory(parent);
+        }
+        w.notify.watch(tenant, parent);
+    }
+}
+
+
 void rask::file_exists(rask::connection::in &packet) {
     ++p_file_exists_received;
     auto logger(fostlib::log::info(c_fost_rask));
@@ -108,8 +124,9 @@ void rask::file_exists(rask::connection::in &packet) {
                     .enrich_update(save_remote_hash)
                     .enrich_otherwise(save_remote_hash)
                     .post_commit(
-                        [size, socket, hash64](auto&c) {
+                        [size, socket, hash64, tenant](auto&c) {
                             if ( !size.isnull() ) {
+                                create_and_watch_parent(socket->workers, tenant, c.location);
                                 allocate_file(c.location,
                                     fostlib::coerce<std::size_t>(size.value()));
                             }
