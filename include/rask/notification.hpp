@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -31,7 +31,8 @@ namespace rask {
         /// Start processing the notifications
         void operator() ();
 
-        /// Add a watch for a directory
+        /// Add a watch for a directory. We have to take a shared_ptr to the
+        // tenant because we're going to store the pointer.
         bool watch(std::shared_ptr<tenant>, const boost::filesystem::path &);
 
     private:
