@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -131,14 +131,14 @@ void rask::rehash_file(
     }
     if ( !g_hashing.insert_if_not_found(filename) ) {
         ++p_skipped_hashing;
-        fostlib::log::warning(c_fost_rask)
+        fostlib::log::debug(c_fost_rask)
             ("", "Not hashing as the file is already being hashed")
             ("tenant", sub.tenant.name())
             ("inode", inode);
         callback();
         return;
     }
-    fostlib::log::warning(c_fost_rask)
+    fostlib::log::debug(c_fost_rask)
         ("", "Going to start hashing a file as the stats don't match")
         ("stat", "now", before_status)
         ("stat", "inode", inode["stat"].isnull() ? fostlib::json() :

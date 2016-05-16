@@ -111,7 +111,7 @@ namespace {
                                     inode);
                             });
                     } else {
-                        fostlib::log::warning(rask::c_fost_rask)
+                        fostlib::log::debug(rask::c_fost_rask)
                             ("", "Have file inode without priority")
                             ("inode", inode);
                     }
