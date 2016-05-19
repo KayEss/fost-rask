@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -33,7 +33,7 @@ namespace {
         }
         boost::asio::spawn(w.files.get_io_service(),
             [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
-                f5::eventfd::limiter limit(w.hashes.get_io_service(), yield, 2);
+                f5::eventfd::limiter limit(w.hashes.get_io_service(), yield, 8);
                 ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
                     throw fostlib::exceptions::not_implemented(
