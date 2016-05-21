@@ -21,7 +21,6 @@ namespace {
     fostlib::performance p_starts(rask::c_fost_rask, "sweep", "started");
     fostlib::performance p_completed(rask::c_fost_rask, "sweep", "completed");
     fostlib::performance p_swept(rask::c_fost_rask, "sweep", "folders");
-    fostlib::performance p_paused(rask::c_fost_rask, "sweep", "pauses");
 
     void sweep(
         rask::workers &w, std::shared_ptr<rask::tenant> tenant,
