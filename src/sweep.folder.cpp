@@ -20,7 +20,9 @@
 namespace {
     fostlib::performance p_starts(rask::c_fost_rask, "sweep", "started");
     fostlib::performance p_completed(rask::c_fost_rask, "sweep", "completed");
-    fostlib::performance p_swept(rask::c_fost_rask, "sweep", "folders");
+    fostlib::performance p_found_folders(rask::c_fost_rask, "sweep", "found", "folders");
+    fostlib::performance p_found_files(rask::c_fost_rask, "sweep", "found", "files");
+    fostlib::performance p_found_others(rask::c_fost_rask, "sweep", "found", "others");
 
     void sweep(
         rask::workers &w, std::shared_ptr<rask::tenant> tenant,
@@ -32,8 +34,8 @@ namespace {
         }
         boost::asio::spawn(w.files.get_io_service(),
             [&w, tenant, folder = std::move(folder)](boost::asio::yield_context yield) {
+                ++p_starts;
                 f5::eventfd::limiter limit(w.hashes.get_io_service(), yield, 8);
-                ++p_swept;
                 if ( !boost::filesystem::is_directory(folder) ) {
                     throw fostlib::exceptions::not_implemented(
                         "Trying to recurse into a non-directory",
@@ -49,14 +51,14 @@ namespace {
                 for ( auto inode = d_iter(folder), end = d_iter(); inode != end; ++inode ) {
                     fostlib::log::debug(rask::c_fost_rask, "Directory sweep", inode->path());
                     if ( inode->status().type() == boost::filesystem::directory_file ) {
-                        ++directories;
+                        ++directories; ++p_found_folders;
                         auto directory = inode->path();
                         tenant->subscription->directory(directory)
                             .broadcast(rask::create_directory_out)
                             .execute();
                         w.notify.watch(tenant, directory);
                     } else if ( inode->status().type() == boost::filesystem::regular_file ) {
-                        ++files;
+                        ++files; ++p_found_files;
                         auto filename = inode->path();
                         auto task(++limit);
                         tenant->subscription->file(filename)
@@ -80,9 +82,10 @@ namespace {
                             })
                         .execute();
                     } else {
-                        ++ignored;
+                        ++ignored; ++p_found_others;
                     }
                 }
+                ++p_completed;
                 fostlib::log::info(rask::c_fost_rask)
                     ("", "Swept folder")
                     ("folder", folder)
