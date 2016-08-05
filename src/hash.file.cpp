@@ -52,7 +52,13 @@ namespace {
         const biter end;
         for ( biter block(filename); block != end; ++block, ++blocks ) {
             ++p_blocks;
-            db(blocks, *block);
+            if ( not db(blocks, *block) ) {
+                /// We've run off the end of the block database file which
+                /// means that the file size has changed under us. Abandon
+                /// this hashing run as we're going to be starting again
+                /// from the beginning anyway
+                return 0;
+            }
         }
         return blocks;
     }
@@ -250,7 +256,7 @@ rask::file::hashdb::hashdb(
 }
 
 
-void rask::file::hashdb::operator () (
+bool rask::file::hashdb::operator () (
     std::size_t block, const std::vector<unsigned char> &hash
 ) {
     if ( block >= blocks_total ) {
@@ -260,10 +266,12 @@ void rask::file::hashdb::operator () (
                 "This implies that the file has grown since the hash database was created")
             ("total-blocks", blocks_total)
             ("block", block);
+        return false;
     }
     if ( std::memcmp(file.data() + block * 32, hash.data(), 32) != 0 ) {
         std::memcpy(file.data() + block * 32, hash.data(), 32);
     }
+    return true;
 }
 
 

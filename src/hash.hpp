@@ -62,8 +62,9 @@ namespace rask {
             std::size_t level() const { return m_level; }
 
             /// Add the next hash value to the database. Give it the block
-            /// number and the block's hash
-            void operator () (std::size_t, const std::vector<unsigned char> &h);
+            /// number and the block's hash. Return true if the block is inside
+            /// the hash file, and false if it falls outside.
+            bool operator () (std::size_t, const std::vector<unsigned char> &h);
 
             /// Return the specified hash value
             std::vector<unsigned char> operator () (std::size_t) const;
