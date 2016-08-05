@@ -160,7 +160,13 @@ namespace {
                         if ( !children[digit] ) {
                             fostlib::insert(data, tree.key(), hash.substr(layer, 1),
                                 fostlib::json::object_t());
-                            children[digit] = tree.layer_dbp(layer + 1, hash);
+                            // TODO When we create the child database there
+                            // may (through some earlier error) be a JSON file
+                            // already in existence. We don't want that as
+                            // we're partiioning into new databases. We need
+                            // to ensure that broken JSON files get wiped.
+                            // Passing true to layer_dbp does that.
+                            children[digit] = tree.layer_dbp(layer + 1, hash, true);
                         }
                         fostlib::jsondb::local child(*children[digit]);
                         child
@@ -236,7 +242,7 @@ boost::filesystem::path rask::tree::dbpath(const boost::filesystem::path &sub) c
 
 
 fostlib::json rask::tree::layer_db_config(
-    std::size_t layer, const name_hash_type &hash
+    std::size_t layer, const name_hash_type &hash, bool wipe
 ) const {
     if ( layer == 0u ) {
         return root_db_config;
@@ -244,6 +250,14 @@ fostlib::json rask::tree::layer_db_config(
         const auto hash_prefix = hash.substr(0, layer);
         const auto ndb_path = dbpath(fostlib::coerce<boost::filesystem::path>(
             rask::name_hash_path(hash.substr(0, layer)) + ".json"));
+        if ( wipe and boost::filesystem::exists(ndb_path) ) {
+            fostlib::log::warning(c_fost_rask)
+                ("", "layer_db_config -- old beanbag file exists, deleting")
+                ("layer", layer)
+                ("hash", hash)
+                ("path", ndb_path);
+            boost::filesystem::remove(ndb_path);
+        }
         fostlib::json conf;
         fostlib::insert(conf, "filepath", ndb_path);
         fostlib::insert(conf, "name",
@@ -253,10 +267,6 @@ fostlib::json rask::tree::layer_db_config(
         fostlib::insert(conf, "initial", "layer", "hash", hash_prefix);
         fostlib::insert(conf, "initial", "layer", "current", hash.substr(layer - 1, 1));
         fostlib::insert(conf, "initial", key(), fostlib::json::object_t());
-//         fostlib::log::debug(c_fost_rask)
-//             ("", "layer_db_config")
-//             ("layer", layer)
-//             ("config", conf);
         return conf;
     }
 }
