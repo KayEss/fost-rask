@@ -253,6 +253,14 @@ rask::file::hashdb::hashdb(
 void rask::file::hashdb::operator () (
     std::size_t block, const std::vector<unsigned char> &hash
 ) {
+    if ( block >= blocks_total ) {
+        // TODO: This ought to be a bit smarter about what it's going to do
+        fostlib::log::warning(c_fost_rask)
+            ("", "Trying to write a hash block beyond the end of the database."
+                "This implies that the file has grown since the hash database was created")
+            ("total-blocks", blocks_total)
+            ("block", block);
+    }
     if ( std::memcmp(file.data() + block * 32, hash.data(), 32) != 0 ) {
         std::memcpy(file.data() + block * 32, hash.data(), 32);
     }
