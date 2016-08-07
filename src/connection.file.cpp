@@ -57,7 +57,7 @@ rask::connection::out rask::file_exists_out(
             packet << hash;
         }
     }
-    return std::move(packet);
+    return packet;
 }
 
 
@@ -167,7 +167,7 @@ rask::connection::out rask::send_empty_file_hash(
     connection::out packet(0x83);
     packet << tenant.name();
     packet << fostlib::coerce<fostlib::string>(inode["name"]);
-    return std::move(packet);
+    return packet;
 }
 
 
@@ -272,7 +272,7 @@ namespace {
             hash << data.second;
             packet << hash.digest();
             packet.size_sequence(data.second) << data.second;
-            return std::move(packet);
+            return packet;
         } catch ( fostlib::exceptions::exception &e ) {
             fostlib::insert(e.data(), "tenant", tenant.name());
             fostlib::insert(e.data(), "location", location);
@@ -291,7 +291,7 @@ namespace {
                             file.location(), position.first);
                     ++position.first;
                     queue(self, socket);
-                    return std::move(packet);
+                    return packet;
                 });
         }
     }
