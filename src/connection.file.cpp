@@ -296,6 +296,7 @@ namespace {
         }
     }
     void save_file_data(
+        rask::workers &w,
         rask::subscriber &sub, fostlib::string filename,
         rask::tick priority, std::size_t offset, std::vector<unsigned char> data
     ) {
@@ -309,7 +310,7 @@ namespace {
         sub.file(filename)
             .compare_priority(priority)
             .if_predicate(
-                [&sub, offset, data = std::move(data)]
+                [&w, &sub, offset, data = std::move(data)]
                     (auto &database, const auto &dbpath, auto &result)
                 {
                     auto logger(fostlib::log::debug(rask::c_fost_rask));
@@ -326,8 +327,13 @@ namespace {
                         boost::iostreams::mapped_file_sink mmap;
                         mmap.open(result.location, data.size(), offset);
                         if ( mmap.is_open() && mmap.data() ) {
-                            logger("action", "write");
-                            std::memcpy(mmap.data(), data.data(), data.size());
+                            if ( std::memcmp(mmap.data(), data.data(), data.size()) != 0 ) {
+                                logger("action", "write");
+                                std::memcpy(mmap.data(), data.data(), data.size());
+                            } else {
+                                logger("action", "already-written");
+                                rask::rehash_file(w, sub, result.location, database[dbpath], [](){});
+                            }
                         } else {
                             logger("action", "mmap-failure");
                         }
@@ -382,10 +388,10 @@ void rask::file_data_block(connection::in &packet) {
     } else if ( tenant->subscription ) {
         logger("action", "check");
         packet.socket->workers.files.get_io_service().post(
-            [tenant, name = std::move(filename), priority, offset,
-                data = std::move(data)
+            [&w = packet.socket->workers, tenant, name = std::move(filename),
+                priority, offset, data = std::move(data)
             ]() {
-                save_file_data(*tenant->subscription, name, priority, offset, data);
+                save_file_data(w, *tenant->subscription, name, priority, offset, data);
             });
     } else {
         logger("action", "drop");
