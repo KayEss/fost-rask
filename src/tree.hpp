@@ -148,6 +148,10 @@ namespace rask {
 
             /// Check two iterators for equality
             bool operator == (const const_iterator &) const;
+            /// Compare the two iterators for inequality
+            bool operator != (const const_iterator &i) const {
+                return !(*this == i);
+            }
         };
 
         /// Return an iterator to the first of the underlying items

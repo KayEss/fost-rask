@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -94,8 +94,13 @@ namespace rask {
             const_block_iterator &operator ++ ();
             /// The data and its offset
             value_type operator *() const;
+
             /// Return true if the two iterators point to the same thing
             bool operator == (const const_block_iterator &) const;
+            /// Return true if the two iterators point to different things
+            bool operator != (const const_block_iterator &i) const {
+                return !(*this == i);
+            }
         };
 
 

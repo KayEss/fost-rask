@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -38,6 +38,10 @@ namespace rask {
         const_file_block_hash_iterator &operator ++ ();
         /// Allow comparison
         bool operator == (const const_file_block_hash_iterator &) const;
+        /// Check for inequality
+        bool operator != (const const_file_block_hash_iterator &i) const {
+            return !(*this == i);
+        }
 
         /// Return the hash for the current block
         std::vector<unsigned char> operator * () const;
