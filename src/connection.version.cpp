@@ -110,6 +110,10 @@ void rask::receive_version(connection::in &packet) {
                     });
             } else {
                 logger("conversation", "not needed");
+                if ( c_exit_on_sync_success.value() ) {
+                    fostlib::log::flush();
+                    std::exit(0);
+                }
             }
         }
     }

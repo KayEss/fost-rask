@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -23,3 +23,5 @@ const fostlib::setting<fostlib::json> rask::c_subscriptions_db(
 
 const fostlib::setting<bool> rask::c_terminate_on_exception(
     "fost-rask/configuration.cpp", "rask", "terminate on exception", true, true);
+const fostlib::setting<bool> rask::c_exit_on_sync_success(
+    "fost-rask/configuration.cpp", "rask", "exit on successful sync", false, true);
