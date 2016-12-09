@@ -111,7 +111,7 @@ void rask::receive_version(connection::in &packet) {
             } else {
                 logger("conversation", "not needed");
                 if ( c_exit_on_sync_success.value() ) {
-                    fostlib::log::flush();
+                    std::cout << "\n\n**** Exit on success ****\n\n" << std::endl;
                     std::exit(0);
                 }
             }
