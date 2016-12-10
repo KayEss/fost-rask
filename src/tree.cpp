@@ -94,6 +94,54 @@ namespace {
         rask::tree::manipulator_fn manipulator,
         std::function<void(void)> post);
 
+    void partition_if_needed(
+        rask::workers &workers,
+        std::size_t layer,
+        const rask::tree &tree,
+        fostlib::json &data
+    ) {
+        if ( data[tree.key()].size() > 96 ) {
+            fostlib::log::debug(rask::c_fost_rask)
+                ("", "partitioning beanbag")
+                ("layer", data["layer"]);
+            std::vector<beanbag::jsondb_ptr> children(32);
+            fostlib::json items(data[tree.key()]);
+            tree.key().replace(data, fostlib::json::object_t());
+            fostlib::insert(data, "@context", rask::c_db_cluster);
+            for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
+                auto item = *niter;
+                const auto hash = fostlib::coerce<fostlib::string>(
+                    item[tree.name_hash_path()]);
+                if ( layer >= hash.length() )
+                    throw fostlib::exceptions::not_implemented(
+                        "Partitioning a tree when we've run out of name hash");
+                const auto digit = rask::from_base32_ascii_digit(hash[layer]);
+                if ( !children[digit] ) {
+                    fostlib::insert(data, tree.key(), hash.substr(layer, 1), fostlib::json::object_t());
+                    // TODO When we create the child database there
+                    // may (through some earlier error) be a JSON file
+                    // already in existence. We don't want that as
+                    // we're partiioning into new databases. We need
+                    // to ensure that broken JSON files get wiped.
+                    // Passing true to layer_dbp does that.
+                    children[digit] = tree.layer_dbp(layer + 1, hash, true);
+                }
+                fostlib::jsondb::local child(*children[digit]);
+                child
+                    .insert(tree.key() / niter.key(), item)
+                    .commit();
+            }
+            for ( auto dbp : children ) {
+                if ( dbp ) {
+                    workers.hashes.get_io_service().post(
+                        [&workers, dbp]() {
+                            rask::rehash_inodes(workers, dbp);
+                        });
+                }
+            }
+        }
+    }
+
     void add_leaf(rask::workers &workers,
         std::size_t layer, fostlib::jsondb::local meta,
         const rask::tree &tree, const fostlib::jcursor &dbpath,
@@ -128,6 +176,7 @@ namespace {
                             dbpath.insert(data, fostlib::json::object_t());
                         }
                         manipulator(workers, data, tree.layer_db_config(layer, hash));
+                        partition_if_needed(workers, layer, tree, data);
                     }
                 } catch ( fostlib::exceptions::exception &e ) {
                     fostlib::push_back(e.data(), "add", "stack", "meta.transformation");
@@ -136,51 +185,6 @@ namespace {
                     fostlib::push_back(e.data(), "add", "recurse", recurse);
                     fostlib::push_back(e.data(), "add", "data", data);
                     throw;
-                }
-            });
-        meta.pre_commit(
-            [&workers, layer, &tree](const fostlib::jcursor &root, fostlib::json &data) {
-                assert(root.size() == 0u);
-                if ( data[tree.key()].size() > 96 ) {
-                    fostlib::log::debug(rask::c_fost_rask)
-                        ("", "partitioning beanbag")
-                        ("layer", data["layer"]);
-                    std::vector<beanbag::jsondb_ptr> children(32);
-                    fostlib::json items(data[tree.key()]);
-                    tree.key().replace(data, fostlib::json::object_t());
-                    fostlib::insert(data, "@context", rask::c_db_cluster);
-                    for ( auto niter(items.begin()); niter != items.end(); ++niter ) {
-                        auto item = *niter;
-                        const auto hash = fostlib::coerce<fostlib::string>(
-                            item[tree.name_hash_path()]);
-                        if ( layer >= hash.length() )
-                            throw fostlib::exceptions::not_implemented(
-                                "Partitioning a tree when we've run out of name hash");
-                        const auto digit = rask::from_base32_ascii_digit(hash[layer]);
-                        if ( !children[digit] ) {
-                            fostlib::insert(data, tree.key(), hash.substr(layer, 1),
-                                fostlib::json::object_t());
-                            // TODO When we create the child database there
-                            // may (through some earlier error) be a JSON file
-                            // already in existence. We don't want that as
-                            // we're partiioning into new databases. We need
-                            // to ensure that broken JSON files get wiped.
-                            // Passing true to layer_dbp does that.
-                            children[digit] = tree.layer_dbp(layer + 1, hash, true);
-                        }
-                        fostlib::jsondb::local child(*children[digit]);
-                        child
-                            .insert(tree.key() / niter.key(), item)
-                            .commit();
-                    }
-                    for ( auto dbp : children ) {
-                        if ( dbp ) {
-                            workers.hashes.get_io_service().post(
-                                [&workers, dbp]() {
-                                    rask::rehash_inodes(workers, dbp);
-                                });
-                        }
-                    }
                 }
             });
         meta.commit();
