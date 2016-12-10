@@ -153,9 +153,9 @@ struct rask::subscriber::change::impl {
         priority([](const auto &) {
             return tick::next();
         }),
-        hasher([](const auto &priority, const auto &) {
+        hasher([](const auto &priority, const auto &node) {
             fostlib::digester hash(fostlib::sha256);
-            hash << priority;
+            hash << fostlib::coerce<fostlib::string>(node["filetype"]);
             return fostlib::coerce<fostlib::json>(
                 fostlib::coerce<fostlib::base64_string>(hash.digest()));
         }),
