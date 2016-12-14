@@ -1,0 +1,6 @@
+
+fost-exe rename
+    :
+        ../../fost-base/Cpp/fost-cli
+        rename.cpp
+    ;
