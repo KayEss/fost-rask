@@ -25,3 +25,5 @@ const fostlib::setting<bool> rask::c_terminate_on_exception(
     "fost-rask/configuration.cpp", "rask", "terminate on exception", true, true);
 const fostlib::setting<bool> rask::c_exit_on_sync_success(
     "fost-rask/configuration.cpp", "rask", "exit on successful sync", false, true);
+const fostlib::setting<fostlib::nullable<fostlib::string>> rask::c_exit_on_server_hash(
+    "fost-rask/configuration.cpp", "rask", "exit on successful sync", fostlib::null, true);

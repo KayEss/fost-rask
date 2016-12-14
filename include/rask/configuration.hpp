@@ -42,6 +42,11 @@ namespace rask {
     /// server is in sync with at least one peer. This is primarily intended
     /// for some types of performance testing between two peers
     extern const fostlib::setting<bool> c_exit_on_sync_success;
+    /// When set to a hash value then exit when the server hash value
+    /// matches the one in the setting. This is primarily intended for
+    /// types of performance testing for file indexing on a single peer.
+    extern const fostlib::setting<fostlib::nullable<fostlib::string>>
+        c_exit_on_server_hash;
 
 
 }

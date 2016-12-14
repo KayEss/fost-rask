@@ -164,10 +164,15 @@ void rask::rehash_tenants(beanbag::jsondb_ptr pdb) {
     beanbag::jsondb_ptr dbp(beanbag::database(
         c_server_db.value()["database"]));
     fostlib::jsondb::local server(*dbp);
+    const auto server_hash =
+        fostlib::coerce<fostlib::string>(
+            fostlib::coerce<fostlib::base64_string>(hash));
     server
-        .set(fostlib::jcursor("hash"),
-            fostlib::coerce<fostlib::string>(
-                fostlib::coerce<fostlib::base64_string>(hash)))
+        .set(fostlib::jcursor("hash"), server_hash)
         .commit();
+    if ( server_hash == c_exit_on_server_hash.value() ) {
+        std::cout << "**** Exit on server hash value *****" << std::endl;
+        std::exit(3);
+    }
 }
 
