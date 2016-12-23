@@ -37,7 +37,7 @@ rask::connection::out rask::tenant_packet(
                 fostlib::coerce<fostlib::ascii_string>(
                     fostlib::coerce<fostlib::string>(meta["hash"]["data"]))));
     packet << hash;
-    return std::move(packet);
+    return packet;
 }
 
 
@@ -65,7 +65,7 @@ rask::connection::out rask::tenant_packet(
             }
         }
     }
-    return std::move(packet);
+    return packet;
 }
 
 

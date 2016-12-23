@@ -18,7 +18,7 @@ rask::connection::out rask::move_out_packet(
 ) {
     connection::out packet(0x93);
     packet << priority << tenant.name() << name;
-    return std::move(packet);
+    return packet;
 }
 
 
