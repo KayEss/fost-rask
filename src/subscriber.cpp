@@ -1,5 +1,5 @@
 /*
-    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2017, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -18,7 +18,7 @@ namespace {
     auto slash(fostlib::string root) {
         if ( !root.endswith('/') )
             root += '/';
-        return std::move(root);
+        return root;
     }
 }
 rask::subscriber::subscriber(workers &w, rask::tenant &t, fostlib::string path)
@@ -288,7 +288,7 @@ rask::subscriber::change &rask::subscriber::change::broadcast(
         ) {
             return rask::broadcast(
                 [b, &t, p, i, j]() {
-                    return std::move(b(t, p, i, j));
+                    return b(t, p, i, j);
                 });
         };
     return *this;
