@@ -1,5 +1,5 @@
 /*
-    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2017, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -125,7 +125,7 @@ void rask::file_exists(rask::connection::in &packet) {
                     .enrich_otherwise(save_remote_hash)
                     .post_commit(
                         [size, socket, hash64, tenant](auto&c) {
-                            if ( !size.isnull() ) {
+                            if ( size ) {
                                 create_and_watch_parent(socket->workers, tenant, c.location);
                                 allocate_file(c.location,
                                     fostlib::coerce<std::size_t>(size.value()));

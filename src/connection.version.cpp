@@ -1,5 +1,5 @@
 /*
-    Copyright 2015-2016, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2017, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -40,7 +40,7 @@ rask::connection::out rask::send_version() {
         logger("time", state.first);
         logger("hash", state.second);
         version << state.first;
-        if ( !state.second.isnull() ) {
+        if ( state.second ) {
             const auto hash = fostlib::coerce<std::vector<unsigned char>>(
                     fostlib::base64_string(
                         fostlib::coerce<fostlib::ascii_string>(
@@ -48,7 +48,7 @@ rask::connection::out rask::send_version() {
             version << hash;
         }
     }
-    return std::move(version);
+    return version;
 }
 
 
@@ -101,7 +101,7 @@ void rask::receive_version(connection::in &packet) {
                 wiring::server_hash{time, identity, hash64});
             // Now compare to see if we need to have a conversation about it
             auto myhash = tick::now();
-            if ( !myhash.second.isnull() &&
+            if ( myhash.second &&
                     myhash.second.value() != fostlib::coerce<fostlib::string>(hash64) ) {
                 logger("conversation", "sending tenants");
                 packet.socket->workers.responses.get_io_service().post(
