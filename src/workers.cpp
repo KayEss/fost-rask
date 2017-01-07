@@ -50,6 +50,6 @@ namespace {
 
 
 rask::workers::workers()
-: io(eh()), responses(eh()), files(eh()), hashes(eh()), notify(*this), server(files) {
+: io(eh()), responses(eh()), files(eh()), hashes(eh()), notify(*this) {
 }
 
