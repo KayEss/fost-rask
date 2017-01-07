@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2017, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -15,12 +15,10 @@
 #include <fost/internet>
 #include <fost/jsondb>
 #include <fost/log>
+#include <fost/rask/protocol>
 
 #include <f5/threading/eventfd.hpp>
 #include <f5/threading/ring.hpp>
-
-#include <boost/asio/streambuf.hpp>
-#include <boost/endian/conversion.hpp>
 
 #include <atomic>
 
@@ -43,7 +41,7 @@ namespace rask {
 
 
     /// A connection between two Rask servers
-    class connection : public std::enable_shared_from_this<connection> {
+    class connection : public fostlib::rask_tcp, public std::enable_shared_from_this<connection> {
         friend void read_and_process(std::shared_ptr<connection>);
     public:
         /// Construct a connection
@@ -53,8 +51,6 @@ namespace rask {
 
         /// Worker pool used for this connection
         rask::workers &workers;
-        /// The connection ID used in log messages
-        const int64_t id;
 
         /// The buffer size to be used
         const static std::size_t buffer_size = 64 * 1024;
@@ -91,77 +87,7 @@ namespace rask {
 
 
         /// Build an outbound packet
-        class out {
-            /// Output buffers
-            std::unique_ptr<boost::asio::streambuf> buffer;
-            /// The control block value
-            unsigned char control;
-        public:
-            /// Construct an outbound packet
-            out(unsigned char control)
-            : buffer(new boost::asio::streambuf), control(control) {
-            }
-            /// Move constructor
-            out(out&& o)
-            : buffer(std::move(o.buffer)), control(o.control) {
-            }
-
-            /// Insert an integer in network byte order
-            template<typename I,
-                typename = std::enable_if_t<std::is_integral<I>::value>>
-            out &operator << (I i) {
-                if ( sizeof(i) > 1 ) {
-                    auto v = boost::endian::native_to_big(i);
-                    buffer->sputn(reinterpret_cast<char *>(&v), sizeof(v));
-                } else {
-                    buffer->sputc(i);
-                }
-                return *this;
-            }
-            /// Insert a clock tick on the buffer
-            out &operator << (const tick &);
-            /// Insert a string on the buffer, with its size header
-            out &operator << (const fostlib::string &);
-            /// Insert a fixed size memory block. If the size is not fixed then it
-            /// needs to be prefixed with a size_sequence so the remote end
-            /// knows how much data has been sent
-            out &operator << (const fostlib::const_memory_block);
-            /// Insert a vector of bytes onto the stream. No size prefix is written.
-            out &operator << (const std::vector<unsigned char> &);
-
-            /// Return the current size of the packet
-            std::size_t size() const {
-                return buffer->size();
-            }
-
-            /// Add a size control sequence
-            out &size_sequence(std::size_t s) {
-                size_sequence(s, *buffer);
-                return *this;
-            }
-            /// Add a size control sequence for a memory block
-            out &size_sequence(const fostlib::const_memory_block b) {
-                return size_sequence(
-                    reinterpret_cast<const char *>(b.second) -
-                    reinterpret_cast<const char *>(b.first));
-            }
-
-            /// Put the data on the wire, then call the requested callback
-            void operator () (
-                std::shared_ptr<connection> socket, boost::asio::yield_context &yield
-            ) const {
-                boost::asio::streambuf header;
-                size_sequence(size(), header);
-                header.sputc(control);
-                std::array<boost::asio::streambuf::const_buffers_type, 2>
-                    data{{header.data(), buffer->data()}};
-                async_write(socket->cnx, data, yield);
-            }
-
-        private:
-            /// Write a size control sequence to the specified buffer
-            static void size_sequence(std::size_t, boost::asio::streambuf &);
-        };
+        using out = out_packet;
 
         /// Queue a packet for outbound sending. Can be called from
         /// multiple threads. Returns true if the packet was queued and
@@ -297,4 +223,16 @@ namespace rask {
 
 
 }
+
+
+/// Insert a clock tick on the buffer
+rask::connection::out &operator << (rask::connection::out &, const rask::tick &);
+/// Insert a string on the buffer, with its size header
+rask::connection::out &operator << (rask::connection::out &, const fostlib::string &);
+/// Insert a fixed size memory block. If the size is not fixed then it
+/// needs to be prefixed with a size_sequence so the remote end
+/// knows how much data has been sent
+rask::connection::out &operator << (rask::connection::out &, const fostlib::const_memory_block);
+/// Insert a vector of bytes onto the stream. No size prefix is written.
+rask::connection::out &operator << (rask::connection::out &, const std::vector<unsigned char> &);
 

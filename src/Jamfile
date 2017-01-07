@@ -7,6 +7,7 @@ fost-lib-autotest fost-rask
         ../../fost-beanbag/beanbag
         ../../fost-base/Cpp/fost-crypto
         ../../fost-internet/Cpp/fost-inet
+        ../../fost-internet/Cpp/fost-rask-proto
         ../../fost-orm/Cpp/fost-jsondb
     ;
 

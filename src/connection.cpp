@@ -1,5 +1,5 @@
 /*
-    Copyright 2015, Proteus Tech Co Ltd. http://www.kirit.com/Rask
+    Copyright 2015-2017, Proteus Tech Co Ltd. http://www.kirit.com/Rask
     Distributed under the Boost Software License, Version 1.0.
     See accompanying file LICENSE_1_0.txt or copy at
         http://www.boost.org/LICENSE_1_0.txt
@@ -22,9 +22,6 @@
 namespace {
     std::mutex g_mutex;
     std::vector<std::weak_ptr<rask::connection>> g_connections;
-
-    fostlib::performance p_cnx_created(rask::c_fost_rask,
-        "connections", "created");
 
     fostlib::performance p_queued(rask::c_fost_rask, "packets", "queued");
     fostlib::performance p_sends(rask::c_fost_rask, "packets", "sends");
@@ -151,7 +148,7 @@ const std::size_t queue_capactiy = 256;
 
 
 rask::connection::connection(rask::workers &w)
-: workers(w), id(++p_cnx_created), cnx(w.io.get_io_service()),
+: workers(w), cnx(w.io.get_io_service()),
         sending_strand(w.io.get_io_service()),
         sender(w.io.get_io_service()),
         heartbeat(w.io.get_io_service()),
@@ -206,7 +203,7 @@ void rask::connection::start_sending() {
                         auto packet = self->packets.pop_front(
                             fostlib::nullable<std::function<out(void)>>()).value();
                         --queued;
-                        packet()(self, yield);
+                        packet()(self->cnx, yield);
                         ++p_sends;
                         self->reset_heartbeat(true);
                     }
@@ -259,55 +256,32 @@ rask::connection::reconnect::reconnect(rask::workers &w, const fostlib::json &co
 */
 
 
-rask::connection::out &rask::connection::out::operator << (const tick &t) {
-    return (*this) << t.time() << t.server();
+rask::connection::out &operator << (rask::connection::out &o, const rask::tick &t) {
+    return o << t.time() << t.server();
 }
 
 
-rask::connection::out &rask::connection::out::operator << (
-    const fostlib::string &s
-) {
+rask::connection::out &operator << (rask::connection::out &o, const fostlib::string &s) {
     // This implementation only works for narrow character string
-    return size_sequence(s.native_length()) <<
+    return o.size_sequence(s.native_length()) <<
         fostlib::const_memory_block(s.c_str(), s.c_str() + s.native_length());
 }
 
 
-rask::connection::out &rask::connection::out::operator << (
-    const fostlib::const_memory_block b
-) {
-    if ( b.first != b.second )
-        buffer->sputn(reinterpret_cast<const char *>(b.first),
-            reinterpret_cast<const char*>(b.second)
-                - reinterpret_cast<const char*>(b.first));
-    return *this;
+rask::connection::out &operator << (rask::connection::out &o, const fostlib::const_memory_block b) {
+    if ( b.first != b.second ) {
+        o.bytes(fostlib::array_view<char>(reinterpret_cast<const char *>(b.first),
+            reinterpret_cast<const char*>(b.second) - reinterpret_cast<const char*>(b.first)));
+    }
+    return o;
 }
 
 
-rask::connection::out &rask::connection::out::operator << (
-    const std::vector<unsigned char> &v
-) {
+rask::connection::out &operator << (rask::connection::out &o, const std::vector<unsigned char> &v) {
     if ( v.size() ) {
-        buffer->sputn(reinterpret_cast<const char *>(v.data()), v.size());
+        o.bytes(fostlib::array_view<char>(reinterpret_cast<const char *>(v.data()), v.size()));
     }
-    return *this;
-}
-
-
-void rask::connection::out::size_sequence(std::size_t s, boost::asio::streambuf &b) {
-    if ( s < 0x80 ) {
-        b.sputc(s);
-    } else if ( s < 0x100 ) {
-        b.sputc(0xf9);
-        b.sputc(s);
-    } else if ( s < 0x10000 ) {
-        b.sputc(0xfa);
-        b.sputc(s >> 8);
-        b.sputc(s & 0xff);
-    } else {
-        throw fostlib::exceptions::not_implemented(
-            "Large packet sizes", fostlib::coerce<fostlib::string>(s));
-    }
+    return o;
 }
 
 
