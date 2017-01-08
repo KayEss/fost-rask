@@ -61,8 +61,6 @@ namespace rask {
         boost::asio::io_service::strand sending_strand;
         /// The communication channel for sending data
         f5::eventfd::unlimited sender;
-        /// An input buffer
-        boost::asio::streambuf input_buffer;
         /// Heartbeat timer
         boost::asio::deadline_timer heartbeat;
 

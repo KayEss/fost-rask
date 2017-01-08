@@ -64,36 +64,26 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
     socket->start_sending();
     boost::asio::spawn(socket->cnx.get_io_service(),
         [socket](boost::asio::yield_context yield) {
+            auto decode{rask::make_decoder(
+                [&yield, &socket]() {
+                    boost::asio::async_read(socket->cnx, socket->input_buffer,
+                        boost::asio::transfer_exactly(1), yield);
+                    return socket->input_buffer.sbumpc();
+                },
+                [&yield, &socket](char *into, std::size_t bytes) {
+                    boost::asio::async_read(socket->cnx, socket->input_buffer,
+                        boost::asio::transfer_exactly(bytes), yield);
+                    return socket->input_buffer.sgetn(into, bytes);
+                })};
             while ( socket->cnx.is_open() ) {
                 try {
-                    fostlib::json size_bytes = fostlib::json::array_t();
-                    boost::asio::async_read(socket->cnx, socket->input_buffer,
-                        boost::asio::transfer_exactly(2), yield);
-                    std::size_t packet_size = socket->input_buffer.sbumpc();
-                    fostlib::push_back(size_bytes, int64_t(packet_size));
-                    if ( packet_size > 0xf8 ) {
-                        const int bytes = packet_size - 0xf8;
-                        boost::asio::async_read(socket->cnx, socket->input_buffer,
-                            boost::asio::transfer_exactly(bytes), yield);
-                        packet_size = 0u;
-                        for ( auto i = 0; i != bytes; ++i ) {
-                            unsigned char byte = socket->input_buffer.sbumpc();
-                            fostlib::push_back(size_bytes, int64_t(byte));
-                            packet_size = (packet_size << 8) + byte;
-                        }
-                    } else if ( packet_size >= 0x80 ) {
-                        socket->cnx.close();
-                        throw fostlib::exceptions::not_implemented(
-                            "Invalid packet size control byte",
-                            fostlib::coerce<fostlib::string>(packet_size));
-                    }
-                    unsigned char control = socket->input_buffer.sbumpc();
+                    std::size_t packet_size = decode.read_size();
+                    unsigned char control = decode.read_byte();
                     boost::asio::async_read(socket->cnx, socket->input_buffer,
                         boost::asio::transfer_exactly(packet_size), yield);
                     fostlib::log::debug(c_fost_rask)
                         ("", "Got packet")
                         ("connection", socket->id)
-                        ("bytes", size_bytes)
                         ("control", control)
                         ("size", packet_size);
                     connection::in packet(socket, packet_size);
@@ -122,12 +112,14 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                     }
                     socket->reset_heartbeat(control != 0x80);
                 } catch ( fostlib::exceptions::exception &e ) {
+                    socket->cnx.close();
                     fostlib::log::error(c_fost_rask)
                         ("", "read_and_process caught an exception")
                         ("connection", socket->id)
                         ("exception", e.as_json());
                     return;
                 } catch ( std::exception &e ) {
+                    socket->cnx.close();
                     fostlib::log::error(c_fost_rask)
                         ("", "read_and_process caught an exception")
                         ("connection", socket->id)
