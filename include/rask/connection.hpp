@@ -36,10 +36,6 @@ namespace rask {
     using name_hash_type = fostlib::string;
 
 
-    /// The highest version of the wire protocol this code knows
-    const char known_version = 0x01;
-
-
     /// A connection between two Rask servers
     class connection : public fostlib::rask_tcp, public std::enable_shared_from_this<connection> {
         friend void read_and_process(std::shared_ptr<connection>);
@@ -63,6 +59,10 @@ namespace rask {
         f5::eventfd::unlimited sender;
         /// Heartbeat timer
         boost::asio::deadline_timer heartbeat;
+
+        /// The version that these two peers can support for sending
+        /// of data
+        fostlib::accessors<uint8_t> peer_version;
 
         /// Structure used to manage
         class reconnect {
@@ -113,6 +113,10 @@ namespace rask {
             /// Return the connection ID
             int64_t socket_id() const {
                 return socket->id;
+            }
+            /// Return the number of remaining bytes
+            std::size_t remaining_bytes() const {
+                return remaining;
             }
 
             /// Read a size  control sequence
@@ -218,6 +222,10 @@ namespace rask {
         tenant &, const rask::tick &, const fostlib::string &, const fostlib::json &);
     /// React to a move inode out packet
     void move_out(connection::in &);
+
+
+    /// The rask protocol definition
+    extern const protocol<std::function<void(connection::in&)>> g_proto;
 
 
 }

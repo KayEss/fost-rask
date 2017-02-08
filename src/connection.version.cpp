@@ -32,7 +32,7 @@ rask::connection::out rask::send_version() {
     logger
         ("", "Sending version block");
     connection::out version(0x80);
-    version << rask::known_version;
+    version << g_proto.max_version();
     if ( server_identity() ) {
         logger("identity", server_identity());
         version << server_identity();
@@ -82,8 +82,10 @@ void rask::receive_version(connection::in &packet) {
     logger
         ("", "Version block")
         ("connection", packet.socket_id());
-    const auto version(packet.read<int8_t>());
-    logger("version", version);
+    const auto version(packet.read<uint8_t>());
+    logger("version", "from-peer", version);
+    packet.socket->peer_version(std::min(g_proto.max_version(), version));
+    logger("version", "negotiated", packet.socket->peer_version());
     if ( !packet.empty() ) {
         auto identity(packet.read<uint32_t>());
         packet.socket->identity = identity;
