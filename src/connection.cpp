@@ -31,6 +31,30 @@ namespace {
 }
 
 
+const rask::protocol<std::function<void(rask::connection::in&)>> rask::g_proto(
+    [](rask::control_byte control, rask::connection::in &packet) {
+        fostlib::log::warning(rask::c_fost_rask)
+            ("", "Unknown control byte received")
+            ("connection", packet.socket_id())
+            ("control", int(control))
+            ("packet-size", packet.remaining_bytes());
+    },
+    {
+        {
+            {0x80, rask::receive_version}
+        },
+        {
+            {0x81, [](auto &v) { rask::tenant_packet(v); }},
+            {0x82, rask::tenant_hash_packet},
+            {0x83, rask::file_hash_without_priority},
+            {0x90, rask::file_exists},
+            {0x91, rask::create_directory},
+            {0x93, rask::move_out},
+            {0x9f, rask::file_data_block}
+        }
+    });
+
+
 void rask::monitor_connection(std::shared_ptr<rask::connection> socket) {
     std::unique_lock<std::mutex> lock(g_mutex);
     /// Try to find an empty slot
@@ -87,29 +111,7 @@ void rask::read_and_process(std::shared_ptr<rask::connection> socket) {
                         ("control", control)
                         ("size", packet_size);
                     connection::in packet(socket, packet_size);
-                    if ( control == 0x80 ) {
-                        receive_version(packet);
-                    } else if ( control == 0x81 ) {
-                        tenant_packet(packet);
-                    } else if ( control == 0x82 ) {
-                        tenant_hash_packet(packet);
-                    } else if ( control == 0x83 ) {
-                        file_hash_without_priority(packet);
-                    } else if ( control == 0x90 ) {
-                        file_exists(packet);
-                    } else if ( control == 0x91 ) {
-                        create_directory(packet);
-                    } else if ( control == 0x93 ) {
-                        move_out(packet);
-                    } else if ( control == 0x9f ) {
-                        file_data_block(packet);
-                    } else {
-                        fostlib::log::warning(c_fost_rask)
-                            ("", "Unknown control byte received")
-                            ("connection", socket->id)
-                            ("control", int(control))
-                            ("packet-size", packet_size);
-                    }
+                    g_proto.dispatch(socket->peer_version(), control, packet);
                     socket->reset_heartbeat(control != 0x80);
                 } catch ( fostlib::exceptions::exception &e ) {
                     socket->cnx.close();
